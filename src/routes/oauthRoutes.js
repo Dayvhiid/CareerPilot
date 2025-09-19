@@ -9,10 +9,10 @@ router.get('/google',
 
 // Step 2: Callback after Google auth
 router.get('/google/callback',
-  passport.authenticate('google', { failureRedirect: '/auth/login.html' }),
+  passport.authenticate('google', { failureRedirect: '/public/auth/login.html' }),
   (req, res) => {
-    // Success -> redirect or send token
-    res.redirect('/'); // or send JWT if you want token-based
+    // Success -> redirect to resume page
+    res.redirect('/public/resume/resume.html');
   }
 );
 

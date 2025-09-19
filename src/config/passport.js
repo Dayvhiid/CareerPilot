@@ -25,19 +25,35 @@ passport.use(new GoogleStrategy({
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
-      // Check if user exists
+      const email = profile.emails?.[0]?.value;
+      
+      // First, check if user exists with this Google ID
       let user = await User.findOne({ googleId: profile.id });
-
-      if (!user) {
-        // Create new user
-        user = await User.create({
-          name: profile.displayName,
-          email: profile.emails?.[0]?.value,
-          googleId: profile.id
-        });
+      
+      if (user) {
+        return done(null, user);
       }
+      
+      // Check if user exists with this email
+      user = await User.findOne({ email: email });
+      
+      if (user) {
+        // User exists with email but not Google ID - link the accounts
+        user.googleId = profile.id;
+        await user.save();
+        return done(null, user);
+      }
+      
+      // Create new user if doesn't exist
+      user = await User.create({
+        name: profile.displayName,
+        email: email,
+        googleId: profile.id
+      });
+      
       done(null, user);
     } catch (err) {
+      console.error('OAuth error:', err);
       done(err, null);
     }
   }
