@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CareerPilot - Upload Resume</title>
+    <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
+    <link
+      as="style"
+      href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter:wght@400;500;700;900"
+      onload="this.rel='stylesheet'"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+      rel="stylesheet"
+    />
+    <script>
+        function redirectToDevicePage() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                window.location.href = 'resumemobile.html';
+            } 
+        }
+        
+        // Redirect on page load
+        window.onload = redirectToDevicePage;
+    </script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#1919e6",
+              "background-light": "#f6f6f8",
+              "background-dark": "#111121",
+            },
+            fontFamily: {
+              display: ["Inter"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "1rem",
+              xl: "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark font-display text-gray-800 dark:text-gray-200"
+  >
+    <div class="flex flex-col min-h-screen">
+      <header class="border-b border-gray-200 dark:border-gray-700/50">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex h-16 items-center justify-between">
+            <div class="flex items-center gap-4">
+              <svg
+                class="h-8 w-8 text-primary"
+                fill="none"
+                viewBox="0 0 48 48"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  clip-rule="evenodd"
+                  d="M39.475 21.6262C40.358 21.4363 40.6863 21.5589 40.7581 21.5934C40.7876 21.655 40.8547 21.857 40.8082 22.3336C40.7408 23.0255 40.4502 24.0046 39.8572 25.2301C38.6799 27.6631 36.5085 30.6631 33.5858 33.5858C30.6631 36.5085 27.6632 38.6799 25.2301 39.8572C24.0046 40.4502 23.0255 40.7407 22.3336 40.8082C21.8571 40.8547 21.6551 40.7875 21.5934 40.7581C21.5589 40.6863 21.4363 40.358 21.6262 39.475C21.8562 38.4054 22.4689 36.9657 23.5038 35.2817C24.7575 33.2417 26.5497 30.9744 28.7621 28.762C30.9744 26.5497 33.2417 24.7574 35.2817 23.5037C36.9657 22.4689 38.4054 21.8562 39.475 21.6262ZM4.41189 29.2403L18.7597 43.5881C19.8813 44.7097 21.4027 44.9179 22.7217 44.7893C24.0585 44.659 25.5148 44.1631 26.9723 43.4579C29.9052 42.0387 33.2618 39.5667 36.4142 36.4142C39.5667 33.2618 42.0387 29.9052 43.4579 26.9723C44.1631 25.5148 44.659 24.0585 44.7893 22.7217C44.9179 21.4027 44.7097 19.8813 43.5881 18.7597L29.2403 4.41187C27.8527 3.02428 25.8765 3.02573 24.2861 3.36776C22.6081 3.72863 20.7334 4.58419 18.8396 5.74801C16.4978 7.18716 13.9881 9.18353 11.5858 11.5858C9.18354 13.988 7.18717 16.4978 5.74802 18.8396C4.58421 20.7334 3.72865 22.6081 3.36778 24.2861C3.02574 25.8765 3.02429 27.8527 4.41189 29.2403Z"
+                  fill="currentColor"
+                  fill-rule="evenodd"
+                ></path>
+              </svg>
+              <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+                CareerPilot
+              </h1>
+            </div>
+            <nav class="hidden md:flex items-center gap-8">
+              <a
+                class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
+                href="#"
+                >Dashboard</a
+              >
+              <a
+                class="text-sm font-medium text-primary dark:text-primary"
+                href="#"
+                >Resume</a
+              >
+              <a
+                class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
+                href="#"
+                >Cover Letter</a
+              >
+              <a
+                class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
+                href="#"
+                >Portfolio</a
+              >
+            </nav>
+            <div class="flex items-center gap-4">
+              <button
+                class="bg-primary text-white font-bold text-sm px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+              >
+                Upgrade
+              </button>
+              <div
+                class="w-10 h-10 rounded-full bg-cover bg-center"
+                style="
+                  background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA-RcpHhJBwZxCUOCOzkYU8s76AICfATuoIR0msurkvy3FG6I574nG4TcI0pQmoXP6BoqUGr2VmHxZ-hHDljn9oW4Q_tQaQ7onc5kO50L6-Tnvse1YKUgzA5xQRZPnd6byhPNF2pMAEDi4Z68IfiV1X7k8wzfOW2jPAQ3k1EqEBqbiQxyVlvZeY5ykqt3sxPa6ezRmeFjRMjddwjBZ0UA19v-nIAOFVkacttM1d4-6Gx2esDCxNtmaZ-paoH2Bg6njYix4rNtBSMq53');
+                "
+              ></div>
+            </div>
+          </div>
+        </div>
+      </header>
+      <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="max-w-3xl mx-auto">
+          <div class="text-center mb-8">
+            <h2
+              class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl"
+            >
+              Upload Your Resume
+            </h2>
+            <p class="mt-2 text-lg text-gray-600 dark:text-gray-400">
+              Let our AI assistant help you land your dream job.
+            </p>
+          </div>
+          <div class="bg-white dark:bg-gray-800/50 rounded-xl shadow-sm">
+            <div class="p-8">
+              <div class="flex justify-center items-center w-full">
+                <label
+                  class="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700/80 transition-colors"
+                  for="dropzone-file"
+                >
+                  <div
+                    class="flex flex-col items-center justify-center pt-5 pb-6"
+                  >
+                    <span
+                      class="material-symbols-outlined text-6xl text-gray-400 dark:text-gray-500"
+                      >upload_file</span
+                    >
+                    <p
+                      class="mb-2 text-lg font-bold text-gray-700 dark:text-gray-300"
+                    >
+                      <span class="font-semibold text-primary"
+                        >Click to upload</span
+                      >
+                      or drag and drop
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                      PDF, DOC, DOCX (MAX. 10MB)
+                    </p>
+                  </div>
+                  <input class="hidden" id="dropzone-file" type="file" />
+                </label>
+              </div>
+            </div>
+            <div class="px-8 pb-8">
+              <div class="space-y-4">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Uploading your_resume.pdf
+                </p>
+                <div
+                  class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5"
+                >
+                  <div
+                    class="bg-primary h-2.5 rounded-full"
+                    style="width: 60%"
+                  ></div>
+                </div>
+                <div
+                  class="flex justify-between text-sm text-gray-500 dark:text-gray-400"
+                >
+                  <span>Uploading...</span>
+                  <span>60% complete</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

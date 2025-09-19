@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>JobApp Automator - Log In</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#13a4ec",
+              "background-light": "#f6f7f8",
+              "background-dark": "#101c22",
+            },
+            fontFamily: {
+              display: ["Work Sans", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="font-display bg-background-light dark:bg-background-dark text-black dark:text-white"
+  >
+    <div class="flex flex-col min-h-screen">
+      <header
+        class="flex items-center justify-between px-6 sm:px-10 py-4 border-b border-black/10 dark:border-white/10"
+      >
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 text-primary">
+            <svg
+              fill="none"
+              viewBox="0 0 48 48"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <g clip-path="url(#clip0_6_330)">
+                <path
+                  clip-rule="evenodd"
+                  d="M24 0.757355L47.2426 24L24 47.2426L0.757355 24L24 0.757355ZM21 35.7574V12.2426L9.24264 24L21 35.7574Z"
+                  fill="currentColor"
+                  fill-rule="evenodd"
+                ></path>
+              </g>
+              <defs>
+                <clipPath id="clip0_6_330">
+                  <rect fill="white" height="48" width="48"></rect>
+                </clipPath>
+              </defs>
+            </svg>
+          </div>
+          <h1 class="text-xl font-bold">JobApp Automator</h1>
+        </div>
+        <nav class="hidden md:flex items-center gap-8">
+          <a
+            class="text-sm font-medium hover:text-primary transition-colors"
+            href="#"
+            >Home</a
+          >
+          <a
+            class="text-sm font-medium hover:text-primary transition-colors"
+            href="#"
+            >Features</a
+          >
+          <a
+            class="text-sm font-medium hover:text-primary transition-colors"
+            href="#"
+            >Pricing</a
+          >
+          <a
+            class="text-sm font-medium hover:text-primary transition-colors"
+            href="#"
+            >Contact</a
+          >
+        </nav>
+        <button class="md:hidden">
+          <span class="material-symbols-outlined"> menu </span>
+        </button>
+      </header>
+      <main class="flex-grow flex items-center justify-center p-4 sm:p-6">
+        <div
+          class="w-full max-w-md bg-white dark:bg-black/20 rounded-lg shadow-sm p-8"
+        >
+          <div class="text-center">
+            <h2 class="text-2xl sm:text-3xl font-bold">Welcome Back</h2>
+            <p class="text-black/60 dark:text-white/60 mt-2">
+              Log in to access your dashboard.
+            </p>
+          </div>
+          <form class="mt-8 space-y-6">
+            <div class="space-y-2">
+              <label class="text-sm font-medium" for="email">Email</label>
+              <input
+                autocomplete="email"
+                class="w-full px-4 py-3 rounded-lg bg-background-light dark:bg-background-dark border border-black/10 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-primary"
+                id="email"
+                name="email"
+                placeholder="you@example.com"
+                required=""
+                type="email"
+              />
+            </div>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-medium" for="password"
+                  >Password</label
+                >
+                <a
+                  class="text-sm font-medium text-primary hover:underline"
+                  href="#"
+                  >Forgot password?</a
+                >
+              </div>
+              <input
+                autocomplete="current-password"
+                class="w-full px-4 py-3 rounded-lg bg-background-light dark:bg-background-dark border border-black/10 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-primary"
+                id="password"
+                name="password"
+                placeholder="••••••••"
+                required=""
+                type="password"
+              />
+            </div>
+            <div>
+              <button
+                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                type="submit"
+              >
+                Log In
+              </button>
+            </div>
+          </form>
+          <div class="mt-6">
+            <div class="relative">
+              <div class="absolute inset-0 flex items-center">
+                <div
+                  class="w-full border-t border-black/10 dark:border-white/10"
+                ></div>
+              </div>
+              <div class="relative flex justify-center text-sm">
+                <span
+                  class="px-2 bg-white dark:bg-[#1C2930] text-black/60 dark:text-white/60"
+                  >Or continue with</span
+                >
+              </div>
+            </div>
+            <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <a
+                class="w-full flex items-center justify-center px-4 py-3 border border-black/10 dark:border-white/10 rounded-lg shadow-sm bg-white dark:bg-black/20 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors"
+                href="#"
+              >
+                <img
+                  alt=""
+                  class="h-5 w-5"
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdxeqeA4_ImNGUjQD20GMYQOmwv1m1QB1FWMU-OtKn1-0_osE6YKfcRhfk8diYEbOtgD0PKC0enEk7fcogYY03i82C4zAWJAys6y2MdlJ7NZiaWJrkmSZoy8NB4WhufX90Ykgt6yy2UnLZDdjp7uF3RdDufHNBJFzwqUhNnrdLzFf1shJ_XboQbu2VqdyFQeAzdsG6tHSzxv8KAoGuX-Miqpvf0eMAxjYSn3_cgIZ0HkFDlfRdyki-JnmzBjg6I_ZcPBL03Rc5cQ"
+                />
+                <span class="ml-3 text-sm font-medium">Google</span>
+              </a>
+              <a
+                class="w-full flex items-center justify-center px-4 py-3 border border-black/10 dark:border-white/10 rounded-lg shadow-sm bg-white dark:bg-black/20 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors"
+                href="#"
+              >
+                <img
+                  alt=""
+                  class="h-5 w-5"
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdxeqeA4_ImNGUjQD20GMYQOmwv1m1QB1FWMU-OtKn1-0_osE6YKfcRhfk8diYEbOtgD0PKC0enEk7fcogYY03i82C4zAWJAys6y2MdlJ7NZiaWJrkmSZoy8NB4WhufX90Ykgt6yy2UnLZDdjp7uF3RdDufHNBJFzwqUhNnrdLzFf1shJ_XboQbu2VqdyFQeAzdsG6tHSzxv8KAoGuX-Miqpvf0eMAxjYSn3_cgIZ0HkFDlfRdyki-JnmzBjg6I_ZcPBL03Rc5cQ"
+                />
+                <span class="ml-3 text-sm font-medium">LinkedIn</span>
+              </a>
+            </div>
+          </div>
+          <p class="mt-8 text-center text-sm text-black/60 dark:text-white/60">
+            Don't have an account?
+            <a class="font-medium text-primary hover:underline" href="#"
+              >Sign up</a
+            >
+          </p>
+        </div>
+      </main>
+      <footer
+        class="px-6 sm:px-10 py-6 border-t border-black/10 dark:border-white/10"
+      >
+        <div
+          class="flex flex-col sm:flex-row justify-between items-center text-sm text-black/60 dark:text-white/60"
+        >
+          <p>© 2024 JobApp Automator. All rights reserved.</p>
+          <div class="flex gap-6 mt-4 sm:mt-0">
+            <a class="hover:text-primary transition-colors" href="#"
+              >Terms of Service</a
+            >
+            <a class="hover:text-primary transition-colors" href="#"
+              >Privacy Policy</a
+            >
+          </div>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
