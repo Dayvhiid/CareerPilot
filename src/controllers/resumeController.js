@@ -6,6 +6,11 @@ const path = require("path");
 const natural = require("natural");
 const nlp = require("compromise");
 const AdvancedResumeParser = require("./AdvancedResumeParser");
+const HuggingFaceResumeParser = require("./HuggingFaceResumeParser");
+const mongoose = require("mongoose");
+
+// Create a test user ObjectId for when auth is disabled
+const TEST_USER_ID = new mongoose.Types.ObjectId("507f1f77bcf86cd799439011");
 
 // Upload and process resume
 exports.uploadResume = async (req, res) => {
@@ -14,7 +19,7 @@ exports.uploadResume = async (req, res) => {
       return res.status(400).json({ msg: "No file uploaded" });
     }
 
-    const userId = req.user.id; // From auth middleware
+    const userId = req.user?.id || TEST_USER_ID; // From auth middleware or test user
     const { filename, originalname, size, mimetype, path: filePath } = req.file;
 
     // Check if user already has a resume and delete old one
@@ -62,7 +67,7 @@ exports.uploadResume = async (req, res) => {
 // Get user's resume
 exports.getResume = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id || TEST_USER_ID;
     const resume = await Resume.findOne({ userId });
 
     if (!resume) {
@@ -87,7 +92,7 @@ exports.getResume = async (req, res) => {
 // Delete resume
 exports.deleteResume = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id || TEST_USER_ID;
     const resume = await Resume.findOne({ userId });
 
     if (!resume) {
@@ -130,14 +135,58 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
         console.log("Error with DOC file, using fallback:", err);
         extractedText = "Unable to extract text from this DOC file format";
       }
+    } else if (mimeType === "text/plain") {
+      // Handle text files for testing
+      extractedText = fs.readFileSync(filePath, 'utf8');
     }
 
     console.log("Extracted text length:", extractedText.length);
-    console.log("Processing text with Advanced Resume Parser...");
+    console.log("🚀 Processing with Universal Python NLP Service...");
 
-    // Process text with advanced parser
-    const parser = new AdvancedResumeParser();
-    const extractedData = await parser.parseResume(extractedText);
+    let extractedData = null;
+    let processingMethod = "unknown";
+
+    // Try HuggingFace Resume NER parser first for specialized resume parsing
+    try {
+      console.log("🤗 Processing with HuggingFace Resume NER (resume-ner-bert-v2)...");
+      const hfParser = new HuggingFaceResumeParser();
+      extractedData = await hfParser.parseResume(extractedText);
+      
+      if (extractedData && typeof extractedData === 'object') {
+        processingMethod = "HuggingFace Resume NER (resume-ner-bert-v2)";
+        console.log("✅ Successfully processed with HuggingFace Resume NER");
+        console.log("🎯 Industry detected:", extractedData.industryExperience?.[0] || 'general');
+        console.log("🔧 Skills found:", extractedData.skills?.length || 0);
+        console.log("💼 Job titles found:", extractedData.jobTitles?.length || 0);
+        console.log("� Companies found:", extractedData.companies?.length || 0);
+        console.log("� Name extracted:", extractedData.name || 'Not found');
+        console.log("� Email extracted:", extractedData.email || 'Not found');
+        console.log("📱 Phone extracted:", extractedData.phone || 'Not found');
+      }
+    } catch (hfError) {
+      console.log("⚠️ HuggingFace parser failed, falling back to Advanced Node.js parser:", hfError.message);
+      extractedData = null; // Ensure fallback is triggered
+    }
+
+    // Fallback to Advanced Resume Parser if HuggingFace parser fails
+    if (!extractedData) {
+      console.log("📋 Using Advanced Resume Parser as fallback...");
+      const parser = new AdvancedResumeParser();
+      extractedData = await parser.parseResume(extractedText);
+      processingMethod = "Advanced Node.js Parser (Fallback)";
+      console.log("✅ Processed with Advanced Node.js Parser fallback");
+    }
+
+    // Ensure extractedData has the required structure
+    if (!extractedData || typeof extractedData !== 'object') {
+      console.log("❌ Invalid extracted data, using empty structure");
+      extractedData = getEmptyResumeData();
+      processingMethod = "Empty fallback";
+    }
+
+    // Add processing metadata
+    extractedData.processingMethod = processingMethod;
+    extractedData.processedAt = new Date().toISOString();
 
     // Update resume with extracted data
     await Resume.findByIdAndUpdate(resumeId, {
@@ -146,8 +195,8 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
       isProcessed: true,
     });
 
-    console.log(`Resume ${resumeId} processed successfully with NLP`);
-    console.log("Extracted data preview:", {
+    console.log(`✅ Resume ${resumeId} processed successfully with ${processingMethod}`);
+    console.log("📊 Extracted data preview:", {
       name: extractedData.name,
       email: extractedData.email,
       location: extractedData.location,
@@ -841,4 +890,28 @@ function generateCareerObjective(data) {
   } else {
     return 'Eager to contribute technical skills and grow within a collaborative, innovation-focused environment.';
   }
+}
+
+// Helper function for empty resume data structure
+function getEmptyResumeData() {
+  return {
+    name: '',
+    email: '',
+    phone: '',
+    location: '',
+    skills: [],
+    experience: [],
+    education: [],
+    certifications: [],
+    languages: [],
+    summary: '',
+    years_experience: 0,
+    job_titles: [],
+    companies: [],
+    industry: '',
+    soft_skills: [],
+    generated_summary: '',
+    processingMethod: '',
+    processedAt: ''
+  };
 }

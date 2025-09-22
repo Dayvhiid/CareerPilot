@@ -1,0 +1,59 @@
+John Smith
+Senior Software Engineer
+john.smith@email.com | (555) 123-4567 | San Francisco, CA
+LinkedIn: linkedin.com/in/johnsmith | GitHub: github.com/johnsmith
+
+PROFESSIONAL SUMMARY
+Experienced software engineer with 5+ years developing scalable web applications and leading cross-functional teams. Expertise in full-stack development, cloud architecture, and agile methodologies.
+
+WORK EXPERIENCE
+
+Senior Software Engineer | Google Inc. | 2020 - Present
+• Developed and maintained microservices using Python, Node.js, and React
+• Led a team of 5 engineers on cloud migration projects, reducing infrastructure costs by 30%
+• Implemented automated CI/CD pipelines using Jenkins and Docker
+• Collaborated with product managers to define technical requirements
+
+Software Developer | Microsoft Corporation | 2018 - 2020
+• Built REST APIs and web applications using JavaScript, Node.js, and Express
+• Worked with databases including MongoDB, PostgreSQL, and Redis
+• Participated in code reviews and maintained high code quality standards
+• Mentored junior developers and conducted technical interviews
+
+Junior Developer | Startup Inc. | 2017 - 2018
+• Developed responsive web interfaces using HTML, CSS, and JavaScript
+• Assisted in database design and optimization
+• Learned agile development practices and version control with Git
+
+EDUCATION
+
+Bachelor of Science in Computer Science | Stanford University | 2013 - 2017
+• GPA: 3.8/4.0
+• Relevant Coursework: Data Structures, Algorithms, Software Engineering, Database Systems
+• Senior Project: Machine Learning algorithm for predictive analytics
+
+TECHNICAL SKILLS
+
+Programming Languages: Python, JavaScript, Java, C++, TypeScript
+Frameworks & Libraries: React, Node.js, Express, Django, Flask, Angular
+Databases: MongoDB, PostgreSQL, MySQL, Redis
+Cloud Platforms: AWS, Azure, Google Cloud Platform
+DevOps & Tools: Docker, Jenkins, Git, Kubernetes, Terraform
+Methodologies: Agile, Scrum, Test-Driven Development
+
+CERTIFICATIONS
+• AWS Certified Solutions Architect (2021)
+• Google Cloud Professional Developer (2020)
+• Certified ScrumMaster (2019)
+
+PROJECTS
+
+E-Commerce Platform
+• Built a full-stack e-commerce application using React and Node.js
+• Implemented secure payment processing and user authentication
+• Technologies: React, Node.js, MongoDB, Stripe API
+
+Data Analytics Dashboard  
+• Created real-time dashboard for business intelligence
+• Integrated with multiple data sources and APIs
+• Technologies: Python, Flask, D3.js, PostgreSQL
