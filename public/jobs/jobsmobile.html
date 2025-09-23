@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>AI Career Assistant - Job Listings</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#135bec",
+              "background-light": "#f6f6f8",
+              "background-dark": "#101622",
+            },
+            fontFamily: {
+              display: ["Inter"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "1rem",
+              xl: "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+      }
+    </style>
+    <style>
+      body {
+        min-height: max(884px, 100dvh);
+      }
+    </style>
+  </head>
+  <body class="bg-background-light dark:bg-background-dark font-display">
+    <div class="flex flex-col h-screen justify-between">
+      <div class="flex-grow overflow-y-auto">
+        <header
+          class="sticky top-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm z-10 p-4"
+        >
+          <div class="flex items-center justify-between">
+            <button class="text-gray-800 dark:text-white" onclick="goBack()">
+              <span class="material-symbols-outlined">arrow_back_ios_new</span>
+            </button>
+            <h1 class="text-lg font-bold text-gray-900 dark:text-white">
+              Jobs
+            </h1>
+            <div class="w-8"></div>
+          </div>
+        </header>
+        <main class="p-4">
+          <div class="mb-4 text-center">
+            <div id="loading" class="hidden">
+              <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <p class="mt-2 text-gray-600 dark:text-gray-400">Finding jobs based on your resume...</p>
+            </div>
+          </div>
+          <div id="jobsList" class="space-y-4">
+            <!-- Jobs will be loaded here automatically based on resume data -->
+          </div>
+          <div id="noJobs" class="hidden text-center py-8">
+            <div class="text-gray-400 dark:text-gray-500">
+              <span class="material-symbols-outlined text-6xl mb-4 block">work_off</span>
+              <h3 class="text-lg font-semibold mb-2">No jobs found</h3>
+              <p>Upload a resume first to get personalized job recommendations</p>
+            </div>
+          </div>
+        </main>
+      </div>
+      <nav
+        class="bg-background-light dark:bg-background-dark border-t border-gray-200 dark:border-white/10 sticky bottom-0"
+      >
+        <div class="flex justify-around items-center px-2 pt-2 pb-5">
+          <a
+            class="flex flex-col items-center gap-1 text-gray-500 dark:text-gray-400"
+            href="#"
+          >
+            <span class="material-symbols-outlined">dashboard</span>
+            <span class="text-xs">Dashboard</span>
+          </a>
+          <a
+            class="flex flex-col items-center gap-1 text-gray-500 dark:text-gray-400"
+            href="#"
+          >
+            <span class="material-symbols-outlined">description</span>
+            <span class="text-xs">Resume</span>
+          </a>
+          <a class="flex flex-col items-center gap-1 text-primary" href="#">
+            <span
+              class="material-symbols-outlined"
+              style="font-variation-settings: 'FILL' 1"
+              >work</span
+            >
+            <span class="text-xs font-bold">Jobs</span>
+          </a>
+          <a
+            class="flex flex-col items-center gap-1 text-gray-500 dark:text-gray-400"
+            href="#"
+          >
+            <span class="material-symbols-outlined">person</span>
+            <span class="text-xs">Profile</span>
+          </a>
+        </div>
+      </nav>
+    </div>
+
+    <script>
+      let currentJobs = [];
+
+      // Initialize page
+      document.addEventListener('DOMContentLoaded', function() {
+        loadResumeBasedJobs();
+      });
+
+      function goBack() {
+        window.history.back();
+      }
+
+      async function loadResumeBasedJobs() {
+        const loading = document.getElementById('loading');
+        const jobsList = document.getElementById('jobsList');
+        const noJobs = document.getElementById('noJobs');
+        
+        loading.classList.remove('hidden');
+        
+        try {
+          const response = await fetch('http://localhost:4000/api/jobs/resume-based');
+          const data = await response.json();
+          
+          if (data.success && data.jobs && data.jobs.length > 0) {
+            currentJobs = data.jobs;
+            displayJobs(currentJobs);
+            noJobs.classList.add('hidden');
+          } else {
+            jobsList.innerHTML = '';
+            noJobs.classList.remove('hidden');
+          }
+        } catch (error) {
+          console.error('Error loading resume-based jobs:', error);
+          jobsList.innerHTML = '';
+          noJobs.classList.remove('hidden');
+        } finally {
+          loading.classList.add('hidden');
+        }
+      }
+
+      function displayJobs(jobs) {
+        const jobsList = document.getElementById('jobsList');
+        
+        jobsList.innerHTML = jobs.map(job => createJobCard(job)).join('');
+      }
+
+      function createJobCard(job) {
+        const matchScore = job.matchScore ? Math.round(job.matchScore) : Math.floor(Math.random() * 30) + 70;
+        
+        // Format salary
+        let salaryDisplay = 'Salary not specified';
+        if (job.salaryMin && job.salaryMax) {
+          salaryDisplay = `₦${formatNumber(job.salaryMin)} - ₦${formatNumber(job.salaryMax)}`;
+        } else if (job.salaryMin) {
+          salaryDisplay = `From ₦${formatNumber(job.salaryMin)}`;
+        } else if (job.salaryMax) {
+          salaryDisplay = `Up to ₦${formatNumber(job.salaryMax)}`;
+        }
+
+        return `
+          <div class="bg-white dark:bg-background-dark dark:border dark:border-white/10 rounded-xl p-4 flex flex-col gap-4 shadow-sm">
+            <div class="flex items-start gap-4">
+              <div class="w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center">
+                <span class="material-symbols-outlined text-primary">work</span>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <h2 class="font-bold text-gray-900 dark:text-white">
+                      ${job.title}
+                    </h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">${job.company}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                      ${salaryDisplay}
+                    </p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      📍 ${job.location} • ${job.employmentType || 'Full Time'}
+                    </p>
+                  </div>
+                  <div class="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-bold">
+                    ${matchScore}% Match
+                  </div>
+                </div>
+                ${job.description ? `
+                <p class="text-sm text-gray-600 dark:text-gray-300 mt-2 line-clamp-2">
+                  ${job.description.substring(0, 100)}${job.description.length > 100 ? '...' : ''}
+                </p>
+                ` : ''}
+                ${job.skills && job.skills.length > 0 ? `
+                <div class="flex flex-wrap gap-1 mt-2">
+                  ${job.skills.slice(0, 2).map(skill => `
+                    <span class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded text-xs">
+                      ${skill}
+                    </span>
+                  `).join('')}
+                  ${job.skills.length > 2 ? `<span class="text-xs text-gray-400">+${job.skills.length - 2} more</span>` : ''}
+                </div>
+                ` : ''}
+              </div>
+            </div>
+            <button
+              class="w-full bg-primary text-white font-bold py-3 rounded-lg text-sm transition-opacity hover:opacity-90"
+              onclick="applyToJob('${job._id || ''}', '${job.applyUrl || job.jobUrl || '#'}')"
+            >
+              Apply Now
+            </button>
+          </div>
+        `;
+      }
+
+      async function applyToJob(jobId, applyUrl) {
+        try {
+          // Mark as applied in our system
+          if (jobId && jobId !== 'undefined' && jobId !== '') {
+            const response = await fetch(`/api/jobs/${jobId}/apply`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+          }
+          
+          // Open external application link
+          if (applyUrl && applyUrl !== '#' && applyUrl !== 'undefined') {
+            window.open(applyUrl, '_blank');
+          } else {
+            alert('Apply directly on the company website or contact them for application details.');
+          }
+        } catch (error) {
+          console.error('Error applying to job:', error);
+          // Still open the external link even if our tracking fails
+          if (applyUrl && applyUrl !== '#' && applyUrl !== 'undefined') {
+            window.open(applyUrl, '_blank');
+          }
+        }
+      }
+
+      function formatNumber(num) {
+        return new Intl.NumberFormat('en-NG').format(num);
+      }
+    </script>
+  </body>
+</html>

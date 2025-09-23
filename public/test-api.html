@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+</head>
+<body>
+    <h1>Testing Resume-Based Jobs API</h1>
+    <button onclick="testAPI()">Test API</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Loading...';
+            
+            try {
+                console.log('Making request to /api/jobs/resume-based');
+                
+                const response = await fetch('/api/jobs/resume-based', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                const text = await response.text();
+                console.log('Raw response:', text);
+                
+                if (response.ok) {
+                    try {
+                        const data = JSON.parse(text);
+                        resultDiv.innerHTML = `
+                            <h2>Success!</h2>
+                            <p>Status: ${response.status}</p>
+                            <p>Jobs found: ${data.jobs ? data.jobs.length : 0}</p>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        `;
+                    } catch (e) {
+                        resultDiv.innerHTML = `
+                            <h2>Response received but not JSON:</h2>
+                            <p>Status: ${response.status}</p>
+                            <pre>${text}</pre>
+                        `;
+                    }
+                } else {
+                    resultDiv.innerHTML = `
+                        <h2>Error Response:</h2>
+                        <p>Status: ${response.status}</p>
+                        <pre>${text}</pre>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `
+                    <h2>Network Error:</h2>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

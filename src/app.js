@@ -6,6 +6,7 @@ const session = require('express-session');
 const authRoutes = require('./routes/authRoutes');
 const oauthRoutes = require('./routes/oauthRoutes');
 const resumeRoutes = require('./routes/resumeRoutes'); // Add this
+const jobRoutes = require('./routes/jobRoutes');
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/oauth', oauthRoutes);
 app.use('/api/resume', resumeRoutes); // Add this
+app.use('/api/jobs', jobRoutes);
 
 // Serve login page at root for testing
 app.get('/', (req, res) => {
