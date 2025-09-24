@@ -2,6 +2,7 @@ const Job = require('../models/Job');
 const JobMatch = require('../models/JobMatch');
 const Resume = require('../models/Resume');
 const jSearchService = require('../services/jSearchService');
+const redisService = require('../services/redisService');
 const natural = require('natural');
 const mongoose = require('mongoose');
 
@@ -588,7 +589,57 @@ exports.getResumeBasedJobs = async (req, res) => {
     // Search for jobs using the first/primary query
     const primaryQuery = searchQueries[0];
     
-    // Try to fetch new jobs, but don't fail if API is unavailable
+    // Generate cache key based on resume data and search parameters
+    console.log('📋 Preparing cache key generation...');
+    console.log('   - extractedData.currentJobTitle:', extractedData.currentJobTitle);
+    console.log('   - extractedData.skills:', extractedData.skills);
+    console.log('   - location:', location);
+    console.log('   - page:', page);
+    console.log('   - primaryQuery:', primaryQuery);
+    
+    const resumeDataForCache = {
+      currentJobTitle: extractedData.currentJobTitle,
+      topSkills: extractedData.skills?.slice(0, 5) || []
+    };
+    const searchParamsForCache = { location, page, query: primaryQuery };
+    
+    console.log('📦 Cache data prepared:');
+    console.log('   - resumeDataForCache:', JSON.stringify(resumeDataForCache));
+    console.log('   - searchParamsForCache:', JSON.stringify(searchParamsForCache));
+    
+    let cacheKey;
+    try {
+      cacheKey = redisService.generateCacheKey(resumeDataForCache, searchParamsForCache);
+      console.log(`🔑 Generated cache key: ${cacheKey}`);
+    } catch (error) {
+      console.error('❌ Failed to generate cache key:', error.message);
+      cacheKey = 'jobs:fallback:' + Date.now();
+    }
+    
+    // Try to get cached results first
+    console.log('🔍 Attempting to retrieve cached jobs...');
+    let cachedJobs = null;
+    try {
+      cachedJobs = await redisService.getJobs(cacheKey);
+    } catch (error) {
+      console.error('❌ Failed to retrieve cached jobs:', error.message);
+      console.error('❌ Cache retrieval error stack:', error.stack);
+    }
+    if (cachedJobs) {
+      console.log(`🚀 Cache HIT! Returning ${cachedJobs.jobs?.length || 0} cached jobs`);
+      console.log('✅ Cache data structure:', Object.keys(cachedJobs));
+      return res.json({
+        ...cachedJobs,
+        fromCache: true,
+        cacheKey: cacheKey,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      console.log('💫 Cache MISS - proceeding to fetch fresh data');
+    }
+    
+    // Cache miss - fetch from API
+    console.log('💫 Cache miss, fetching fresh data from API...');
     let savedJobs = [];
     let fetchError = null;
     
@@ -654,7 +705,7 @@ exports.getResumeBasedJobs = async (req, res) => {
     
     console.log(`✅ Found ${savedJobs.length} jobs based on resume data`);
     
-    res.json({
+    const responseData = {
       success: true,
       jobs: savedJobs,
       totalResults: savedJobs.length,
@@ -669,8 +720,26 @@ exports.getResumeBasedJobs = async (req, res) => {
         location: location,
         page,
         basedOnResume: true
+      },
+      fromCache: false,
+      fetchError: fetchError
+    };
+    
+    // Cache the results for future requests (TTL: 2 hours = 7200 seconds)
+    if (savedJobs.length > 0) {
+      console.log(`💾 Attempting to cache ${savedJobs.length} jobs with key: ${cacheKey}`);
+      try {
+        const cacheSuccess = await redisService.setJobs(cacheKey, responseData, 7200);
+        console.log(`📦 Cache operation result: ${cacheSuccess ? 'SUCCESS' : 'FAILED'}`);
+      } catch (error) {
+        console.error('❌ Failed to cache jobs:', error.message);
+        console.error('❌ Cache error stack:', error.stack);
       }
-    });
+    } else {
+      console.log('⚠️ No jobs to cache (empty result set)');
+    }
+    
+    res.json(responseData);
     
   } catch (error) {
     console.error('❌ Error in getResumeBasedJobs:', error);

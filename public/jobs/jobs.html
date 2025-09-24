@@ -121,6 +121,56 @@
       </nav>
     </div>
 
+    <!-- Cover Letter Modal -->
+    <div id="coverLetterModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-background-dark rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white">Generate Cover Letter</h2>
+          <button onclick="closeCoverLetterModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="p-4 overflow-y-auto max-h-[70vh]">
+          <div id="coverLetterLoading" class="hidden text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p class="mt-2 text-gray-600 dark:text-gray-400">Generating your personalized cover letter...</p>
+          </div>
+          <div id="coverLetterContent" class="hidden">
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Your Cover Letter:</label>
+              <textarea 
+                id="coverLetterText" 
+                rows="15" 
+                class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm resize-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                placeholder="Your generated cover letter will appear here..."
+              ></textarea>
+            </div>
+            <div class="flex gap-2">
+              <button 
+                onclick="downloadCoverLetter()" 
+                class="flex-1 bg-primary text-white font-bold py-3 rounded-lg text-sm transition-opacity hover:opacity-90"
+              >
+                Download Cover Letter
+              </button>
+              <button 
+                onclick="closeCoverLetterModal()" 
+                class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white font-bold py-3 rounded-lg text-sm transition-opacity hover:opacity-90"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+          <div id="coverLetterError" class="hidden text-center py-8">
+            <div class="text-red-500 dark:text-red-400">
+              <span class="material-symbols-outlined text-6xl mb-4 block">error</span>
+              <h3 class="text-lg font-semibold mb-2">Error Generating Cover Letter</h3>
+              <p id="errorMessage">Please try again later.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
       let currentJobs = [];
 
@@ -237,12 +287,20 @@
                 ` : ''}
               </div>
             </div>
-            <button
-              class="w-full bg-primary text-white font-bold py-3 rounded-lg text-sm transition-opacity hover:opacity-90"
-              onclick="applyToJob('${job._id || ''}', '${job.applyUrl || job.jobUrl || '#'}')"
-            >
-              Apply Now
-            </button>
+            <div class="flex gap-2">
+              <button
+                class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white font-bold py-3 rounded-lg text-sm transition-opacity hover:opacity-90"
+                onclick="generateCoverLetter('${job._id || JSON.stringify(job).replace(/'/g, '&apos;')}')"
+              >
+                Generate Cover Letter
+              </button>
+              <button
+                class="flex-1 bg-primary text-white font-bold py-3 rounded-lg text-sm transition-opacity hover:opacity-90"
+                onclick="applyToJob('${job._id || ''}', '${job.applyUrl || job.jobUrl || '#'}')"
+              >
+                Apply Now
+              </button>
+            </div>
           </div>
         `;
       }
@@ -276,6 +334,114 @@
 
       function formatNumber(num) {
         return new Intl.NumberFormat('en-NG').format(num);
+      }
+
+      // Cover Letter Functions
+      let currentJobForCoverLetter = null;
+
+      async function generateCoverLetter(jobData) {
+        try {
+          // Parse job data if it's a string (for jobs without IDs)
+          let job;
+          if (typeof jobData === 'string' && jobData.startsWith('{')) {
+            job = JSON.parse(jobData.replace(/&apos;/g, "'"));
+          } else {
+            // Find job by ID
+            job = currentJobs.find(j => j._id === jobData) || JSON.parse(jobData.replace(/&apos;/g, "'"));
+          }
+          
+          currentJobForCoverLetter = job;
+          
+          // Show modal and loading state
+          const modal = document.getElementById('coverLetterModal');
+          const loading = document.getElementById('coverLetterLoading');
+          const content = document.getElementById('coverLetterContent');
+          const error = document.getElementById('coverLetterError');
+          
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+          loading.classList.remove('hidden');
+          content.classList.add('hidden');
+          error.classList.add('hidden');
+          
+          console.log('🔍 Generating cover letter for job:', job.title);
+          
+          // Make API call to generate cover letter
+          const response = await fetch(`http://localhost:4000/api/coverletter/generate/${job._id || 'temp'}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              jobData: job
+            })
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Server responded with ${response.status}: ${errorText}`);
+          }
+          
+          const data = await response.json();
+          console.log('✅ Cover letter generated:', data);
+          
+          if (data.success && data.coverLetter) {
+            // Show the generated cover letter
+            document.getElementById('coverLetterText').value = data.coverLetter;
+            loading.classList.add('hidden');
+            content.classList.remove('hidden');
+          } else {
+            throw new Error(data.message || 'Failed to generate cover letter');
+          }
+          
+        } catch (error) {
+          console.error('❌ Error generating cover letter:', error);
+          
+          // Show error state
+          const loading = document.getElementById('coverLetterLoading');
+          const content = document.getElementById('coverLetterContent');
+          const errorDiv = document.getElementById('coverLetterError');
+          const errorMessage = document.getElementById('errorMessage');
+          
+          loading.classList.add('hidden');
+          content.classList.add('hidden');
+          errorDiv.classList.remove('hidden');
+          errorMessage.textContent = error.message || 'Please try again later.';
+        }
+      }
+
+      function closeCoverLetterModal() {
+        const modal = document.getElementById('coverLetterModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        currentJobForCoverLetter = null;
+      }
+
+      function downloadCoverLetter() {
+        const coverLetterText = document.getElementById('coverLetterText').value;
+        if (!coverLetterText) {
+          alert('No cover letter to download');
+          return;
+        }
+        
+        // Create and download the file
+        const blob = new Blob([coverLetterText], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        // Generate filename
+        const jobTitle = currentJobForCoverLetter?.title || 'Job';
+        const company = currentJobForCoverLetter?.company || 'Company';
+        const fileName = `Cover_Letter_${jobTitle.replace(/[^a-zA-Z0-9]/g, '_')}_${company.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
+        
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        console.log('📥 Cover letter downloaded:', fileName);
       }
     </script>
   </body>

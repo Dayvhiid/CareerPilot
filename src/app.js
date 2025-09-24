@@ -3,12 +3,30 @@ const cors = require('cors');
 const path = require('path');
 const passport = require('./config/passport');
 const session = require('express-session');
+const redisService = require('./services/redisService');
 const authRoutes = require('./routes/authRoutes');
 const oauthRoutes = require('./routes/oauthRoutes');
 const resumeRoutes = require('./routes/resumeRoutes'); // Add this
 const jobRoutes = require('./routes/jobRoutes');
+const coverLetterRoutes = require('./routes/coverLetterRoutes');
 
 const app = express();
+
+// Initialize Redis connection (non-blocking)
+console.log('🔧 Initializing Redis connection...');
+redisService.connect().then(success => {
+  if (success) {
+    console.log('🎉 Redis connection established successfully');
+  } else {
+    console.warn('⚠️ Redis connection failed but server will continue');
+  }
+}).catch(err => {
+  console.error('❌ Redis connection error details:');
+  console.error('   - Error message:', err.message);
+  console.error('   - Error code:', err.code);
+  console.error('   - Error stack:', err.stack);
+  console.warn('⚠️ Server continuing without Redis cache');
+});
 
 // CORS middleware - Allow requests from frontend
 app.use(cors({
@@ -40,6 +58,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/oauth', oauthRoutes);
 app.use('/api/resume', resumeRoutes); // Add this
 app.use('/api/jobs', jobRoutes);
+app.use('/api/coverletter', coverLetterRoutes);
 
 // Serve login page at root for testing
 app.get('/', (req, res) => {

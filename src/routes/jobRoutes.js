@@ -15,6 +15,20 @@ const {
 router.get('/search', searchJobs);
 router.get('/recommended', getRecommendedJobs);
 router.get('/resume-based', getResumeBasedJobs);
+
+// Cache management routes (for testing)
+router.get('/cache/stats', async (req, res) => {
+  const redisService = require('../services/redisService');
+  const stats = await redisService.getCacheStats();
+  res.json(stats);
+});
+
+router.delete('/cache/clear', async (req, res) => {
+  const redisService = require('../services/redisService');
+  const cleared = await redisService.clearJobsCache();
+  res.json({ success: cleared, message: cleared ? 'Cache cleared' : 'Failed to clear cache' });
+});
+
 router.post('/:jobId/bookmark', bookmarkJob);
 router.post('/:jobId/apply', markJobApplied);
 router.get('/:jobId', getJobDetails); // This must come last
