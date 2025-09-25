@@ -1,5 +1,6 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const GitHubStrategy = require('passport-github2').Strategy;
 const User = require('../models/User');
 
 // Serialize user (stores user ID in session)
@@ -54,6 +55,48 @@ passport.use(new GoogleStrategy({
       done(null, user);
     } catch (err) {
       console.error('OAuth error:', err);
+      done(err, null);
+    }
+  }
+));
+
+// GitHub OAuth Strategy
+passport.use(new GitHubStrategy({
+    clientID: process.env.GITHUB_CLIENT_ID,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    callbackURL: process.env.GITHUB_CALLBACK_URL || "/api/oauth/github/callback"
+  },
+  async (accessToken, refreshToken, profile, done) => {
+    try {
+      const email = profile.emails?.[0]?.value || `${profile.username}@github.local`;
+      
+      // First, check if user exists with this GitHub ID
+      let user = await User.findOne({ githubId: profile.id });
+      
+      if (user) {
+        return done(null, user);
+      }
+      
+      // Check if user exists with this email
+      user = await User.findOne({ email: email });
+      
+      if (user) {
+        // User exists with email but not GitHub ID - link the accounts
+        user.githubId = profile.id;
+        await user.save();
+        return done(null, user);
+      }
+      
+      // Create new user if doesn't exist
+      user = await User.create({
+        name: profile.displayName || profile.username,
+        email: email,
+        githubId: profile.id
+      });
+      
+      done(null, user);
+    } catch (err) {
+      console.error('GitHub OAuth error:', err);
       done(err, null);
     }
   }

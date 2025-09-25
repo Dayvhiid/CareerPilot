@@ -16,6 +16,21 @@ router.get('/google/callback',
   }
 );
 
+// GitHub OAuth Routes
+// Step 1: Kick off GitHub login
+router.get('/github',
+  passport.authenticate('github', { scope: ['user:email'] })
+);
+
+// Step 2: Callback after GitHub auth
+router.get('/github/callback',
+  passport.authenticate('github', { failureRedirect: '/public/auth/login.html' }),
+  (req, res) => {
+    // Success -> redirect to resume page
+    res.redirect('/public/resume/resume.html');
+  }
+);
+
 // Step 3: Logout
 router.get('/logout', (req, res) => {
   req.logout(err => {

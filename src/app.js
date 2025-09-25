@@ -9,6 +9,7 @@ const oauthRoutes = require('./routes/oauthRoutes');
 const resumeRoutes = require('./routes/resumeRoutes'); // Add this
 const jobRoutes = require('./routes/jobRoutes');
 const coverLetterRoutes = require('./routes/coverLetterRoutes');
+const chatbotRoutes = require('./routes/chatbotRoutes');
 
 const app = express();
 
@@ -59,6 +60,7 @@ app.use('/api/oauth', oauthRoutes);
 app.use('/api/resume', resumeRoutes); // Add this
 app.use('/api/jobs', jobRoutes);
 app.use('/api/coverletter', coverLetterRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 // Serve login page at root for testing
 app.get('/', (req, res) => {

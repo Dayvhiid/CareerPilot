@@ -7,11 +7,16 @@ const userSchema = new mongoose.Schema(
     password: { 
       type: String, 
       required: function() {
-        // Password is required only if googleId is not present
-        return !this.googleId;
+        // Password is required only if no OAuth provider is used
+        return !this.googleId && !this.githubId;
       }
     },
     googleId: {
+      type: String,
+      unique: true,
+      sparse: true // Allows multiple null values
+    },
+    githubId: {
       type: String,
       unique: true,
       sparse: true // Allows multiple null values

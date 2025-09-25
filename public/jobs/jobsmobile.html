@@ -150,7 +150,7 @@
                 onclick="downloadCoverLetter()" 
                 class="w-full bg-primary text-white font-bold py-3 rounded-lg text-sm transition-opacity hover:opacity-90"
               >
-                Download Cover Letter
+                📄 Download as Word Doc
               </button>
               <button 
                 onclick="closeCoverLetterModal()" 
@@ -401,31 +401,59 @@
         currentJobForCoverLetter = null;
       }
 
-      function downloadCoverLetter() {
+      async function downloadCoverLetter() {
         const coverLetterText = document.getElementById('coverLetterText').value;
         if (!coverLetterText) {
           alert('No cover letter to download');
           return;
         }
         
-        // Create and download the file
-        const blob = new Blob([coverLetterText], { type: 'text/plain' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        
-        // Generate filename
-        const jobTitle = currentJobForCoverLetter?.title || 'Job';
-        const company = currentJobForCoverLetter?.company || 'Company';
-        const fileName = `Cover_Letter_${jobTitle.replace(/[^a-zA-Z0-9]/g, '_')}_${company.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
-        
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        console.log('📥 Cover letter downloaded:', fileName);
+        try {
+          console.log('📄 Requesting Word document download...');
+          
+          // Make API call to generate Word document
+          const response = await fetch('http://localhost:4000/api/coverletter/download', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              coverLetterText: coverLetterText,
+              jobTitle: currentJobForCoverLetter?.title || 'Job',
+              company: currentJobForCoverLetter?.company || 'Company',
+              applicantName: '[Your Name]'
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Server responded with ${response.status}`);
+          }
+          
+          // Get the file blob
+          const blob = await response.blob();
+          
+          // Create download link
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          
+          // Generate filename
+          const jobTitle = currentJobForCoverLetter?.title || 'Job';
+          const company = currentJobForCoverLetter?.company || 'Company';
+          const fileName = `Cover_Letter_${jobTitle.replace(/[^a-zA-Z0-9]/g, '_')}_${company.replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
+          
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          
+          console.log('✅ Word document downloaded:', fileName);
+          
+        } catch (error) {
+          console.error('❌ Error downloading cover letter:', error);
+          alert('Failed to download cover letter. Please try again.');
+        }
       }
     </script>
   </body>

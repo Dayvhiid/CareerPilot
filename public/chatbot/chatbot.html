@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Resume Builder Chat</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#135bec",
+              "background-light": "#f6f6f8",
+              "background-dark": "#101622",
+            },
+            fontFamily: {
+              display: ["Inter"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "1rem",
+              xl: "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      .glassmorphism {
+        background: rgba(255, 255, 255, 0.2);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .dark .glassmorphism {
+        background: rgba(16, 22, 34, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+    </style>
+    <style>
+      body {
+        min-height: max(884px, 100dvh);
+      }
+    </style>
+    <style>
+      body {
+        min-height: max(884px, 100dvh);
+      }
+    </style>
+  </head>
+  <body class="bg-background-light dark:bg-background-dark font-display">
+    <div class="relative flex flex-col h-screen w-full">
+      <header class="fixed top-0 left-0 right-0 z-10 glassmorphism">
+        <div class="flex items-center p-4">
+          <button onclick="goBack()" class="text-slate-800 dark:text-white">
+            <span class="material-symbols-outlined">arrow_back_ios_new</span>
+          </button>
+          <h1
+            class="flex-1 text-center text-lg font-bold text-slate-900 dark:text-white pr-6"
+          >
+            Resume Builder Chat
+          </h1>
+        </div>
+      </header>
+      <main class="flex-1 flex flex-col pt-20 pb-24 px-4 overflow-y-auto">
+        <!-- Progress Bar -->
+        <div class="mb-4 bg-white/50 dark:bg-black/20 rounded-full h-2">
+          <div id="progressBar" class="bg-primary h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+        
+        <!-- Chat Messages Container -->
+        <div id="chatMessages" class="flex flex-col gap-6 flex-1 overflow-y-auto">
+          <!-- Messages will be added here dynamically -->
+        </div>
+        
+        <!-- Typing Indicator -->
+        <div id="typingIndicator" class="hidden flex items-end gap-3 self-start max-w-xs mt-4">
+          <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-white text-lg">smart_toy</span>
+          </div>
+          <div class="relative flex flex-col gap-1">
+            <div class="bg-primary/10 dark:bg-primary/20 text-slate-800 dark:text-slate-200 rounded-lg rounded-bl-none p-3 shadow-md">
+              <div class="flex space-x-1">
+                <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Generate Resume Button -->
+        <div id="generateResumeBtn" class="hidden mt-6">
+          <button onclick="generateResume()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl text-lg transition-colors duration-300 shadow-lg">
+            🎉 Generate My Resume
+          </button>
+        </div>
+      </main>
+      <footer class="fixed bottom-0 left-0 right-0 p-4 glassmorphism">
+        <div class="flex items-center gap-3">
+          <input
+            id="messageInput"
+            class="flex-1 bg-white/50 dark:bg-black/20 border-0 rounded-full h-12 px-5 text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-primary/50 transition-all duration-300"
+            placeholder="Type your message..."
+            type="text"
+            onkeypress="handleKeyPress(event)"
+          />
+          <button
+            id="sendButton"
+            onclick="sendMessage()"
+            class="w-12 h-12 flex items-center justify-center bg-primary rounded-full text-white shrink-0 shadow-lg hover:bg-primary/90 transition-colors duration-300"
+          >
+            <span class="material-symbols-outlined">send</span>
+          </button>
+        </div>
+        <div class="h-safe-area-bottom"></div>
+      </footer>
+    </div>
+
+    <script>
+      // Global variables
+      let currentSessionId = null;
+      let currentState = 'welcome';
+      let isProcessing = false;
+      const API_BASE_URL = 'http://localhost:4000/api';
+
+      // Initialize chatbot
+      document.addEventListener('DOMContentLoaded', function() {
+        startConversation();
+      });
+
+      // Start new conversation
+      async function startConversation() {
+        try {
+          console.log('🚀 Starting new conversation...');
+          
+          const response = await fetch(`${API_BASE_URL}/chatbot/start`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Server responded with ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log('✅ Conversation started:', data);
+          
+          currentSessionId = data.sessionId;
+          currentState = data.state;
+          
+          // Add welcome message
+          addBotMessage(data.response);
+          updateProgress(data.progress || 0);
+          
+        } catch (error) {
+          console.error('❌ Error starting conversation:', error);
+          addBotMessage("Sorry, I'm having trouble connecting. Please refresh the page and try again.");
+        }
+      }
+
+      // Send user message
+      async function sendMessage() {
+        const input = document.getElementById('messageInput');
+        const message = input.value.trim();
+        
+        if (!message || isProcessing) return;
+        
+        // Add user message to chat
+        addUserMessage(message);
+        input.value = '';
+        
+        // Show typing indicator
+        showTypingIndicator();
+        isProcessing = true;
+        
+        try {
+          console.log('💬 Sending message:', message);
+          
+          const response = await fetch(`${API_BASE_URL}/chatbot/message`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              message: message,
+              sessionId: currentSessionId
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Server responded with ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log('✅ Received response:', data);
+          
+          // Hide typing indicator and add bot response
+          hideTypingIndicator();
+          addBotMessage(data.response);
+          
+          // Update state and progress
+          currentState = data.state;
+          updateProgress(data.progress || 0);
+          
+          // Show generate button if completed
+          if (data.state === 'completed') {
+            showGenerateButton();
+          }
+          
+        } catch (error) {
+          console.error('❌ Error sending message:', error);
+          hideTypingIndicator();
+          addBotMessage("Sorry, I encountered an error. Please try again.");
+        } finally {
+          isProcessing = false;
+        }
+      }
+
+      // Generate resume
+      async function generateResume() {
+        try {
+          console.log('📄 Generating resume...');
+          
+          const response = await fetch(`${API_BASE_URL}/chatbot/generate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              sessionId: currentSessionId
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Server responded with ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log('✅ Resume generated:', data);
+          
+          addBotMessage(data.message);
+          
+          // Add download options
+          setTimeout(() => {
+            addDownloadOptions();
+          }, 1000);
+          
+        } catch (error) {
+          console.error('❌ Error generating resume:', error);
+          addBotMessage("Sorry, I couldn't generate your resume. Please try again.");
+        }
+      }
+
+      // Handle Enter key press
+      function handleKeyPress(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+          event.preventDefault();
+          sendMessage();
+        }
+      }
+
+      // UI Helper Functions
+      function addUserMessage(message) {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'flex items-end gap-3 self-end max-w-xs';
+        messageDiv.innerHTML = `
+          <div class="relative flex flex-col gap-1">
+            <div class="bg-primary text-white rounded-lg rounded-br-none p-3 shadow-md">
+              <p class="text-sm">${escapeHtml(message)}</p>
+            </div>
+          </div>
+        `;
+        chatMessages.appendChild(messageDiv);
+        scrollToBottom();
+      }
+
+      function addBotMessage(message) {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'flex items-end gap-3 self-start max-w-sm';
+        
+        // Format message with line breaks and bold text
+        const formattedMessage = formatBotMessage(message);
+        
+        messageDiv.innerHTML = `
+          <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-white text-lg">smart_toy</span>
+          </div>
+          <div class="relative flex flex-col gap-1">
+            <div class="bg-primary/10 dark:bg-primary/20 text-slate-800 dark:text-slate-200 rounded-lg rounded-bl-none p-3 shadow-md">
+              <div class="text-sm">${formattedMessage}</div>
+            </div>
+          </div>
+        `;
+        chatMessages.appendChild(messageDiv);
+        scrollToBottom();
+      }
+
+      function formatBotMessage(message) {
+        return message
+          .replace(/\n/g, '<br>')
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/🚀|💬|📝|👋|💼|🎓|💪|🔥|🛠️|🎯|🔗|📋|👤|🎉|📄/g, '<span class="text-lg">$&</span>');
+      }
+
+      function showTypingIndicator() {
+        document.getElementById('typingIndicator').classList.remove('hidden');
+        scrollToBottom();
+      }
+
+      function hideTypingIndicator() {
+        document.getElementById('typingIndicator').classList.add('hidden');
+      }
+
+      function updateProgress(percentage) {
+        const progressBar = document.getElementById('progressBar');
+        progressBar.style.width = `${percentage}%`;
+      }
+
+      function showGenerateButton() {
+        document.getElementById('generateResumeBtn').classList.remove('hidden');
+        scrollToBottom();
+      }
+
+      function addDownloadOptions() {
+        const chatMessages = document.getElementById('chatMessages');
+        const downloadDiv = document.createElement('div');
+        downloadDiv.className = 'flex items-end gap-3 self-start max-w-sm';
+        downloadDiv.innerHTML = `
+          <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-white text-lg">smart_toy</span>
+          </div>
+          <div class="relative flex flex-col gap-2">
+            <div class="bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-700 rounded-lg p-4 shadow-md">
+              <p class="text-sm font-medium text-slate-800 dark:text-slate-200 mb-3">
+                🎉 Your resume is ready! You can now:
+              </p>
+              <div class="flex flex-col space-y-2">
+                <button onclick="viewResume()" class="flex items-center justify-center gap-3 w-full bg-primary text-white rounded-full py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors duration-300">
+                  <span class="material-symbols-outlined">visibility</span>
+                  View My Resume
+                </button>
+                <button onclick="downloadResume()" class="flex items-center justify-center gap-3 w-full bg-green-600 text-white rounded-full py-2.5 text-sm font-medium hover:bg-green-700 transition-colors duration-300">
+                  <span class="material-symbols-outlined">download</span>
+                  Download Resume
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+        chatMessages.appendChild(downloadDiv);
+        scrollToBottom();
+      }
+
+      function viewResume() {
+        // Redirect to resume page
+        window.location.href = '/public/resume/resume.html';
+      }
+
+      function downloadResume() {
+        // This would trigger the resume download
+        addBotMessage("Great! Your resume download should start shortly. You can also view it on the Resume page anytime! 🎉");
+      }
+
+      function scrollToBottom() {
+        setTimeout(() => {
+          const chatMessages = document.getElementById('chatMessages');
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }, 100);
+      }
+
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // Go back function
+      function goBack() {
+        window.history.back();
+      }
+    </script>
+    </div>
+  </body>
+</html>

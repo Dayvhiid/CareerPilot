@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Resume Builder Chat</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#135bec",
+            "background-light": "#f6f6f8",
+            "background-dark": "#101622",
+          },
+          fontFamily: {
+            "display": ["Inter"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "lg": "1rem",
+            "xl": "1.5rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .glassmorphism {
+      background: rgba(255, 255, 255, 0.2);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .dark .glassmorphism {
+      background: rgba(16, 22, 34, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex flex-col h-screen w-full">
+<header class="fixed top-0 left-0 right-0 z-10 glassmorphism">
+<div class="flex items-center p-4">
+<button class="text-slate-800 dark:text-white">
+<span class="material-symbols-outlined">arrow_back_ios_new</span>
+</button>
+<h1 class="flex-1 text-center text-lg font-bold text-slate-900 dark:text-white pr-6">Resume Builder</h1>
+</div>
+</header>
+<main class="flex-1 flex flex-col pt-20 pb-24 px-4">
+<div class="flex flex-col gap-6">
+<div class="flex items-end gap-3 self-start max-w-xs">
+<div class="w-10 h-10 rounded-full bg-cover bg-center shrink-0" style='background-image: url("https://lh3.googleusercontent.com/a/ACg8ocL_1Y-y-3_aYlE0QYyJc-XbWw_F1D4Qz_ZzXjI8B8jZk4=s96-c")'></div>
+<div class="relative flex flex-col gap-1">
+<div class="bg-primary/10 dark:bg-primary/20 text-slate-800 dark:text-slate-200 rounded-lg rounded-bl-none p-3 shadow-md">
+<p class="text-sm">Hi there! I'm here to help you create a standout resume. Let's start with your contact information. What's your full name?</p>
+</div>
+</div>
+</div>
+<div class="flex items-end gap-3 self-end max-w-xs">
+<div class="relative flex flex-col gap-1">
+<div class="bg-primary text-white rounded-lg rounded-br-none p-3 shadow-md">
+<p class="text-sm">John Doe</p>
+</div>
+</div>
+</div>
+<div class="flex items-end gap-3 self-start max-w-xs">
+<div class="w-10 h-10 rounded-full bg-cover bg-center shrink-0" style='background-image: url("https://lh3.googleusercontent.com/a/ACg8ocL_1Y-y-3_aYlE0QYyJc-XbWw_F1D4Qz_ZzXjI8B8jZk4=s96-c")'></div>
+<div class="relative flex flex-col gap-1">
+<div class="bg-primary/10 dark:bg-primary/20 text-slate-800 dark:text-slate-200 rounded-lg rounded-bl-none p-3 shadow-md">
+<p class="text-sm">Great, John! Now, what's your email address and phone number?</p>
+</div>
+</div>
+</div>
+<div class="flex items-end gap-3 self-end max-w-xs">
+<div class="relative flex flex-col gap-1">
+<div class="bg-primary text-white rounded-lg rounded-br-none p-3 shadow-md">
+<p class="text-sm">john.doe@email.com, 555-1234</p>
+</div>
+</div>
+</div>
+<div class="flex items-end gap-3 self-start max-w-xs">
+<div class="w-10 h-10 rounded-full bg-cover bg-center shrink-0" style='background-image: url("https://lh3.googleusercontent.com/a/ACg8ocL_1Y-y-3_aYlE0QYyJc-XbWw_F1D4Qz_ZzXjI8B8jZk4=s96-c")'></div>
+<div class="relative flex flex-col gap-2">
+<div class="bg-primary/10 dark:bg-primary/20 text-slate-800 dark:text-slate-200 rounded-lg rounded-bl-none p-3 shadow-md">
+<p class="text-sm">Excellent! Your resume is ready. You can download it in your preferred format.</p>
+</div>
+<div class="bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-700 rounded-lg p-4 shadow-md">
+<p class="text-sm font-medium text-slate-800 dark:text-slate-200 mb-3">Download your resume:</p>
+<div class="flex flex-col space-y-2">
+<button class="flex items-center justify-center gap-3 w-full bg-primary text-white rounded-full py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors duration-300">
+<span class="material-symbols-outlined">picture_as_pdf</span>
+                        Download as PDF
+                    </button>
+<button class="flex items-center justify-center gap-3 w-full bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-full py-2.5 text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors duration-300">
+<span class="material-symbols-outlined">description</span>
+                        Download as DOCX
+                    </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<footer class="fixed bottom-0 left-0 right-0 p-4 glassmorphism">
+<div class="flex items-center gap-3">
+<input class="flex-1 bg-white/50 dark:bg-black/20 border-0 rounded-full h-12 px-5 text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-primary/50 transition-all duration-300" placeholder="Type your message..." type="text"/>
+<button class="w-12 h-12 flex items-center justify-center bg-primary rounded-full text-white shrink-0 shadow-lg hover:bg-primary/90 transition-colors duration-300">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+<div class="h-safe-area-bottom"></div>
+</footer>
+</div>
+
+</body></html>

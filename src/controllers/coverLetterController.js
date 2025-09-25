@@ -2,6 +2,7 @@ const Resume = require('../models/Resume');
 const Job = require('../models/Job');
 const huggingFaceService = require('../services/huggingFaceService');
 const mongoose = require('mongoose');
+const { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } = require('docx');
 
 // Create a test user ObjectId for when auth is disabled
 const TEST_USER_ID = new mongoose.Types.ObjectId("507f1f77bcf86cd799439011");
@@ -135,6 +136,113 @@ exports.testHuggingFace = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to test Hugging Face connection',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Download cover letter as Word document
+ */
+exports.downloadCoverLetter = async (req, res) => {
+  try {
+    const { coverLetterText, jobTitle, company, applicantName } = req.body;
+    
+    if (!coverLetterText) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cover letter text is required'
+      });
+    }
+
+    console.log(`📄 Generating Word document for ${jobTitle} at ${company}`);
+
+    // Split cover letter into paragraphs
+    const paragraphs = coverLetterText.split('\n\n').filter(p => p.trim().length > 0);
+    
+    // Create Word document
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: paragraphs.map(paragraphText => {
+            const trimmedText = paragraphText.trim();
+            
+            // Check if this is the date
+            if (trimmedText.match(/\w+\s+\d{1,2},\s+\d{4}/)) {
+              return new Paragraph({
+                children: [
+                  new TextRun({
+                    text: trimmedText,
+                    size: 22
+                  })
+                ],
+                alignment: AlignmentType.RIGHT,
+                spacing: { after: 200 }
+              });
+            }
+            
+            // Check if this is a greeting
+            if (trimmedText.startsWith('Dear ')) {
+              return new Paragraph({
+                children: [
+                  new TextRun({
+                    text: trimmedText,
+                    size: 22
+                  })
+                ],
+                spacing: { after: 200 }
+              });
+            }
+            
+            // Check if this is the signature
+            if (trimmedText.startsWith('Sincerely,') || trimmedText.startsWith('Best regards,')) {
+              return new Paragraph({
+                children: [
+                  new TextRun({
+                    text: trimmedText,
+                    size: 22
+                  })
+                ],
+                spacing: { before: 200 }
+              });
+            }
+            
+            // Regular paragraph
+            return new Paragraph({
+              children: [
+                new TextRun({
+                  text: trimmedText,
+                  size: 22
+                })
+              ],
+              spacing: { after: 200 },
+              alignment: AlignmentType.JUSTIFIED
+            });
+          })
+        }
+      ]
+    });
+
+    // Generate the document buffer
+    const buffer = await Packer.toBuffer(doc);
+    
+    // Set response headers for file download
+    const fileName = `Cover_Letter_${(jobTitle || 'Job').replace(/[^a-zA-Z0-9]/g, '_')}_${(company || 'Company').replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
+    
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Length', buffer.length);
+    
+    res.send(buffer);
+    
+    console.log(`✅ Word document generated successfully: ${fileName}`);
+
+  } catch (error) {
+    console.error('❌ Error generating Word document:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate Word document',
       error: error.message
     });
   }

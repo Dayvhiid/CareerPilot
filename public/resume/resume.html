@@ -148,6 +148,28 @@
             </p>
           </div>
 
+          <!-- No Resume Section -->
+          <div id="noResumeSection" class="mb-8">
+            <div class="bg-gradient-to-r from-primary/10 to-indigo-500/10 dark:from-primary/20 dark:to-indigo-500/20 border border-primary/20 dark:border-primary/30 rounded-xl p-6">
+              <div class="text-center">
+                <div class="flex justify-center mb-4">
+                  <span class="material-symbols-outlined text-6xl text-primary">description</span>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  You don't have a resume?
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">
+                  Don't worry! CareerPilot has got you covered. Let our AI-powered chatbot help you build a professional resume from scratch.
+                </p>
+                <a href="../chatbot/chatbot.html" 
+                   class="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-semibold px-6 py-3 rounded-lg transition-colors">
+                  <span class="material-symbols-outlined">smart_toy</span>
+                  Build Resume with AI Assistant
+                </a>
+              </div>
+            </div>
+          </div>
+
           <!-- Existing Resume Display -->
           <div id="existingResume" class="mb-8 hidden">
             <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
@@ -606,6 +628,8 @@
 
       function showResumeLoadingState() {
         const existingResumeDiv = document.getElementById('existingResume');
+        const noResumeSection = document.getElementById('noResumeSection');
+        
         existingResumeDiv.innerHTML = `
           <div class="text-center py-8">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -613,15 +637,33 @@
           </div>
         `;
         existingResumeDiv.classList.remove('hidden');
+        
+        // Hide the No Resume Section while loading
+        if (noResumeSection) {
+          noResumeSection.classList.add('hidden');
+        }
       }
 
       function hideResumeLoadingState() {
         const existingResumeDiv = document.getElementById('existingResume');
+        const noResumeSection = document.getElementById('noResumeSection');
+        
         existingResumeDiv.classList.add('hidden');
+        
+        // Show the No Resume Section when no existing resume is found
+        if (noResumeSection) {
+          noResumeSection.classList.remove('hidden');
+        }
       }
 
       function showProcessingState(resume) {
         const existingResumeDiv = document.getElementById('existingResume');
+        const noResumeSection = document.getElementById('noResumeSection');
+        
+        // Hide the No Resume Section while processing
+        if (noResumeSection) {
+          noResumeSection.classList.add('hidden');
+        }
         existingResumeDiv.innerHTML = `
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between mb-4">
@@ -713,33 +755,6 @@
             console.error('Error polling processing status:', error);
           }
         }, 2000);
-      }
-
-      function showExistingResume(resume) {
-        const existingResumeDiv = document.getElementById('existingResume');
-        const fileName = document.getElementById('existingFileName');
-        const fileInfo = document.getElementById('existingFileInfo');
-
-        fileName.textContent = resume.filename;
-        fileInfo.textContent = `Uploaded on ${new Date(resume.uploadedAt).toLocaleDateString()}`;
-        
-        existingResumeDiv.classList.remove('hidden');
-
-        // Populate extracted data
-        populateExtractedData(resume.extractedData || {});
-
-        // View extracted data functionality (with null check)
-        const oldViewBtn = document.getElementById('viewExtractedDataBtn');
-        if (oldViewBtn) {
-          console.log('🔗 Adding event listener to old view button');
-          oldViewBtn.addEventListener('click', toggleExtractedData);
-        }
-
-        // Delete resume functionality (with null check)
-        const oldDeleteBtn = document.getElementById('deleteResumeBtn');
-        if (oldDeleteBtn) {
-          oldDeleteBtn.addEventListener('click', deleteResume);
-        }
       }
 
       function populateExtractedData(data) {
@@ -1253,7 +1268,15 @@
             });
 
             if (response.ok) {
+              const noResumeSection = document.getElementById('noResumeSection');
+              
               document.getElementById('existingResume').classList.add('hidden');
+              
+              // Show the No Resume Section when resume is deleted
+              if (noResumeSection) {
+                noResumeSection.classList.remove('hidden');
+              }
+              
               alert('Resume deleted successfully');
             }
           } catch (error) {
@@ -1348,6 +1371,7 @@
       function showExistingResume(resume) {
         console.log('🎯 showExistingResume called with:', resume);
         const existingResumeDiv = document.getElementById('existingResume');
+        const noResumeSection = document.getElementById('noResumeSection');
         console.log('📍 existingResumeDiv element:', existingResumeDiv ? 'Found' : 'Not found');
         
         existingResumeDiv.innerHTML = `
@@ -1401,6 +1425,11 @@
         `;
 
         existingResumeDiv.classList.remove('hidden');
+        
+        // Hide the No Resume Section when showing existing resume
+        if (noResumeSection) {
+          noResumeSection.classList.add('hidden');
+        }
         
         // Populate extracted data if available
         if (resume.extractedData) {
