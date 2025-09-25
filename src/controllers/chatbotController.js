@@ -550,8 +550,9 @@ function handleReviewState(session, message) {
   if (lowerMessage.includes('yes') || lowerMessage.includes('looks good') || lowerMessage.includes('correct')) {
     session.state = CONVERSATION_STATES.COMPLETED;
     return {
-      message: "Perfect! Your resume data is ready! 🎉\n\nClick the 'Generate Resume' button to create your professional resume. You'll be able to download it and use it for job applications!",
-      progress: 100
+      message: "Perfect! Your resume data is ready! 🎉\n\nClick the 'Generate Resume' button below to create your professional resume. You'll be able to download it and use it for job applications!",
+      progress: 100,
+      state: 'completed'
     };
   } else if (lowerMessage.includes('edit') || lowerMessage.includes('change') || lowerMessage.includes('modify')) {
     return {
@@ -622,7 +623,7 @@ function generateReviewMessage(data) {
     review += `🔗 **Professional Links:**\n${data.additionalInfo.links}\n\n`;
   }
   
-  review += `Does this look correct? Type 'yes' to generate your resume or 'edit' to make changes:`;
+  review += `Does this look correct? Type 'yes' to confirm and I'll show you the generate button, or type 'edit' to make changes:`;
   
   return review;
 }
