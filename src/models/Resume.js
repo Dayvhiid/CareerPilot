@@ -34,22 +34,50 @@ const resumeSchema = new mongoose.Schema({
     email: String,
     phone: String,
     location: String,
-    skills: [String],
-    jobTitles: [String],
-    companies: [String],
-    experience: [String],
-    education: [String],
-    languages: [String],
-    certifications: [String],
     summary: String,
-    generatedSummary: String, // AI-generated professional summary
-    yearsOfExperience: Number,
     currentJobTitle: String,
-    linkedinUrl: String,
-    githubUrl: String,
-    portfolioUrl: String,
+    yearsOfExperience: Number,
+    skills: [String],
     softSkills: [String],
     industryExperience: [String],
+    education: [
+      {
+        degree: String,
+        institution: String,
+        year: String,
+        location: String
+      }
+    ],
+    workExperience: [
+      {
+        position: String,
+        company: String,
+        duration: String,
+        location: String,
+        responsibilities: String,
+        contact: String
+      }
+    ],
+    projects: [
+      {
+        name: String,
+        description: String,
+        dates: String
+      }
+    ],
+    certificates: [
+      {
+        name: String,
+        issuer: String,
+        date: String
+      }
+    ],
+    interests: [String],
+    achievements: [String],
+    languages: [String],
+    // Temporarily removed links field to avoid schema conflicts
+    // Will store individual URLs in linkedinUrl, githubUrl, portfolioUrl instead
+    generatedSummary: String,
   },
   processingError: String,
   isProcessed: {
@@ -59,5 +87,5 @@ const resumeSchema = new mongoose.Schema({
 }, {
   timestamps: true,
 });
-module.exports = mongoose.model("Resume", resumeSchema);
+module.exports = mongoose.model("ResumeV2", resumeSchema);
 

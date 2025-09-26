@@ -377,9 +377,62 @@
         window.location.href = '/public/resume/resume.html';
       }
 
-      function downloadResume() {
-        // This would trigger the resume download
-        addBotMessage("Great! Your resume download should start shortly. You can also view it on the Resume page anytime! 🎉");
+      async function downloadResume() {
+        try {
+          console.log('📥 Starting resume download...');
+          
+          // Show loading message
+          addBotMessage("Preparing your professional PDF resume... 📄");
+          
+          const response = await fetch(`${API_BASE_URL}/chatbot/download`, {
+            method: 'GET',
+            // Remove Content-Type header to let browser handle the response properly
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Server responded with ${response.status}`);
+          }
+          
+          // Get the filename from the response headers
+          const contentDisposition = response.headers.get('Content-Disposition');
+          let filename = 'Professional_Resume.pdf';
+          
+          if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+            if (filenameMatch && filenameMatch[1]) {
+              filename = filenameMatch[1].replace(/['"]/g, '');
+            }
+          }
+          
+          console.log('📋 Downloading PDF:', filename);
+          
+          // Create PDF blob and download
+          const blob = await response.blob();
+          
+          // Verify it's a PDF
+          if (blob.type !== 'application/pdf' && !filename.endsWith('.pdf')) {
+            console.warn('⚠️ Response is not a PDF, got:', blob.type);
+            filename = filename.replace(/\.[^/.]+$/, '') + '.pdf';
+          }
+          
+          const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          
+          console.log('✅ PDF resume downloaded successfully');
+          addBotMessage("Perfect! Your professional PDF resume has been downloaded! 🎉📋 You can now use it for job applications!");
+          
+        } catch (error) {
+          console.error('❌ Error downloading resume:', error);
+          addBotMessage("Sorry, I couldn't download your PDF resume. Please try again or visit the Resume page to access it.");
+        }
       }
 
       function scrollToBottom() {

@@ -62,9 +62,12 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/coverletter', coverLetterRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 
-// Serve login page at root for testing
+// Serve landing page at root
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/auth/login.html'));
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
+
+// Serve static files from root (for direct access to HTML files)
+app.use(express.static(path.join(__dirname, '../public')));
 
 module.exports = app;

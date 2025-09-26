@@ -5,14 +5,21 @@ const {
   processMessage,
   startConversation,
   generateResume,
-  getProgress
+  getProgress,
+  downloadResume
 } = require('../controllers/chatbotController');
 
 // Chatbot routes - Temporarily removing auth for testing
 router.post('/start', startConversation);
 router.post('/message', processMessage);
 router.post('/generate', generateResume);
-router.get('/progress/:sessionId', getProgress);
+// Get conversation progress
+router.get('/progress', getProgress);
+
+// Download generated resume
+router.get('/download', downloadResume);
+
+module.exports = router;
 
 // Original routes with auth (uncomment when ready):
 // router.post('/start', auth, startConversation);
