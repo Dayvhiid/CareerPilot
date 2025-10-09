@@ -30,8 +30,10 @@ redisService.connect().then(success => {
 });
 
 // CORS middleware - Allow requests from frontend
+// Allow origins via environment variable (comma-separated) for easy deployment. Defaults include common localhost dev origins
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5500,http://127.0.0.1:5500,http://localhost:3000,http://localhost:4000').split(',').map(s => s.trim());
 app.use(cors({
-  origin: ['http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:3000', 'http://localhost:4000'], 
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']

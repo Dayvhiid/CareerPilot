@@ -191,7 +191,7 @@
         loading.classList.remove('hidden');
         
         try {
-          const response = await fetch('http://localhost:4000/api/jobs/resume-based');
+          const response = await fetch('/api/jobs/resume-based');
           const data = await response.json();
           
           if (data.success && data.jobs && data.jobs.length > 0) {
@@ -351,7 +351,7 @@
           console.log('🔍 Generating cover letter for job:', job.title);
           
           // Make API call to generate cover letter
-          const response = await fetch(`http://localhost:4000/api/coverletter/generate/${job._id || 'temp'}`, {
+          const response = await fetch(`/api/coverletter/generate/${job._id || 'temp'}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -412,7 +412,7 @@
           console.log('📄 Requesting Word document download...');
           
           // Make API call to generate Word document
-          const response = await fetch('http://localhost:4000/api/coverletter/download', {
+          const response = await fetch('/api/coverletter/download', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
