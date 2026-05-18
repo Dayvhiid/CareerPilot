@@ -1004,6 +1004,66 @@ function convertChatDataToResume(chatData) {
     return match ? parseInt(match[0]) : 0;
   };
 
+  const normalizeEmbeddedEntry = (entry, mapper) => {
+    if (!entry) {
+      return null;
+    }
+
+    if (typeof entry === 'string') {
+      const value = entry.trim();
+      return value ? mapper(value, {}) : null;
+    }
+
+    if (typeof entry === 'object') {
+      return mapper('', entry);
+    }
+
+    return null;
+  };
+
+  const normalizeEducation = (education) => {
+    if (!Array.isArray(education)) return [];
+
+    return education
+      .map(entry => normalizeEmbeddedEntry(entry, (value, item) => {
+        const degree = String(item.degree || item.title || item.name || value).trim();
+        const institution = String(item.institution || item.school || item.university || '').trim();
+        const year = String(item.year || item.date || '').trim();
+        const location = String(item.location || '').trim();
+
+        if (!degree && !institution && !year && !location) {
+          return null;
+        }
+
+        return { degree, institution, year, location };
+      }))
+      .filter(Boolean);
+  };
+
+  const normalizeProjects = (projects) => {
+    if (!Array.isArray(projects)) return [];
+
+    return projects
+      .map(entry => normalizeEmbeddedEntry(entry, (value, item) => ({
+        name: String(item.name || item.title || value).trim(),
+        description: String(item.description || '').trim(),
+        dates: String(item.dates || item.date || '').trim(),
+      })))
+      .filter(project => project && (project.name || project.description || project.dates));
+  };
+
+  const normalizeCertificates = (certificates) => {
+    if (!Array.isArray(certificates)) return [];
+
+    return certificates
+      .map(entry => normalizeEmbeddedEntry(entry, (value, item) => ({
+        name: String(item.name || item.title || value).trim(),
+        issuer: String(item.issuer || item.organization || '').trim(),
+        date: String(item.date || item.year || '').trim(),
+      })))
+      .filter(cert => cert && (cert.name || cert.issuer || cert.date));
+  };
+
   // Helper function to validate and clean links
   const cleanLinks = (links) => {
     if (!Array.isArray(links)) return [];
@@ -1034,7 +1094,7 @@ function convertChatDataToResume(chatData) {
     yearsOfExperience: parseYearsOfExperience(chatData.professionalSummary?.experience),
     
     // Education with detailed info
-    education: Array.isArray(chatData.education) ? chatData.education : [],
+    education: normalizeEducation(chatData.education),
     
     // Work Experience with detailed info - cleaned
     workExperience: cleanWorkExperience(chatData.workExperience),
@@ -1043,10 +1103,10 @@ function convertChatDataToResume(chatData) {
     skills: Array.isArray(chatData.skills) ? chatData.skills : [],
     
     // Projects with detailed info
-    projects: Array.isArray(chatData.projects) ? chatData.projects : [],
+    projects: normalizeProjects(chatData.projects),
     
     // Certificates with detailed info
-    certificates: Array.isArray(chatData.certificates) ? chatData.certificates : [],
+    certificates: normalizeCertificates(chatData.certificates),
     
     // Achievements
     achievements: Array.isArray(chatData.achievements) ? chatData.achievements : [],
@@ -1764,10 +1824,94 @@ function generateStunningHTML(data) {
   `;
 }
 
+/**
+ * Handle speech-to-text (audio to text transcription)
+ */
+const transcribeAudio = async (req, res) => {
+  try {
+    const huggingFaceService = require('../services/huggingFaceService');
+    
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({
+        success: false,
+        message: 'No audio file provided'
+      });
+    }
+
+    console.log('🎙️ Received audio for transcription:', req.file.originalname, 'Size:', req.file.size);
+
+    const result = await huggingFaceService.transcribeAudio(req.file.buffer);
+    
+    if (result.success) {
+      return res.json({
+        success: true,
+        text: result.text,
+        model: result.model
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: result.error
+      });
+    }
+  } catch (error) {
+    console.error('❌ Transcription error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to transcribe audio',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Handle text-to-speech (text to audio synthesis)
+ */
+const synthesizeSpeech = async (req, res) => {
+  try {
+    const huggingFaceService = require('../services/huggingFaceService');
+    const { text } = req.body;
+
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'No text provided or invalid text'
+      });
+    }
+
+    console.log('🔊 Synthesizing speech for text:', text.substring(0, 50) + '...');
+
+    const result = await huggingFaceService.synthesizeSpeech(text);
+
+    if (result.success) {
+      return res.json({
+        success: true,
+        audio: result.audio,
+        mimeType: result.mimeType,
+        model: result.model
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: result.error
+      });
+    }
+  } catch (error) {
+    console.error('❌ TTS synthesis error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to synthesize speech',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   processMessage,
   startConversation,
   generateResume,
   getProgress,
-  downloadResume
+  downloadResume,
+  transcribeAudio,
+  synthesizeSpeech
 };

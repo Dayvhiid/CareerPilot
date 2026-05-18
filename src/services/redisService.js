@@ -8,11 +8,19 @@ class RedisService {
 
   async connect() {
     try {
-      console.log('🔌 Attempting to connect to Redis at:', process.env.REDIS_URL || 'redis://localhost:6379');
+      const redisUrl = (process.env.REDIS_URL || '').trim();
+
+      if (!redisUrl) {
+        console.log('⚠️ Redis disabled: REDIS_URL is not set');
+        this.isConnected = false;
+        return false;
+      }
+
+      console.log('🔌 Attempting to connect to Redis at:', redisUrl);
       
       // Create Redis client with connection options
       this.client = createClient({
-        url: process.env.REDIS_URL || 'redis://localhost:6379',
+        url: redisUrl,
         socket: {
           connectTimeout: 5000,
           lazyConnect: true

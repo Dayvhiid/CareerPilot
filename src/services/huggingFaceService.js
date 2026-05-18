@@ -116,46 +116,76 @@ class HuggingFaceService {
       'the technical and soft skills required for this role';
 
     // Build a more sophisticated prompt
-    const prompt = `You are a professional career advisor writing a personalized cover letter. Create a compelling, professional cover letter that demonstrates genuine interest and qualifications.
+   const prompt = `
+You are an elite executive recruiter, hiring manager, and professional career coach with years of experience writing high-converting, industry-standard cover letters.
+
+Your task is to generate a highly personalized, ATS-optimized, professional cover letter tailored specifically to the applicant and the target role.
 
 CONTEXT:
-- Applicant: ${applicantName}
+- Applicant Name: ${applicantName}
 - Position: ${jobTitle}
 - Company: ${company}
 - Date: ${currentDate}
-- Applicant's Skills: ${skillsText}
-- Recent Experience: ${experienceText}
+- Skills: ${skillsText}
+- Experience: ${experienceText}
 - Education: ${degree}
 - Job Requirements: ${requirementsText}
 
-INSTRUCTIONS:
-Write a professional cover letter that:
-1. Opens with genuine enthusiasm for the specific role and company
-2. Highlights 2-3 most relevant qualifications that match the job requirements
-3. Provides a specific example of relevant achievement or experience
-4. Shows knowledge of the company or industry
-5. Concludes with a strong call to action
-6. Uses professional but engaging tone
-7. Is concise (3-4 paragraphs maximum)
+OBJECTIVE:
+Write a compelling cover letter that positions the applicant as one of the strongest candidates for the role by clearly demonstrating:
+- Relevant experience
+- Technical and soft skills
+- Measurable impact
+- Alignment with company goals
+- Industry understanding
+- Ability to solve problems and contribute value immediately
 
-COVER LETTER:
+The letter should not just summarize qualifications — it should persuade the employer WHY this applicant is a better fit than other candidates.
 
-${currentDate}
+IMPORTANT WRITING RULES:
+- Sound natural, confident, intelligent, and human
+- Avoid robotic wording or generic AI phrases
+- Avoid clichés like "I am writing to express my interest"
+- Do NOT repeat the resume word-for-word
+- Tailor the content directly to the provided job requirements
+- Use strong professional language with persuasive tone
+- Emphasize achievements, impact, leadership, adaptability, initiative, and value creation
+- Use ATS-friendly keywords naturally
+- Keep the tone modern and professional
+- Never invent fake companies, achievements, or certifications
+- If experience is limited, emphasize transferable skills, learning ability, passion, and potential
 
-Dear Hiring Manager,
+STRUCTURE:
+1. Opening Paragraph
+   - Immediately capture attention
+   - Show enthusiasm for the role and company
+   - Mention why the applicant is genuinely interested
 
-I am excited to apply for the ${jobTitle} position at ${company}. Your commitment to innovation and excellence in the industry aligns perfectly with my professional values and career aspirations.
+2. Qualification & Experience Paragraph
+   - Match the applicant’s strongest skills and experience to the role requirements
+   - Mention relevant tools, technologies, or competencies
+   - Include 1–2 concrete examples of impact, achievements, or contributions
 
-With my background in ${experienceText} and expertise in ${skillsText}, I am well-positioned to contribute meaningfully to your team. My experience has equipped me with strong capabilities in ${requirementsText}, which I understand are crucial for success in this role.
+3. Why the Applicant Stands Out
+   - Clearly explain why the applicant would be a valuable addition to the company
+   - Highlight qualities that make the applicant a stronger option than other candidates
+   - Focus on problem-solving ability, adaptability, communication, leadership, innovation, collaboration, or business impact
 
-In my previous role, I successfully [specific achievement that demonstrates relevant skills and impact]. This experience has strengthened my ability to [relevant skill/competency] and deliver results that drive business objectives forward.
+4. Closing Paragraph
+   - End confidently and professionally
+   - Include a strong call to action
+   - Express appreciation without sounding desperate
 
-I am particularly drawn to ${company} because of [mention something specific about the company - innovation, market position, values, or recent achievements]. I would welcome the opportunity to discuss how my skills and enthusiasm can contribute to your team's continued success.
+OUTPUT REQUIREMENTS:
+- 300–500 words maximum
+- Professional business format
+- Use proper paragraph spacing
+- Return ONLY the final cover letter
+- Do not include placeholders like "[achievement]"
+- Do not include explanations or notes
 
-Thank you for considering my application. I look forward to hearing from you soon.
-
-Sincerely,
-${applicantName}`;
+Generate the final polished cover letter now.
+`;
 
     return prompt;
   }
@@ -279,6 +309,107 @@ ${applicantName}`;
     } catch (error) {
       console.error('❌ Hugging Face connection failed:', error.message);
       return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Transcribe audio to text using Whisper (STT)
+   * Accepts audio blob/buffer and returns transcribed text
+   */
+  async transcribeAudio(audioBuffer) {
+    try {
+      console.log('🎙️ Transcribing audio with Whisper...');
+      
+      // Use Whisper model for speech-to-text
+      // Note: Model may require authorization, fallback to a simpler approach if needed
+      try {
+        const response = await this.hf.automaticSpeechRecognition({
+          model: 'openai/whisper-small',
+          data: audioBuffer
+        });
+
+        console.log('✅ Transcription successful:', response.text);
+        return {
+          success: true,
+          text: response.text,
+          model: 'openai/whisper-small'
+        };
+      } catch (whisperError) {
+        console.log('⚠️  Whisper model failed, trying alternative model...');
+        // Fallback to a more accessible model
+        const altResponse = await this.hf.automaticSpeechRecognition({
+          model: 'facebook/wav2vec2-base-960h',
+          data: audioBuffer
+        });
+        console.log('✅ Transcription successful (fallback):', altResponse.text);
+        return {
+          success: true,
+          text: altResponse.text,
+          model: 'facebook/wav2vec2-base-960h'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Transcription error:', error.message);
+      return {
+        success: false,
+        error: error.message,
+        text: ''
+      };
+    }
+  }
+
+  /**
+   * Convert text to speech using high-quality model (TTS)
+   * Returns audio blob as base64 or buffer
+   */
+  async synthesizeSpeech(text) {
+    try {
+      console.log('🔊 Synthesizing speech:', text.substring(0, 50) + '...');
+      
+      // Try multiple TTS models, fallback to free options if needed
+      try {
+        // Try the high-quality VITS model first
+        const response = await this.hf.textToSpeech({
+          model: 'espnet/kan-bayashi_ljspeech_vits',
+          inputs: text
+        });
+
+        console.log('✅ TTS synthesis successful');
+        const buffer = await response.arrayBuffer();
+        const base64 = Buffer.from(buffer).toString('base64');
+        
+        return {
+          success: true,
+          audio: base64,
+          model: 'espnet/kan-bayashi_ljspeech_vits',
+          mimeType: 'audio/wav'
+        };
+      } catch (vitsError) {
+        console.log('⚠️  VITS model failed, trying alternative TTS...');
+        // Fallback to a more accessible TTS model
+        const response = await this.hf.textToSpeech({
+          model: 'Facebook/MMS-TTS-ENG',
+          inputs: text
+        });
+
+        console.log('✅ TTS synthesis successful (fallback)');
+        const buffer = await response.arrayBuffer();
+        const base64 = Buffer.from(buffer).toString('base64');
+        
+        return {
+          success: true,
+          audio: base64,
+          model: 'Facebook/MMS-TTS-ENG',
+          mimeType: 'audio/wav'
+        };
+      }
+    } catch (error) {
+      console.error('❌ TTS synthesis error:', error.message);
+      return {
+        success: false,
+        error: error.message,
+        audio: null
+      };
     }
   }
 }

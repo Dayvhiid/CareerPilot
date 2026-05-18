@@ -1,476 +1,1273 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>AI Career Assistant - Job Listings</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com" rel="preconnect" />
-    <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
-      rel="stylesheet"
-    />
-    <script>
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              primary: "#135bec",
-              "background-light": "#f6f6f8",
-              "background-dark": "#101622",
-            },
-            fontFamily: {
-              display: ["Inter"],
-            },
-            borderRadius: {
-              DEFAULT: "0.5rem",
-              lg: "1rem",
-              xl: "1.5rem",
-              full: "9999px",
-            },
-          },
-        },
-      };
-    </script>
-    <style>
-      .material-symbols-outlined {
-        font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-      }
-    </style>
-    <style>
-      body {
-        min-height: max(884px, 100dvh);
-      }
-    </style>
-  </head>
-  <body class="bg-background-light dark:bg-background-dark font-display">
-    <div class="flex flex-col h-screen justify-between">
-      <div class="flex-grow overflow-y-auto">
-        <header
-          class="sticky top-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm z-10 p-4"
-        >
-          <div class="flex items-center justify-between">
-            <button class="text-gray-800 dark:text-white" onclick="goBack()">
-              <span class="material-symbols-outlined">arrow_back_ios_new</span>
-            </button>
-            <h1 class="text-lg font-bold text-gray-900 dark:text-white">
-              Jobs
-            </h1>
-            <div class="w-8"></div>
-          </div>
-        </header>
-        <main class="p-4">
-          <div class="mb-4 text-center">
-            <div id="loading" class="hidden">
-              <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <p class="mt-2 text-gray-600 dark:text-gray-400">Finding jobs based on your resume...</p>
-            </div>
-          </div>
-          <div id="jobsList" class="space-y-4">
-            <!-- Jobs will be loaded here automatically based on resume data -->
-          </div>
-          <div id="noJobs" class="hidden text-center py-8">
-            <div class="text-gray-400 dark:text-gray-500">
-              <span class="material-symbols-outlined text-6xl mb-4 block">work_off</span>
-              <h3 class="text-lg font-semibold mb-2">No jobs found</h3>
-              <p>Upload a resume first to get personalized job recommendations</p>
-            </div>
-          </div>
-        </main>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareerPilot — Find Jobs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #08080E;
+      --surf:   #0F0F1A;
+      --surf2:  #161628;
+      --glass:  rgba(255,255,255,0.04);
+      --gold:   #C9973A;
+      --gold-b: #E8B45A;
+      --gold-d: rgba(201,151,58,0.35);
+      --tp:     #F0EDE6;
+      --ts:     #8A8580;
+      --tt:     #484644;
+      --bs:     rgba(201,151,58,0.12);
+      --bm:     rgba(201,151,58,0.28);
+      --bst:    rgba(201,151,58,0.55);
+      --glow:   0 0 60px rgba(201,151,58,0.13);
+      --glow-h: 0 0 30px rgba(201,151,58,0.38);
+      --r-sm:   6px;
+      --r-md:   10px;
+      --r-lg:   18px;
+      --r-xl:   26px;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(var(--bs) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bs) 1px, transparent 1px);
+      background-size: 60px 60px;
+      color: var(--tp);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -20%; left: 50%;
+      transform: translateX(-50%);
+      width: 1000px; height: 1000px;
+      background: radial-gradient(ellipse, rgba(201,151,58,0.07) 0%, transparent 65%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── HEADER ─────────────────────────────── */
+    .header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 72px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 clamp(1.5rem, 5vw, 3rem);
+      background: rgba(8,8,14,0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--bs);
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none;
+    }
+    .logo-mark {
+      width: 32px; height: 32px;
+      border: 1px solid var(--gold); border-radius: var(--r-sm);
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(201,151,58,0.08); flex-shrink: 0;
+    }
+    .logo-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300; font-size: 1.35rem;
+      color: var(--tp); letter-spacing: 0.01em;
+    }
+
+    .nav {
+      display: flex; align-items: center; gap: 0.25rem;
+    }
+    .nav a {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300; font-size: 0.875rem;
+      color: var(--ts); text-decoration: none;
+      padding: 0.4rem 0.85rem; border-radius: var(--r-md);
+      transition: color 0.2s ease, background 0.2s ease;
+    }
+    .nav a:hover { color: var(--tp); background: rgba(255,255,255,0.04); }
+    .nav a.active {
+      color: var(--gold);
+      background: rgba(201,151,58,0.08);
+      border: 1px solid var(--bs);
+    }
+
+    .header-actions { display: flex; align-items: center; gap: 0.75rem; }
+
+    .btn-icon {
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--bs); border-radius: var(--r-md);
+      background: transparent; color: var(--ts); font-size: 17px;
+      cursor: pointer; transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-icon:hover { border-color: var(--bm); color: var(--tp); }
+
+    /* ─── PAGE BODY ──────────────────────────── */
+    .page-body {
+      padding-top: 72px;
+      position: relative; z-index: 1;
+      flex: 1; display: flex; flex-direction: column;
+    }
+
+    .container {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 clamp(1.5rem, 5vw, 3rem);
+      width: 100%;
+    }
+
+    /* ─── PAGE HERO ──────────────────────────── */
+    .page-hero {
+      padding: clamp(2.5rem, 5vw, 4rem) 0 2rem;
+      animation: fadeUp 0.6s ease both 0.05s;
+    }
+
+    .sec-eyebrow {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 1rem;
+    }
+    .sec-eyebrow-bar { width: 24px; height: 1px; background: var(--gold); opacity: 0.7; }
+    .sec-eyebrow-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.63rem; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--gold);
+    }
+
+    .page-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300; font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1.1; color: var(--tp); margin-bottom: 0.5rem;
+    }
+    .page-title em { font-style: italic; color: var(--gold); }
+
+    .page-subtitle {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300; font-size: 0.95rem;
+      color: var(--ts); line-height: 1.65;
+    }
+
+    /* ─── FILTER BAR ─────────────────────────── */
+    .filter-bar {
+      display: flex; align-items: center;
+      gap: 0.65rem; flex-wrap: wrap;
+      padding-bottom: 1.75rem;
+      animation: fadeUp 0.6s ease both 0.12s;
+    }
+
+    .filter-pill {
+      display: flex; align-items: center; gap: 5px;
+      padding: 0.4rem 0.9rem;
+      border: 1px solid var(--bs); border-radius: 20px;
+      background: transparent; color: var(--ts);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.83rem; font-weight: 300;
+      cursor: pointer; transition: all 0.2s ease;
+    }
+    .filter-pill:hover { border-color: var(--bm); color: var(--tp); }
+    .filter-pill.active {
+      border-color: var(--gold); color: var(--gold);
+      background: rgba(201,151,58,0.07);
+    }
+    .filter-pill i { font-size: 13px; }
+
+    .filter-sep {
+      width: 1px; height: 20px;
+      background: var(--bs); flex-shrink: 0;
+    }
+
+    .results-count {
+      margin-left: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--tt);
+    }
+    .results-count span { color: var(--gold); }
+
+    /* ─── JOBS GRID ──────────────────────────── */
+    .jobs-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 1.5rem;
+      padding-bottom: 4rem;
+      align-items: start;
+    }
+
+    /* ─── JOB CARD ───────────────────────────── */
+    .jobs-list {
+      display: flex; flex-direction: column; gap: 1rem;
+      animation: fadeUp 0.65s ease both 0.18s;
+    }
+
+    .job-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--bs);
+      border-radius: var(--r-lg);
+      padding: 1.5rem;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .job-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0;
+      width: 3px; height: 100%;
+      background: var(--gold-d);
+      transition: background 0.3s ease;
+    }
+    .job-card:hover {
+      border-color: var(--bm);
+      box-shadow: var(--glow);
+      transform: translateY(-3px);
+    }
+    .job-card:hover::before { background: var(--gold); }
+    .job-card.featured { border-color: var(--bm); }
+    .job-card.featured::before { background: var(--gold); }
+
+    .job-card-top {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .job-company-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .company-logo {
+      width: 42px; height: 42px; flex-shrink: 0;
+      border-radius: var(--r-md);
+      background: var(--surf2);
+      border: 1px solid var(--bs);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem; font-weight: 500;
+      color: var(--gold); text-transform: uppercase;
+    }
+
+    .job-meta {}
+    .job-company {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300; font-size: 0.82rem; color: var(--ts);
+      margin-bottom: 0.15rem;
+    }
+    .job-title {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500; font-size: 1rem; color: var(--tp);
+      line-height: 1.3;
+    }
+
+    /* Match score ring */
+    .match-ring-wrap {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 3px; flex-shrink: 0;
+    }
+    .match-ring {
+      width: 46px; height: 46px; position: relative;
+    }
+    .match-ring svg { transform: rotate(-90deg); }
+    .match-ring-track { stroke: var(--surf2); }
+    .match-ring-fill {
+      stroke: var(--gold); stroke-linecap: round;
+      stroke-dasharray: 120;
+      stroke-dashoffset: 120;
+      transition: stroke-dashoffset 1s ease 0.3s;
+    }
+    .match-ring-num {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem; font-weight: 500; color: var(--gold);
+    }
+    .match-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.52rem; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--tt);
+    }
+
+    .job-attrs {
+      display: flex; flex-wrap: wrap; gap: 0.4rem;
+      margin-bottom: 0.85rem;
+    }
+    .job-attr {
+      display: flex; align-items: center; gap: 4px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300; font-size: 0.78rem; color: var(--ts);
+    }
+    .job-attr i { font-size: 13px; color: var(--tt); }
+
+    .job-attr-sep { color: var(--tt); }
+
+    .job-desc {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300; font-size: 0.875rem;
+      color: var(--ts); line-height: 1.7;
+      margin-bottom: 1rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .job-skills {
+      display: flex; flex-wrap: wrap; gap: 0.35rem;
+      margin-bottom: 1.1rem;
+    }
+    .skill-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem; letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 0.22rem 0.55rem;
+      border: 1px solid var(--bs); border-radius: 20px;
+      color: var(--tt); background: var(--surf2);
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .job-card:hover .skill-tag { border-color: var(--bs); }
+
+    .job-salary {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400; font-size: 0.9rem; color: var(--tp);
+      margin-bottom: 1.1rem;
+    }
+    .job-salary span { color: var(--ts); font-weight: 300; font-size: 0.78rem; }
+
+    .job-card-divider {
+      height: 1px; background: var(--bs); margin-bottom: 1.1rem;
+    }
+
+    .job-actions {
+      display: flex; gap: 0.65rem;
+    }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 0.55rem 1.25rem;
+      background: var(--gold); color: #08080E;
+      border: none; border-radius: var(--r-md);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500; font-size: 0.85rem;
+      cursor: pointer; transition: background 0.25s, box-shadow 0.25s, transform 0.25s;
+    }
+    .btn-primary:hover { background: var(--gold-b); box-shadow: var(--glow-h); transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 0.5rem 1.1rem;
+      border: 1px solid var(--bm); border-radius: var(--r-md);
+      background: transparent; color: var(--ts);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem; font-weight: 300;
+      cursor: pointer; transition: all 0.25s ease;
+    }
+    .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ─── FEATURED BADGE ─────────────────────── */
+    .featured-badge {
+      position: absolute; top: 1rem; right: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem; font-weight: 500;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 0.22rem 0.6rem;
+      background: var(--gold); color: #08080E;
+      border-radius: 20px;
+    }
+
+    /* ─── LOADING SKELETON ───────────────────── */
+    #loading { display: none; flex-direction: column; gap: 1rem; }
+    #loading.visible { display: flex; }
+
+    .skeleton-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--bs);
+      border-radius: var(--r-lg);
+      padding: 1.5rem;
+      display: flex; flex-direction: column; gap: 0.85rem;
+    }
+    .sk {
+      border-radius: var(--r-sm);
+      background: linear-gradient(90deg, var(--surf) 25%, var(--surf2) 50%, var(--surf) 75%);
+      background-size: 400px 100%;
+      animation: shimmer 1.6s infinite;
+    }
+    @keyframes shimmer {
+      from { background-position: -400px 0; }
+      to   { background-position:  400px 0; }
+    }
+
+    /* ─── EMPTY STATE ────────────────────────── */
+    #noJobs { display: none; }
+    #noJobs.visible { display: flex; }
+
+    .empty-state {
+      flex-direction: column; align-items: center;
+      text-align: center; padding: 4rem 2rem; gap: 1.25rem;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--bs); border-radius: var(--r-xl);
+    }
+    .empty-icon {
+      width: 72px; height: 72px;
+      border-radius: var(--r-xl);
+      background: rgba(201,151,58,0.07);
+      border: 1px solid var(--bs);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px; color: var(--tt);
+    }
+    .empty-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300; font-size: 1.6rem; color: var(--ts);
+    }
+    .empty-sub {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300; font-size: 0.875rem;
+      color: var(--tt); max-width: 360px; line-height: 1.7;
+    }
+
+    /* ─── SIDEBAR ────────────────────────────── */
+    .sidebar {
+      display: flex; flex-direction: column; gap: 1.25rem;
+      animation: fadeUp 0.65s ease both 0.25s;
+      position: sticky; top: 88px;
+    }
+
+    .panel {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--bs);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+    }
+    .panel-head {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--bs);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .panel-title {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500; font-size: 0.875rem; color: var(--tp);
+    }
+    .panel-title i { color: var(--gold); font-size: 15px; }
+    .panel-body { padding: 1.25rem; }
+
+    /* Stats row */
+    .stat-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .stat-box {
+      background: var(--surf2);
+      border: 1px solid var(--bs);
+      border-radius: var(--r-md);
+      padding: 0.85rem;
+      text-align: center;
+    }
+    .stat-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300; font-size: 1.8rem;
+      color: var(--gold); line-height: 1;
+      margin-bottom: 0.2rem;
+    }
+    .stat-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.56rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--tt);
+    }
+
+    /* Applied jobs mini list */
+    .applied-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--bs);
+    }
+    .applied-item:last-child { border-bottom: none; }
+    .applied-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--gold-d); flex-shrink: 0;
+    }
+    .applied-title {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300; font-size: 0.83rem; color: var(--ts);
+      flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .applied-status {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem; letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 0.18rem 0.5rem;
+      border-radius: 20px;
+      background: rgba(201,151,58,0.1); color: var(--gold);
+      border: 1px solid var(--bs);
+      white-space: nowrap;
+    }
+
+    /* ─── MODAL OVERLAY ──────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(8,8,14,0.88);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1.5rem;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--surf);
+      border: 1px solid var(--bm);
+      border-radius: var(--r-xl);
+      width: 100%; max-width: 640px;
+      max-height: 88vh;
+      display: flex; flex-direction: column;
+      box-shadow: var(--glow);
+      transform: translateY(16px);
+      transition: transform 0.3s ease;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--bs);
+      flex-shrink: 0;
+    }
+    .modal-title-wrap { display: flex; align-items: center; gap: 10px; }
+    .modal-icon {
+      width: 34px; height: 34px;
+      border-radius: var(--r-md);
+      background: rgba(201,151,58,0.1);
+      border: 1px solid var(--bm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; color: var(--gold);
+    }
+    .modal-title {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500; font-size: 0.95rem; color: var(--tp);
+    }
+    .modal-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--tt);
+      margin-top: 1px;
+    }
+    .modal-close {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--bs); border-radius: var(--r-sm);
+      background: none; color: var(--ts); font-size: 17px;
+      cursor: pointer; transition: border-color 0.2s, color 0.2s;
+    }
+    .modal-close:hover { border-color: var(--bm); color: var(--tp); }
+
+    .modal-body {
+      flex: 1; overflow-y: auto; padding: 1.5rem;
+    }
+    .modal-body::-webkit-scrollbar { width: 3px; }
+    .modal-body::-webkit-scrollbar-thumb { background: var(--surf2); border-radius: 2px; }
+
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--bs);
+      display: flex; gap: 0.65rem;
+      flex-shrink: 0;
+    }
+
+    /* Modal states */
+    .modal-state { display: none; }
+    .modal-state.visible { display: block; }
+
+    /* Loading state */
+    .modal-loading {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 1rem; padding: 3rem 1rem; text-align: center;
+    }
+    .spinner-ring {
+      width: 48px; height: 48px; position: relative;
+    }
+    .spinner-ring svg { animation: spinRing 1.4s linear infinite; }
+    @keyframes spinRing {
+      to { transform: rotate(360deg); }
+    }
+    .spinner-ring circle {
+      stroke: var(--gold);
+      stroke-dasharray: 120;
+      stroke-dashoffset: 30;
+      stroke-linecap: round;
+      fill: none; stroke-width: 3;
+    }
+    .spinner-ring .track {
+      stroke: var(--surf2); stroke-dasharray: none;
+      stroke-dashoffset: 0;
+    }
+    .loading-title {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500; font-size: 0.95rem; color: var(--tp);
+    }
+    .loading-sub {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300; font-size: 0.83rem; color: var(--ts);
+    }
+
+    /* Cover letter textarea */
+    #coverLetterText {
+      width: 100%;
+      background: var(--surf2);
+      border: 1px solid var(--bs);
+      border-radius: var(--r-md);
+      padding: 1rem 1.1rem;
+      color: var(--ts);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300; font-size: 0.875rem;
+      line-height: 1.75; resize: vertical;
+      min-height: 320px; outline: none;
+      transition: border-color 0.25s;
+    }
+    #coverLetterText:focus { border-color: var(--gold); }
+
+    /* Error state */
+    .modal-error {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 1rem;
+      padding: 2.5rem 1rem; text-align: center;
+    }
+    .modal-error i { font-size: 36px; color: #f09595; }
+    .error-title {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500; font-size: 0.95rem; color: var(--tp);
+    }
+    .error-msg {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300; font-size: 0.875rem;
+      color: var(--ts); max-width: 380px; line-height: 1.7;
+    }
+
+    /* ─── ANIMATIONS ─────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(22px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── RESPONSIVE ─────────────────────────── */
+    @media (max-width: 960px) {
+      .jobs-layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .stat-grid { display: none; }
+    }
+    @media (max-width: 640px) {
+      .nav a:not(.active) { display: none; }
+      .job-actions { flex-direction: column; }
+      .btn-primary, .btn-ghost { width: 100%; justify-content: center; }
+      .filter-sep { display: none; }
+      .results-count { margin-left: 0; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── HEADER ─────────────────────────────── -->
+  <header class="header">
+    <a href="/" class="logo">
+      <div class="logo-mark">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" stroke="#C9973A" stroke-width="1.2" fill="none"/>
+          <circle cx="8" cy="8" r="2" fill="#C9973A"/>
+        </svg>
       </div>
-      <nav
-        class="bg-background-light dark:bg-background-dark border-t border-gray-200 dark:border-white/10 sticky bottom-0"
-      >
-        <div class="flex justify-around items-center px-2 pt-2 pb-5">
-          <a
-            class="flex flex-col items-center gap-1 text-gray-500 dark:text-gray-400"
-            href="#"
-          >
-            <span class="material-symbols-outlined">dashboard</span>
-            <span class="text-xs">Dashboard</span>
-          </a>
-          <a
-            class="flex flex-col items-center gap-1 text-gray-500 dark:text-gray-400"
-            href="#"
-          >
-            <span class="material-symbols-outlined">description</span>
-            <span class="text-xs">Resume</span>
-          </a>
-          <a class="flex flex-col items-center gap-1 text-primary" href="#">
-            <span
-              class="material-symbols-outlined"
-              style="font-variation-settings: 'FILL' 1"
-              >work</span
-            >
-            <span class="text-xs font-bold">Jobs</span>
-          </a>
-          <a
-            class="flex flex-col items-center gap-1 text-gray-500 dark:text-gray-400"
-            href="#"
-          >
-            <span class="material-symbols-outlined">person</span>
-            <span class="text-xs">Profile</span>
-          </a>
+      <span class="logo-text">CareerPilot</span>
+    </a>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="/resume">Resume</a>
+      <a href="/jobs" class="active">Find Jobs</a>
+      <a href="/chatbot">AI Coach</a>
+    </nav>
+    <div class="header-actions">
+      <button class="btn-icon" onclick="goBack()" aria-label="Go back" title="Back">
+        <i class="ti ti-arrow-left" aria-hidden="true"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── PAGE BODY ─────────────────────────── -->
+  <div class="page-body">
+    <div class="container">
+
+      <!-- Page hero -->
+      <div class="page-hero">
+        <div class="sec-eyebrow">
+          <div class="sec-eyebrow-bar"></div>
+          <span class="sec-eyebrow-text">AI-Matched Roles</span>
         </div>
-      </nav>
+        <h1 class="page-title">Jobs matched to <em>your profile.</em></h1>
+        <p class="page-subtitle">Roles ranked by how well they align with your resume, skills, and experience.</p>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <button class="filter-pill active" onclick="setFilter(this,'all')">
+          <i class="ti ti-layout-grid" aria-hidden="true"></i> All Roles
+        </button>
+        <button class="filter-pill" onclick="setFilter(this,'remote')">
+          <i class="ti ti-world" aria-hidden="true"></i> Remote
+        </button>
+        <button class="filter-pill" onclick="setFilter(this,'fulltime')">
+          <i class="ti ti-clock" aria-hidden="true"></i> Full-time
+        </button>
+        <button class="filter-pill" onclick="setFilter(this,'contract')">
+          <i class="ti ti-file-text" aria-hidden="true"></i> Contract
+        </button>
+        <div class="filter-sep" aria-hidden="true"></div>
+        <span class="results-count" id="resultsCount"><span id="countNum">—</span> results</span>
+      </div>
+
+      <!-- Two-column layout -->
+      <div class="jobs-layout">
+
+        <!-- LEFT: Job list -->
+        <div>
+
+          <!-- Loading skeletons -->
+          <div id="loading">
+            <div class="skeleton-card">
+              <div style="display:flex;gap:10px;align-items:center;">
+                <div class="sk" style="width:42px;height:42px;border-radius:var(--r-md);flex-shrink:0;"></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+                  <div class="sk" style="height:11px;width:40%;"></div>
+                  <div class="sk" style="height:14px;width:65%;"></div>
+                </div>
+              </div>
+              <div class="sk" style="height:11px;width:55%;"></div>
+              <div class="sk" style="height:60px;"></div>
+              <div style="display:flex;gap:6px;">
+                <div class="sk" style="height:22px;width:60px;border-radius:20px;"></div>
+                <div class="sk" style="height:22px;width:80px;border-radius:20px;"></div>
+                <div class="sk" style="height:22px;width:55px;border-radius:20px;"></div>
+              </div>
+            </div>
+            <div class="skeleton-card">
+              <div style="display:flex;gap:10px;align-items:center;">
+                <div class="sk" style="width:42px;height:42px;border-radius:var(--r-md);flex-shrink:0;"></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+                  <div class="sk" style="height:11px;width:35%;"></div>
+                  <div class="sk" style="height:14px;width:55%;"></div>
+                </div>
+              </div>
+              <div class="sk" style="height:11px;width:45%;"></div>
+              <div class="sk" style="height:60px;"></div>
+              <div style="display:flex;gap:6px;">
+                <div class="sk" style="height:22px;width:70px;border-radius:20px;"></div>
+                <div class="sk" style="height:22px;width:55px;border-radius:20px;"></div>
+              </div>
+            </div>
+            <div class="skeleton-card">
+              <div style="display:flex;gap:10px;align-items:center;">
+                <div class="sk" style="width:42px;height:42px;border-radius:var(--r-md);flex-shrink:0;"></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+                  <div class="sk" style="height:11px;width:50%;"></div>
+                  <div class="sk" style="height:14px;width:70%;"></div>
+                </div>
+              </div>
+              <div class="sk" style="height:11px;width:40%;"></div>
+              <div class="sk" style="height:60px;"></div>
+            </div>
+          </div>
+
+          <!-- Job cards injected here -->
+          <div class="jobs-list" id="jobsList"></div>
+
+          <!-- Empty state -->
+          <div id="noJobs" class="empty-state" role="status">
+            <div class="empty-icon"><i class="ti ti-briefcase-off" aria-hidden="true"></i></div>
+            <p class="empty-title">No matched roles yet</p>
+            <p class="empty-sub">Upload your resume so our AI can match you with the most relevant opportunities in your field.</p>
+            <a href="/resume" class="btn-ghost" style="border-color:var(--bm);color:var(--gold);">
+              <i class="ti ti-upload" aria-hidden="true"></i> Upload Resume
+            </a>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: Sidebar -->
+        <aside class="sidebar">
+
+          <!-- Stats -->
+          <div class="panel">
+            <div class="panel-head">
+              <i class="ti ti-chart-bar panel-title" style="color:var(--gold);font-size:15px;" aria-hidden="true"></i>
+              <span class="panel-title">Your Activity</span>
+            </div>
+            <div class="panel-body">
+              <div class="stat-grid">
+                <div class="stat-box">
+                  <div class="stat-num" id="statMatched">—</div>
+                  <div class="stat-label">Matched</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-num" id="statApplied">0</div>
+                  <div class="stat-label">Applied</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-num" id="statSaved">0</div>
+                  <div class="stat-label">Saved</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-num" id="statLetters">0</div>
+                  <div class="stat-label">Cover Letters</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent applications -->
+          <div class="panel" id="recentPanel" style="display:none;">
+            <div class="panel-head">
+              <i class="ti ti-history" style="color:var(--gold);font-size:15px;" aria-hidden="true"></i>
+              <span class="panel-title">Recent Applications</span>
+            </div>
+            <div class="panel-body" id="recentList"></div>
+          </div>
+
+          <!-- Tip -->
+          <div class="panel">
+            <div class="panel-head">
+              <i class="ti ti-bulb" style="color:var(--gold);font-size:15px;" aria-hidden="true"></i>
+              <span class="panel-title">Pro tip</span>
+            </div>
+            <div class="panel-body" style="display:flex;flex-direction:column;gap:0.65rem;">
+              <p style="font-family:'DM Sans',sans-serif;font-weight:300;font-size:0.83rem;color:var(--ts);line-height:1.65;">
+                A tailored cover letter increases your callback rate by up to <strong style="color:var(--tp);font-weight:500;">3×</strong>. Use the generator on each role you apply to.
+              </p>
+              <a href="/chatbot" style="display:inline-flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:300;color:var(--gold);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='var(--gold-b)'" onmouseout="this.style.color='var(--gold)'">
+                <i class="ti ti-robot" aria-hidden="true"></i> Open AI Career Coach →
+              </a>
+            </div>
+          </div>
+
+        </aside>
+
+      </div><!-- /jobs-layout -->
+    </div><!-- /container -->
+  </div><!-- /page-body -->
+
+  <!-- ─── COVER LETTER MODAL ────────────────── -->
+  <div class="modal-overlay" id="coverLetterModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon" aria-hidden="true"><i class="ti ti-file-description"></i></div>
+          <div>
+            <div class="modal-title" id="modalTitle">Cover Letter</div>
+            <div class="modal-sub" id="modalSub">AI-generated · ready to customise</div>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeCoverLetterModal()" aria-label="Close modal">
+          <i class="ti ti-x" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Loading -->
+        <div class="modal-state visible" id="coverLetterLoading">
+          <div class="modal-loading">
+            <div class="spinner-ring">
+              <svg width="48" height="48" viewBox="0 0 48 48">
+                <circle class="track" cx="24" cy="24" r="20"/>
+                <circle cx="24" cy="24" r="20"/>
+              </svg>
+            </div>
+            <p class="loading-title">Writing your cover letter…</p>
+            <p class="loading-sub">Our AI is tailoring this to the role and your resume.</p>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div class="modal-state" id="coverLetterContent">
+          <textarea id="coverLetterText" aria-label="Generated cover letter"></textarea>
+        </div>
+
+        <!-- Error -->
+        <div class="modal-state" id="coverLetterError">
+          <div class="modal-error">
+            <i class="ti ti-alert-circle" aria-hidden="true"></i>
+            <p class="error-title">Generation failed</p>
+            <p class="error-msg" id="errorMessage">Something went wrong. Please try again in a moment.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-primary" id="downloadBtn" onclick="downloadCoverLetter()" style="display:none;">
+          <i class="ti ti-download" aria-hidden="true"></i> Download .docx
+        </button>
+        <button class="btn-ghost" onclick="closeCoverLetterModal()">
+          <i class="ti ti-x" aria-hidden="true"></i> Close
+        </button>
+      </div>
     </div>
 
-    <!-- Cover Letter Modal -->
-    <div id="coverLetterModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-background-dark rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 class="text-xl font-bold text-gray-900 dark:text-white">Generate Cover Letter</h2>
-          <button onclick="closeCoverLetterModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-        <div class="p-4 overflow-y-auto max-h-[70vh]">
-          <div id="coverLetterLoading" class="hidden text-center py-8">
-            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p class="mt-2 text-gray-600 dark:text-gray-400">Generating your personalized cover letter...</p>
-          </div>
-          <div id="coverLetterContent" class="hidden">
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Your Cover Letter:</label>
-              <textarea 
-                id="coverLetterText" 
-                rows="15" 
-                class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm resize-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                placeholder="Your generated cover letter will appear here..."
-              ></textarea>
-            </div>
-            <div class="flex gap-2">
-              <button 
-                onclick="downloadCoverLetter()" 
-                class="flex-1 bg-primary text-white font-bold py-3 rounded-lg text-sm transition-opacity hover:opacity-90"
-              >
-                📄 Download as Word Doc
-              </button>
-              <button 
-                onclick="closeCoverLetterModal()" 
-                class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white font-bold py-3 rounded-lg text-sm transition-opacity hover:opacity-90"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-          <div id="coverLetterError" class="hidden text-center py-8">
-            <div class="text-red-500 dark:text-red-400">
-              <span class="material-symbols-outlined text-6xl mb-4 block">error</span>
-              <h3 class="text-lg font-semibold mb-2">Error Generating Cover Letter</h3>
-              <p id="errorMessage">Please try again later.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+  </div><!-- /modal -->
 
-    <script>
-      let currentJobs = [];
+  <!-- ─── SCRIPTS ───────────────────────────── -->
+  <script>
+    /* ═════════════════════════════════════════
+       GLOBALS
+    ═════════════════════════════════════════ */
+    const API_BASE   = '/api';
+    const token      = localStorage.getItem('token') || '';
+    let currentJobs  = [];
+    let activeFilter = 'all';
+    let appliedCount = 0;
+    let letterCount  = 0;
+    let recentApps   = [];
+    let currentCoverLetterText = '';
+    let currentCoverLetterJob  = null;
 
-      // Initialize page
-      document.addEventListener('DOMContentLoaded', function() {
-        loadResumeBasedJobs();
+    /* ═════════════════════════════════════════
+       INIT
+    ═════════════════════════════════════════ */
+    document.addEventListener('DOMContentLoaded', loadResumeBasedJobs);
+
+    /* ═════════════════════════════════════════
+       LOAD JOBS
+    ═════════════════════════════════════════ */
+    async function loadResumeBasedJobs() {
+      show('loading');
+      hide('noJobs');
+      document.getElementById('jobsList').innerHTML = '';
+
+      try {
+        const res  = await fetch(`${API_BASE}/jobs/resume-based`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (res.ok && data.jobs && data.jobs.length) {
+          currentJobs = data.jobs;
+          displayJobs(currentJobs);
+          document.getElementById('statMatched').textContent = currentJobs.length;
+        } else {
+          showEmpty();
+        }
+      } catch (err) {
+        console.error('Jobs load error:', err);
+        showEmpty();
+      } finally {
+        hide('loading');
+      }
+    }
+
+    function showEmpty() {
+      document.getElementById('jobsList').innerHTML = '';
+      el('noJobs').classList.add('visible');
+    }
+
+    /* ═════════════════════════════════════════
+       DISPLAY JOBS
+    ═════════════════════════════════════════ */
+    function displayJobs(jobs) {
+      const list = document.getElementById('jobsList');
+      el('noJobs').classList.remove('visible');
+
+      const filtered = activeFilter === 'all' ? jobs : jobs.filter(j => {
+        if (activeFilter === 'remote')   return (j.location || '').toLowerCase().includes('remote');
+        if (activeFilter === 'fulltime') return (j.employmentType || '').toLowerCase().includes('full');
+        if (activeFilter === 'contract') return (j.employmentType || '').toLowerCase().includes('contract');
+        return true;
       });
 
-      function goBack() {
-        window.history.back();
-      }
+      document.getElementById('countNum').textContent = filtered.length;
+      list.innerHTML = filtered.length
+        ? filtered.map((j, i) => createJobCard(j, i)).join('')
+        : `<div class="empty-state" style="display:flex;">
+             <div class="empty-icon"><i class="ti ti-filter-off"></i></div>
+             <p class="empty-title">No results for this filter</p>
+             <p class="empty-sub">Try a different filter or view all roles.</p>
+           </div>`;
 
-      async function loadResumeBasedJobs() {
-        const loading = document.getElementById('loading');
-        const jobsList = document.getElementById('jobsList');
-        const noJobs = document.getElementById('noJobs');
-        
-        loading.classList.remove('hidden');
-        
-        try {
-          console.log('🔍 Fetching resume-based jobs...');
-          const response = await fetch('/api/jobs/resume-based');
-          console.log('📊 Response status:', response.status);
-          console.log('📋 Response headers:', response.headers);
-          
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ Server error:', response.status, errorText);
-            throw new Error(`Server responded with ${response.status}: ${errorText}`);
-          }
-          
-          const data = await response.json();
-          console.log('✅ Received data:', data);
-          
-          if (data.success && data.jobs && data.jobs.length > 0) {
-            currentJobs = data.jobs;
-            displayJobs(currentJobs);
-            noJobs.classList.add('hidden');
-          } else {
-            console.log('⚠️ No jobs found or unsuccessful response');
-            if (data.message) {
-              console.log('📝 Server message:', data.message);
-            }
-            jobsList.innerHTML = '';
-            noJobs.classList.remove('hidden');
-          }
-        } catch (error) {
-          console.error('❌ Error loading resume-based jobs:', error);
-          console.error('❌ Error details:', error.message);
-          jobsList.innerHTML = '';
-          noJobs.classList.remove('hidden');
-        } finally {
-          loading.classList.add('hidden');
-        }
-      }
+      /* Animate match rings after DOM insert */
+      setTimeout(() => {
+        document.querySelectorAll('.match-ring-fill').forEach(ring => {
+          const pct = parseFloat(ring.dataset.pct || 0);
+          ring.style.strokeDashoffset = 120 - (120 * pct / 100);
+        });
+      }, 60);
+    }
 
-      function displayJobs(jobs) {
-        const jobsList = document.getElementById('jobsList');
-        
-        jobsList.innerHTML = jobs.map(job => createJobCard(job)).join('');
-      }
+    /* ═════════════════════════════════════════
+       CREATE JOB CARD
+    ═════════════════════════════════════════ */
+    function createJobCard(job, idx) {
+      const match   = job.matchScore ?? Math.floor(65 + Math.random() * 30);
+      const initials = (job.company || 'CO').substring(0, 2).toUpperCase();
+      const salary  = job.salaryMin && job.salaryMax
+        ? `$${formatNumber(job.salaryMin)} – $${formatNumber(job.salaryMax)} <span>/ year</span>`
+        : job.salaryMin ? `From $${formatNumber(job.salaryMin)} <span>/ year</span>` : '';
 
-      function createJobCard(job) {
-        const matchScore = job.matchScore ? Math.round(job.matchScore) : Math.floor(Math.random() * 30) + 70;
-        
-        // Format salary
-        let salaryDisplay = 'Salary not specified';
-        if (job.salaryMin && job.salaryMax) {
-          salaryDisplay = `₦${formatNumber(job.salaryMin)} - ₦${formatNumber(job.salaryMax)}`;
-        } else if (job.salaryMin) {
-          salaryDisplay = `From ₦${formatNumber(job.salaryMin)}`;
-        } else if (job.salaryMax) {
-          salaryDisplay = `Up to ₦${formatNumber(job.salaryMax)}`;
-        }
+      const skills = (job.skills || []).slice(0, 5).map(s =>
+        `<span class="skill-tag">${esc(s)}</span>`
+      ).join('');
 
-        return `
-          <div class="bg-white dark:bg-background-dark dark:border dark:border-white/10 rounded-xl p-4 flex flex-col gap-4 shadow-sm">
-            <div class="flex items-start gap-4">
-              <div class="w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center">
-                <span class="material-symbols-outlined text-primary">work</span>
-              </div>
-              <div class="flex-1">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <h2 class="font-bold text-gray-900 dark:text-white">
-                      ${job.title}
-                    </h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">${job.company}</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                      ${salaryDisplay}
-                    </p>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      📍 ${job.location} • ${job.employmentType || 'Full Time'}
-                    </p>
-                  </div>
-                  <div class="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-bold">
-                    ${matchScore}% Match
-                  </div>
-                </div>
-                ${job.description ? `
-                <p class="text-sm text-gray-600 dark:text-gray-300 mt-2 line-clamp-2">
-                  ${job.description.substring(0, 150)}${job.description.length > 150 ? '...' : ''}
-                </p>
-                ` : ''}
-                ${job.skills && job.skills.length > 0 ? `
-                <div class="flex flex-wrap gap-1 mt-2">
-                  ${job.skills.slice(0, 3).map(skill => `
-                    <span class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded text-xs">
-                      ${skill}
-                    </span>
-                  `).join('')}
-                  ${job.skills.length > 3 ? `<span class="text-xs text-gray-400">+${job.skills.length - 3} more</span>` : ''}
-                </div>
-                ` : ''}
+      const featured = idx === 0 ? 'featured' : '';
+      const featuredBadge = idx === 0 ? `<span class="featured-badge">Top Match</span>` : '';
+
+      /* Safely serialise job for onclick */
+      const jobData = encodeURIComponent(JSON.stringify(job));
+
+      return `
+        <div class="job-card ${featured}" data-id="${esc(job._id || '')}">
+          ${featuredBadge}
+          <div class="job-card-top">
+            <div class="job-company-row">
+              <div class="company-logo" aria-hidden="true">${initials}</div>
+              <div class="job-meta">
+                <div class="job-company">${esc(job.company || 'Company')}</div>
+                <div class="job-title">${esc(job.title || 'Role')}</div>
               </div>
             </div>
-            <div class="flex gap-2">
-              <button
-                class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white font-bold py-3 rounded-lg text-sm transition-opacity hover:opacity-90"
-                onclick="generateCoverLetter('${job._id || JSON.stringify(job).replace(/'/g, '&apos;')}')"
-              >
-                Generate Cover Letter
-              </button>
-              <button
-                class="flex-1 bg-primary text-white font-bold py-3 rounded-lg text-sm transition-opacity hover:opacity-90"
-                onclick="applyToJob('${job._id || ''}', '${job.applyUrl || job.jobUrl || '#'}')"
-              >
-                Apply Now
-              </button>
+            <div class="match-ring-wrap" title="${match}% match">
+              <div class="match-ring" aria-label="${match}% match">
+                <svg width="46" height="46" viewBox="0 0 46 46">
+                  <circle class="match-ring-track" cx="23" cy="23" r="19" fill="none" stroke-width="4"/>
+                  <circle class="match-ring-fill" cx="23" cy="23" r="19" fill="none" stroke-width="4"
+                    data-pct="${match}" style="stroke-dashoffset:120;"/>
+                </svg>
+                <div class="match-ring-num">${match}%</div>
+              </div>
+              <span class="match-label">Match</span>
             </div>
           </div>
-        `;
-      }
 
-      async function applyToJob(jobId, applyUrl) {
+          <div class="job-attrs">
+            ${job.location     ? `<span class="job-attr"><i class="ti ti-map-pin"></i>${esc(job.location)}</span><span class="job-attr-sep">·</span>` : ''}
+            ${job.employmentType ? `<span class="job-attr"><i class="ti ti-briefcase"></i>${esc(job.employmentType)}</span>` : ''}
+          </div>
+
+          ${salary ? `<div class="job-salary">${salary}</div>` : ''}
+
+          ${job.description ? `<p class="job-desc">${esc(job.description)}</p>` : ''}
+
+          ${skills ? `<div class="job-skills">${skills}</div>` : ''}
+
+          <div class="job-card-divider"></div>
+
+          <div class="job-actions">
+            <button class="btn-primary" onclick="applyToJob('${esc(job._id||'')}','${esc(job.applyUrl||job.jobUrl||job.url||'')}')">
+              <i class="ti ti-external-link" aria-hidden="true"></i> Apply Now
+            </button>
+            <button class="btn-ghost" onclick="generateCoverLetter('${esc(job._id || '')}')">
+              <i class="ti ti-file-description" aria-hidden="true"></i> Cover Letter
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    /* ═════════════════════════════════════════
+       FILTERS
+    ═════════════════════════════════════════ */
+    function setFilter(btn, filter) {
+      activeFilter = filter;
+      document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      displayJobs(currentJobs);
+    }
+
+    /* ═════════════════════════════════════════
+       APPLY
+    ═════════════════════════════════════════ */
+    async function applyToJob(jobId, applyUrl) {
+      if (jobId) {
         try {
-          // Mark as applied in our system
-          if (jobId && jobId !== 'undefined' && jobId !== '') {
-            const response = await fetch(`/api/jobs/${jobId}/apply`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              }
-            });
-          }
-          
-          // Open external application link
-          if (applyUrl && applyUrl !== '#' && applyUrl !== 'undefined') {
-            window.open(applyUrl, '_blank');
-          } else {
-            alert('Apply directly on the company website or contact them for application details.');
-          }
-        } catch (error) {
-          console.error('Error applying to job:', error);
-          // Still open the external link even if our tracking fails
-          if (applyUrl && applyUrl !== '#' && applyUrl !== 'undefined') {
-            window.open(applyUrl, '_blank');
-          }
-        }
-      }
-
-      function formatNumber(num) {
-        return new Intl.NumberFormat('en-NG').format(num);
-      }
-
-      // Cover Letter Functions
-      let currentJobForCoverLetter = null;
-
-      async function generateCoverLetter(jobData) {
-        try {
-          // Parse job data if it's a string (for jobs without IDs)
-          let job;
-          if (typeof jobData === 'string' && jobData.startsWith('{')) {
-            job = JSON.parse(jobData.replace(/&apos;/g, "'"));
-          } else {
-            // Find job by ID
-            job = currentJobs.find(j => j._id === jobData) || JSON.parse(jobData.replace(/&apos;/g, "'"));
-          }
-          
-          currentJobForCoverLetter = job;
-          
-          // Show modal and loading state
-          const modal = document.getElementById('coverLetterModal');
-          const loading = document.getElementById('coverLetterLoading');
-          const content = document.getElementById('coverLetterContent');
-          const error = document.getElementById('coverLetterError');
-          
-          modal.classList.remove('hidden');
-          modal.classList.add('flex');
-          loading.classList.remove('hidden');
-          content.classList.add('hidden');
-          error.classList.add('hidden');
-          
-          console.log('🔍 Generating cover letter for job:', job.title);
-          
-          // Make API call to generate cover letter
-          const response = await fetch(`/api/coverletter/generate/${job._id || 'temp'}`, {
+          await fetch(`${API_BASE}/jobs/${jobId}/apply`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              jobData: job
-            })
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
           });
-          
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Server responded with ${response.status}: ${errorText}`);
+        } catch (err) { console.error('Apply track error:', err); }
+      }
+
+      const job = currentJobs.find(j => j._id === jobId);
+      const destinationUrl = applyUrl && applyUrl !== '#' ? applyUrl : (job?.applyUrl || job?.jobUrl || job?.url || '');
+
+      if (destinationUrl) {
+        window.open(destinationUrl, '_blank', 'noopener,noreferrer');
+        appliedCount++;
+        document.getElementById('statApplied').textContent = appliedCount;
+        trackRecentApp(jobId);
+      } else {
+        alert('No application link available for this role.');
+      }
+    }
+
+    function trackRecentApp(jobId) {
+      const job = currentJobs.find(j => j._id === jobId);
+      if (!job) return;
+      recentApps.unshift(job);
+      recentApps = recentApps.slice(0, 4);
+      renderRecentApps();
+    }
+
+    function renderRecentApps() {
+      if (!recentApps.length) return;
+      show('recentPanel');
+      document.getElementById('recentList').innerHTML = recentApps.map(j => `
+        <div class="applied-item">
+          <div class="applied-dot"></div>
+          <span class="applied-title">${esc(j.title)} · ${esc(j.company)}</span>
+          <span class="applied-status">Applied</span>
+        </div>
+      `).join('');
+    }
+
+    /* ═════════════════════════════════════════
+       COVER LETTER
+    ═════════════════════════════════════════ */
+    async function generateCoverLetter(jobDataRaw) {
+      let jobData = {};
+      const rawValue = String(jobDataRaw || '').trim();
+
+      if (rawValue) {
+        const existingJob = currentJobs.find(j => String(j._id) === rawValue);
+        if (existingJob) {
+          jobData = existingJob;
+        } else {
+          try {
+            jobData = JSON.parse(rawValue);
+          } catch {
+            jobData = { _id: rawValue };
           }
-          
-          const data = await response.json();
-          console.log('✅ Cover letter generated:', data);
-          
-          if (data.success && data.coverLetter) {
-            // Show the generated cover letter
-            document.getElementById('coverLetterText').value = data.coverLetter;
-            loading.classList.add('hidden');
-            content.classList.remove('hidden');
-          } else {
-            throw new Error(data.message || 'Failed to generate cover letter');
-          }
-          
-        } catch (error) {
-          console.error('❌ Error generating cover letter:', error);
-          
-          // Show error state
-          const loading = document.getElementById('coverLetterLoading');
-          const content = document.getElementById('coverLetterContent');
-          const errorDiv = document.getElementById('coverLetterError');
-          const errorMessage = document.getElementById('errorMessage');
-          
-          loading.classList.add('hidden');
-          content.classList.add('hidden');
-          errorDiv.classList.remove('hidden');
-          errorMessage.textContent = error.message || 'Please try again later.';
         }
       }
 
-      function closeCoverLetterModal() {
-        const modal = document.getElementById('coverLetterModal');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-        currentJobForCoverLetter = null;
+      currentCoverLetterJob = jobData;
+      const jobId = jobData._id || rawValue || '';
+
+      if (!jobId) {
+        document.getElementById('errorMessage').textContent = 'No job ID was found for this role.';
+        openModal();
+        showModalState('error');
+        return;
       }
 
-      async function downloadCoverLetter() {
-        const coverLetterText = document.getElementById('coverLetterText').value;
-        if (!coverLetterText) {
-          alert('No cover letter to download');
-          return;
+      openModal();
+      showModalState('loading');
+      document.getElementById('downloadBtn').style.display = 'none';
+      document.getElementById('modalSub').textContent = jobData.title
+        ? `${esc(jobData.title)} at ${esc(jobData.company || '')} · AI-generated`
+        : 'AI-generated · ready to customise';
+
+      try {
+        const res  = await fetch(`${API_BASE}/coverletter/generate/${jobId}`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body:    JSON.stringify({ jobData }),
+        });
+        const data = await res.json();
+
+        if (res.ok && (data.coverLetter || data.content)) {
+          currentCoverLetterText = data.coverLetter || data.content;
+          document.getElementById('coverLetterText').value = currentCoverLetterText;
+          showModalState('content');
+          document.getElementById('downloadBtn').style.display = 'inline-flex';
+          letterCount++;
+          document.getElementById('statLetters').textContent = letterCount;
+        } else {
+          document.getElementById('errorMessage').textContent = data.msg || 'Generation failed. Please try again.';
+          showModalState('error');
         }
-        
-        try {
-          console.log('📄 Requesting Word document download...');
-          
-          // Make API call to generate Word document
-          const response = await fetch('/api/coverletter/download', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              coverLetterText: coverLetterText,
-              jobTitle: currentJobForCoverLetter?.title || 'Job',
-              company: currentJobForCoverLetter?.company || 'Company',
-              applicantName: '[Your Name]'
-            })
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Server responded with ${response.status}`);
-          }
-          
-          // Get the file blob
-          const blob = await response.blob();
-          
-          // Create download link
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          
-          // Generate filename
-          const jobTitle = currentJobForCoverLetter?.title || 'Job';
-          const company = currentJobForCoverLetter?.company || 'Company';
-          const fileName = `Cover_Letter_${jobTitle.replace(/[^a-zA-Z0-9]/g, '_')}_${company.replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
-          
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-          
-          console.log('✅ Word document downloaded:', fileName);
-          
-        } catch (error) {
-          console.error('❌ Error downloading cover letter:', error);
-          alert('Failed to download cover letter. Please try again.');
-        }
+      } catch (err) {
+        console.error('Cover letter error:', err);
+        document.getElementById('errorMessage').textContent = 'Network error. Please check your connection and try again.';
+        showModalState('error');
       }
-    </script>
-  </body>
+    }
+
+    async function downloadCoverLetter() {
+      const text    = document.getElementById('coverLetterText').value;
+      const job     = currentCoverLetterJob || {};
+      const user    = JSON.parse(localStorage.getItem('user') || '{}');
+
+      try {
+        const res  = await fetch(`${API_BASE}/coverletter/download`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body:    JSON.stringify({
+            coverLetterText: text,
+            jobTitle: job.title, company: job.company,
+            applicantName: user.name,
+          }),
+        });
+        const blob = await res.blob();
+        const name = `cover-letter-${(job.company || 'job').toLowerCase().replace(/\s+/g,'-')}.docx`;
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url; a.download = name; a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Download error:', err);
+        alert('Download failed. Please try again.');
+      }
+    }
+
+    function openModal()  { document.getElementById('coverLetterModal').classList.add('open'); }
+    function closeCoverLetterModal() {
+      document.getElementById('coverLetterModal').classList.remove('open');
+      currentCoverLetterText = '';
+      currentCoverLetterJob  = null;
+    }
+
+    function showModalState(state) {
+      ['coverLetterLoading','coverLetterContent','coverLetterError'].forEach(id => {
+        document.getElementById(id).classList.remove('visible');
+      });
+      const map = { loading:'coverLetterLoading', content:'coverLetterContent', error:'coverLetterError' };
+      document.getElementById(map[state]).classList.add('visible');
+    }
+
+    /* ═════════════════════════════════════════
+       HELPERS
+    ═════════════════════════════════════════ */
+    function show(id) { const e = el(id); if (e) { e.style.display = ''; e.classList.add('visible'); } }
+    function hide(id) { const e = el(id); if (e) { e.style.display = 'none'; e.classList.remove('visible'); } }
+    function el(id)   { return document.getElementById(id); }
+    function esc(str) {
+      return String(str || '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+    }
+    function formatNumber(n) {
+      return Number(n).toLocaleString('en-US');
+    }
+    function goBack() { window.history.back(); }
+
+    /* Close modal on overlay click */
+    document.getElementById('coverLetterModal').addEventListener('click', function(e) {
+      if (e.target === this) closeCoverLetterModal();
+    });
+
+    /* Close modal on Escape */
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeCoverLetterModal();
+    });
+  </script>
+
+</body>
 </html>

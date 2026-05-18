@@ -98,12 +98,12 @@ exports.getRecommendedJobs = async (req, res) => {
     const userId = req.user?.id || TEST_USER_ID;
     const { page = 1, limit = 20 } = req.query;
     
-    console.log(`🎯 Getting recommended jobs for user: ${userId}`);
+    console.log(` Getting recommended jobs for user: ${userId}`);
 
     // Get user's resume data
     const resume = await Resume.findOne({ userId });
     if (!resume || !resume.extractedData) {
-      // If no resume, get recent jobs
+    
       return await getRecentJobs(req, res);
     }
 
@@ -684,23 +684,47 @@ exports.getResumeBasedJobs = async (req, res) => {
     // If no new jobs were fetched, try to return relevant existing jobs from database
     if (savedJobs.length === 0) {
       console.log('🔍 Searching existing jobs in database...');
-      
-      // Build a regex pattern for matching job titles and descriptions
-      const searchPattern = searchQueries.join('|');
-      const regex = new RegExp(searchPattern, 'i');
-      
-      const existingJobs = await Job.find({
-        $or: [
-          { title: regex },
-          { description: regex },
-          { company: regex }
-        ]
-      })
-      .limit(parseInt(limit))
-      .sort({ createdAt: -1 });
-      
+
+      // Safely escape resume-derived queries for use in RegExp
+      const escapeRegex = (s = '') => String(s).replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
+      const cleanedQueries = searchQueries
+        .map(q => (q || '').toString().trim())
+        .filter(Boolean)
+        .map(q => escapeRegex(q));
+
+      let existingJobs = [];
+
+      if (cleanedQueries.length > 0) {
+        try {
+          const searchPattern = cleanedQueries.join('|');
+          const regex = new RegExp(searchPattern, 'i');
+
+          existingJobs = await Job.find({
+            $or: [
+              { title: regex },
+              { description: regex },
+              { company: regex }
+            ]
+          })
+          .limit(parseInt(limit))
+          .sort({ createdAt: -1 });
+
+          console.log(`📊 Regex search used (pattern=${searchPattern}) — found ${existingJobs.length} jobs`);
+        } catch (regexError) {
+          console.error('❌ Regex search failed, falling back to broader DB query:', regexError.message);
+        }
+      }
+
+      // If regex search returned nothing, fall back to recent active jobs to avoid empty UX
+      if (!existingJobs || existingJobs.length === 0) {
+        console.log('💡 Falling back to recent active jobs');
+        existingJobs = await Job.find({ isActive: true })
+          .limit(parseInt(limit))
+          .sort({ postedDate: -1 });
+      }
+
       savedJobs = existingJobs;
-      console.log(`📊 Found ${savedJobs.length} existing jobs in database`);
+      console.log(`📊 Returning ${savedJobs.length} existing jobs from database`);
     }
     
     console.log(`✅ Found ${savedJobs.length} jobs based on resume data`);

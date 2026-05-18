@@ -13,7 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "@huggingface/hub": "^2.6.5",
-    "@huggingface/inference": "^4.8.0",
+    "@huggingface/inference": "^4.13.15",
     "@nlpjs/basic": "^5.0.0-alpha.5",
     "@nlpjs/lang-en": "^5.0.0-alpha.5",
     "axios": "^1.12.2",
@@ -44,5 +44,8 @@
     "redis": "^5.8.2",
     "textract": "^2.5.0",
     "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }

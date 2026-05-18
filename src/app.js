@@ -14,12 +14,12 @@ const chatbotRoutes = require('./routes/chatbotRoutes');
 const app = express();
 
 // Initialize Redis connection (non-blocking)
-console.log('🔧 Initializing Redis connection...');
+console.log('🔧 Initializing Redis connection if configured...');
 redisService.connect().then(success => {
   if (success) {
     console.log('🎉 Redis connection established successfully');
   } else {
-    console.warn('⚠️ Redis connection failed but server will continue');
+    console.warn('⚠️ Redis not configured or unavailable; server will continue without cache');
   }
 }).catch(err => {
   console.error('❌ Redis connection error details:');

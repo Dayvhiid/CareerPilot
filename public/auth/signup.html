@@ -1,323 +1,923 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>CareerPilot --Sign in</title>
-    <link href="https://fonts.googleapis.com" rel="preconnect" />
-    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&amp;display=swap"
-      rel="stylesheet"
-    />
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script>
-      function redirectToDevicePage() {
-        const isMobile =
-          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-            navigator.userAgent
-          );
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareerPilot — Create Account</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
 
-        if (isMobile) {
-          window.location.href = "signupmobile.html";
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #08080E;
+      --surf:   #0F0F1A;
+      --surf2:  #161628;
+      --glass:  rgba(255,255,255,0.04);
+      --gold:   #C9973A;
+      --gold-b: #E8B45A;
+      --gold-d: rgba(201,151,58,0.35);
+      --tp:     #F0EDE6;
+      --ts:     #8A8580;
+      --tt:     #484644;
+      --bs:     rgba(201,151,58,0.12);
+      --bm:     rgba(201,151,58,0.28);
+      --bst:    rgba(201,151,58,0.55);
+      --glow:   0 0 60px rgba(201,151,58,0.13);
+      --glow-h: 0 0 30px rgba(201,151,58,0.38);
+      --r-sm:   6px;
+      --r-md:   10px;
+      --r-lg:   18px;
+      --r-xl:   26px;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(var(--bs) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bs) 1px, transparent 1px);
+      background-size: 60px 60px;
+      color: var(--tp);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1000px;
+      height: 1000px;
+      background: radial-gradient(ellipse, rgba(201,151,58,0.08) 0%, transparent 65%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── HEADER ─────────────────────────────── */
+    .header {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 clamp(1.5rem, 5vw, 3rem);
+      height: 72px;
+      border-bottom: 1px solid var(--bs);
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo-mark {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--gold);
+      border-radius: var(--r-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(201,151,58,0.08);
+      flex-shrink: 0;
+    }
+
+    .logo-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300;
+      font-size: 1.35rem;
+      color: var(--tp);
+      letter-spacing: 0.01em;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    .nav a {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      font-size: 0.875rem;
+      color: var(--ts);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    .nav a:hover { color: var(--tp); }
+
+    .nav-login {
+      padding: 0.45rem 1.1rem;
+      border: 1px solid var(--bm);
+      border-radius: var(--r-md);
+      color: var(--ts) !important;
+      transition: border-color 0.25s ease, color 0.25s ease !important;
+    }
+    .nav-login:hover {
+      border-color: var(--gold) !important;
+      color: var(--gold) !important;
+    }
+
+    /* ─── MAIN ───────────────────────────────── */
+    main {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem clamp(1.25rem, 5vw, 2rem);
+    }
+
+    .card-wrap {
+      width: 100%;
+      max-width: 450px;
+      animation: fadeUp 0.65s ease both;
+      animation-delay: 0.1s;
+    }
+
+    /* ─── EYEBROW ────────────────────────────── */
+    .sec-eyebrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 1.35rem;
+    }
+    .sec-eyebrow-bar {
+      width: 24px;
+      height: 1px;
+      background: var(--gold);
+      opacity: 0.7;
+    }
+    .sec-eyebrow-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.63rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    /* ─── HEADLINE ───────────────────────────── */
+    .headline {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300;
+      font-size: clamp(2.2rem, 5vw, 2.8rem);
+      line-height: 1.1;
+      color: var(--tp);
+      text-align: center;
+      margin-bottom: 0.45rem;
+    }
+    .headline em {
+      font-style: italic;
+      color: var(--gold);
+    }
+
+    .subline {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      font-size: 0.9rem;
+      color: var(--ts);
+      text-align: center;
+      margin-bottom: 2rem;
+      line-height: 1.65;
+    }
+
+    /* ─── CARD ───────────────────────────────── */
+    .card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--bs);
+      border-radius: var(--r-xl);
+      padding: 2rem 2rem 1.75rem;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+      border-color: var(--bm);
+      box-shadow: var(--glow);
+    }
+
+    /* ─── MESSAGE ────────────────────────────── */
+    #message {
+      border-radius: var(--r-md);
+      padding: 0.65rem 0.9rem;
+      margin-bottom: 1.25rem;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      font-size: 0.83rem;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    #message.error {
+      background: rgba(162,45,45,0.15);
+      border: 1px solid rgba(162,45,45,0.4);
+      color: #f09595;
+      display: flex;
+    }
+    #message.success {
+      background: rgba(15,110,86,0.15);
+      border: 1px solid rgba(15,110,86,0.4);
+      color: #5DCAA5;
+      display: flex;
+    }
+
+    /* ─── OAUTH ──────────────────────────────── */
+    .oauth-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .oauth-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--bm);
+      border-radius: var(--r-md);
+      background: transparent;
+      color: var(--ts);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      font-size: 0.85rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.25s ease;
+    }
+    .oauth-btn:hover {
+      border-color: var(--bst);
+      color: var(--tp);
+      background: rgba(201,151,58,0.04);
+    }
+    .oauth-btn svg { flex-shrink: 0; }
+
+    /* ─── DIVIDER ────────────────────────────── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      margin-bottom: 1.5rem;
+    }
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: var(--bs);
+    }
+    .divider-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--tt);
+      white-space: nowrap;
+    }
+
+    /* ─── FORM FIELDS ────────────────────────── */
+    .field { margin-bottom: 1rem; }
+
+    .field-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.45rem;
+    }
+
+    .label-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--tt);
+    }
+
+    .input-wrap { position: relative; }
+
+    .input-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--tt);
+      font-size: 15px;
+      pointer-events: none;
+      transition: color 0.25s ease;
+    }
+    .input-wrap:focus-within .input-icon { color: var(--gold); }
+
+    /* Validation state icons */
+    .input-status {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 14px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .input-status.valid   { color: #5DCAA5; opacity: 1; }
+    .input-status.invalid { color: #f09595; opacity: 1; }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      background: var(--surf2);
+      border: 1px solid var(--bs);
+      border-radius: var(--r-md);
+      padding: 0.65rem 2.25rem 0.65rem 2.5rem;
+      color: var(--tp);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.25s ease, background 0.25s ease;
+      -webkit-appearance: none;
+    }
+    input::placeholder { color: var(--tt); }
+    input:focus {
+      border-color: var(--gold);
+      background: rgba(22,22,40,0.9);
+    }
+    input.is-valid   { border-color: rgba(29,158,117,0.55); }
+    input.is-invalid { border-color: rgba(162,45,45,0.55); }
+
+    /* password toggle needs right padding */
+    #password,
+    #confirm-password { padding-right: 2.5rem; }
+
+    .pw-toggle {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--tt);
+      cursor: pointer;
+      font-size: 15px;
+      padding: 0;
+      line-height: 1;
+      transition: color 0.2s ease;
+    }
+    .pw-toggle:hover { color: var(--gold); }
+
+    /* ─── PASSWORD STRENGTH ──────────────────── */
+    .pw-strength {
+      margin-top: 0.5rem;
+      display: none;
+    }
+    .pw-strength.visible { display: block; }
+
+    .pw-strength-bars {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 0.3rem;
+    }
+
+    .pw-bar {
+      flex: 1;
+      height: 3px;
+      border-radius: 2px;
+      background: var(--surf2);
+      border: 1px solid var(--bs);
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+    .pw-bar.weak   { background: #a32d2d; border-color: rgba(162,45,45,0.4); }
+    .pw-bar.fair   { background: #854F0B; border-color: rgba(133,79,11,0.4); }
+    .pw-bar.good   { background: #C9973A; border-color: rgba(201,151,58,0.4); }
+    .pw-bar.strong { background: #0F6E56; border-color: rgba(15,110,86,0.4); }
+
+    .pw-strength-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--tt);
+    }
+    .pw-strength-label.weak   { color: #f09595; }
+    .pw-strength-label.fair   { color: #EF9F27; }
+    .pw-strength-label.good   { color: var(--gold); }
+    .pw-strength-label.strong { color: #5DCAA5; }
+
+    /* ─── TERMS CHECKBOX ─────────────────────── */
+    .terms-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      margin-bottom: 1.4rem;
+      margin-top: 0.5rem;
+    }
+
+    input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      min-width: 15px;
+      border: 1px solid var(--bm);
+      border-radius: 3px;
+      background: transparent;
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease;
+      position: relative;
+      margin-top: 2px;
+    }
+    input[type="checkbox"]:checked {
+      background: var(--gold);
+      border-color: var(--gold);
+    }
+    input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 3px;
+      top: 1px;
+      width: 5px;
+      height: 7px;
+      border: 1.5px solid #08080E;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg);
+    }
+
+    .terms-label {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      font-size: 0.82rem;
+      color: var(--ts);
+      line-height: 1.55;
+      cursor: pointer;
+      user-select: none;
+    }
+    .terms-label a {
+      color: var(--gold);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    .terms-label a:hover { color: var(--gold-b); }
+
+    /* ─── SUBMIT BUTTON ──────────────────────── */
+    .btn-primary {
+      width: 100%;
+      padding: 0.78rem 1.5rem;
+      background: var(--gold);
+      color: #08080E;
+      border: none;
+      border-radius: var(--r-md);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+      margin-bottom: 1.5rem;
+    }
+    .btn-primary:hover {
+      background: var(--gold-b);
+      box-shadow: var(--glow-h);
+      transform: translateY(-1px);
+    }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* ─── CARD FOOTER ────────────────────────── */
+    .card-footer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--bs);
+    }
+
+    .login-line {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      font-size: 0.85rem;
+      color: var(--ts);
+    }
+    .login-link {
+      color: var(--gold);
+      text-decoration: none;
+      font-weight: 400;
+      transition: color 0.2s ease;
+    }
+    .login-link:hover { color: var(--gold-b); }
+
+    .fine-print {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--tt);
+      text-align: center;
+    }
+    .fine-print a { color: var(--tt); text-decoration: underline; text-underline-offset: 2px; }
+    .fine-print a:hover { color: var(--ts); }
+
+    /* ─── FOOTER ─────────────────────────────── */
+    footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 1.25rem;
+      border-top: 1px solid var(--bs);
+    }
+    .footer-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--tt);
+    }
+    .footer-text a { color: var(--tt); text-decoration: underline; text-underline-offset: 2px; }
+    .footer-text a:hover { color: var(--ts); }
+
+    /* ─── ANIMATIONS ─────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── RESPONSIVE ─────────────────────────── */
+    @media (max-width: 640px) {
+      .nav a:not(.nav-login) { display: none; }
+      .card { padding: 1.5rem 1.25rem; }
+      .oauth-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── HEADER ─────────────────────────────── -->
+  <header class="header">
+    <a href="/" class="logo">
+      <div class="logo-mark">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" stroke="#C9973A" stroke-width="1.2" fill="none"/>
+          <circle cx="8" cy="8" r="2" fill="#C9973A"/>
+        </svg>
+      </div>
+      <span class="logo-text">CareerPilot</span>
+    </a>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/login" class="nav-login">Log in →</a>
+    </nav>
+  </header>
+
+  <!-- ─── MAIN ───────────────────────────────── -->
+  <main>
+    <div class="card-wrap">
+
+      <!-- Eyebrow -->
+      <div class="sec-eyebrow" aria-hidden="true">
+        <div class="sec-eyebrow-bar"></div>
+        <span class="sec-eyebrow-text">Get Started Free</span>
+        <div class="sec-eyebrow-bar"></div>
+      </div>
+
+      <!-- Headline -->
+      <h1 class="headline">Your career, <em>elevated.</em></h1>
+      <p class="subline">Create your account and start landing the roles you deserve.</p>
+
+      <!-- Signup Card -->
+      <div class="card">
+
+        <!-- Feedback message -->
+        <div id="message" role="alert" aria-live="polite"></div>
+
+        <!-- OAuth buttons -->
+        <div class="oauth-row">
+          <a href="/api/oauth/google" class="oauth-btn">
+            <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true">
+              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+              <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+              <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z" fill="#EA4335"/>
+            </svg>
+            Sign up with Google
+          </a>
+          <a href="/api/oauth/github" class="oauth-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
+            </svg>
+            Sign up with GitHub
+          </a>
+        </div>
+
+        <!-- Divider -->
+        <div class="divider" aria-hidden="true">
+          <div class="divider-line"></div>
+          <span class="divider-label">or sign up with email</span>
+          <div class="divider-line"></div>
+        </div>
+
+        <!-- Signup Form -->
+        <form id="signupForm" novalidate>
+
+          <!-- Full Name -->
+          <div class="field">
+            <div class="field-label">
+              <label class="label-text" for="name">Full name</label>
+            </div>
+            <div class="input-wrap">
+              <i class="ti ti-user input-icon" aria-hidden="true"></i>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                placeholder="Jane Doe"
+                autocomplete="name"
+                required
+              />
+              <i class="ti ti-check input-status" id="name-status" aria-hidden="true"></i>
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div class="field">
+            <div class="field-label">
+              <label class="label-text" for="email">Email address</label>
+            </div>
+            <div class="input-wrap">
+              <i class="ti ti-mail input-icon" aria-hidden="true"></i>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="you@example.com"
+                autocomplete="email"
+                required
+              />
+              <i class="ti ti-check input-status" id="email-status" aria-hidden="true"></i>
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div class="field">
+            <div class="field-label">
+              <label class="label-text" for="password">Password</label>
+            </div>
+            <div class="input-wrap">
+              <i class="ti ti-lock input-icon" aria-hidden="true"></i>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Min. 8 characters"
+                autocomplete="new-password"
+                required
+              />
+              <button type="button" class="pw-toggle" id="pwToggle1" aria-label="Toggle password visibility">
+                <i class="ti ti-eye" id="eyeIcon1" aria-hidden="true"></i>
+              </button>
+            </div>
+            <!-- Strength meter -->
+            <div class="pw-strength" id="pwStrength">
+              <div class="pw-strength-bars">
+                <div class="pw-bar" id="bar1"></div>
+                <div class="pw-bar" id="bar2"></div>
+                <div class="pw-bar" id="bar3"></div>
+                <div class="pw-bar" id="bar4"></div>
+              </div>
+              <span class="pw-strength-label" id="strengthLabel">Too short</span>
+            </div>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="field">
+            <div class="field-label">
+              <label class="label-text" for="confirm-password">Confirm password</label>
+            </div>
+            <div class="input-wrap">
+              <i class="ti ti-lock-check input-icon" aria-hidden="true"></i>
+              <input
+                type="password"
+                id="confirm-password"
+                name="confirm-password"
+                placeholder="Repeat your password"
+                autocomplete="new-password"
+                required
+              />
+              <button type="button" class="pw-toggle" id="pwToggle2" aria-label="Toggle confirm password visibility">
+                <i class="ti ti-eye" id="eyeIcon2" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Terms checkbox -->
+          <div class="terms-row">
+            <input type="checkbox" id="terms" name="terms" required />
+            <label for="terms" class="terms-label">
+              I agree to the <a href="/terms">Terms of Service</a> and
+              <a href="/privacy">Privacy Policy</a>
+            </label>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="btn-primary" id="signupBtn">
+            <span id="btnText">Create your account</span>
+            <i class="ti ti-arrow-right" aria-hidden="true"></i>
+          </button>
+
+        </form>
+
+        <!-- Card footer -->
+        <div class="card-footer">
+          <p class="login-line">
+            Already have an account? <a href="/login" class="login-link">Sign in →</a>
+          </p>
+          <p class="fine-print">
+            Protected by industry-standard encryption &nbsp;·&nbsp; <a href="/security">Security info</a>
+          </p>
+        </div>
+
+      </div><!-- /card -->
+    </div><!-- /card-wrap -->
+  </main>
+
+  <!-- ─── FOOTER ─────────────────────────────── -->
+  <footer>
+    <p class="footer-text">
+      © 2025 CareerPilot &nbsp;·&nbsp;
+      <a href="/terms">Terms</a> &nbsp;·&nbsp;
+      <a href="/privacy">Privacy</a>
+    </p>
+  </footer>
+
+  <!-- ─── SCRIPTS ───────────────────────────── -->
+  <script>
+    const API_BASE = '/api';
+
+    /* ── Password toggle helpers ── */
+    function bindToggle(btnId, iconId, inputId) {
+      document.getElementById(btnId).addEventListener('click', () => {
+        const input = document.getElementById(inputId);
+        const icon  = document.getElementById(iconId);
+        if (input.type === 'password') {
+          input.type = 'text';
+          icon.className = 'ti ti-eye-off';
+        } else {
+          input.type = 'password';
+          icon.className = 'ti ti-eye';
         }
+      });
+    }
+    bindToggle('pwToggle1', 'eyeIcon1', 'password');
+    bindToggle('pwToggle2', 'eyeIcon2', 'confirm-password');
+
+    /* ── Password strength meter ── */
+    const pwInput      = document.getElementById('password');
+    const pwStrength   = document.getElementById('pwStrength');
+    const strengthLabel = document.getElementById('strengthLabel');
+    const bars = [
+      document.getElementById('bar1'),
+      document.getElementById('bar2'),
+      document.getElementById('bar3'),
+      document.getElementById('bar4'),
+    ];
+
+    function scorePassword(pw) {
+      if (pw.length < 6) return 0;
+      let score = 0;
+      if (pw.length >= 8)  score++;
+      if (pw.length >= 12) score++;
+      if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+      if (/[0-9]/.test(pw)) score++;
+      if (/[^A-Za-z0-9]/.test(pw)) score++;
+      return Math.min(score, 4);
+    }
+
+    const levels = [
+      { label: 'Weak',   cls: 'weak'   },
+      { label: 'Fair',   cls: 'fair'   },
+      { label: 'Good',   cls: 'good'   },
+      { label: 'Strong', cls: 'strong' },
+    ];
+
+    pwInput.addEventListener('input', () => {
+      const pw    = pwInput.value;
+      const score = scorePassword(pw);
+
+      if (pw.length === 0) {
+        pwStrength.classList.remove('visible');
+        return;
+      }
+      pwStrength.classList.add('visible');
+
+      bars.forEach((bar, i) => {
+        bar.className = 'pw-bar';
+        if (i < score) bar.classList.add(levels[score - 1].cls);
+      });
+
+      const lvl = levels[Math.max(score - 1, 0)];
+      strengthLabel.textContent = lvl.label;
+      strengthLabel.className   = 'pw-strength-label ' + lvl.cls;
+    });
+
+    /* ── Inline validation feedback ── */
+    function setStatus(inputId, statusId, valid) {
+      const input  = document.getElementById(inputId);
+      const status = document.getElementById(statusId);
+      if (!input || !status) return;
+      input.classList.toggle('is-valid',   valid);
+      input.classList.toggle('is-invalid', !valid);
+      status.className = 'input-status ti ' + (valid ? 'ti-check valid' : 'ti-x invalid');
+    }
+
+    document.getElementById('name').addEventListener('blur', (e) => {
+      setStatus('name', 'name-status', e.target.value.trim().length >= 2);
+    });
+
+    document.getElementById('email').addEventListener('blur', (e) => {
+      setStatus('email', 'email-status', /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.target.value));
+    });
+
+    /* ── Message helper ── */
+    function showMessage(text, type, iconCls) {
+      const el = document.getElementById('message');
+      el.innerHTML = `<i class="ti ${iconCls}" aria-hidden="true" style="font-size:15px;flex-shrink:0;"></i><span>${text}</span>`;
+      el.className = type;
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => { el.className = ''; el.innerHTML = ''; }, 5000);
+    }
+
+    /* ── Signup form submission ── */
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const name            = document.getElementById('name').value.trim();
+      const email           = document.getElementById('email').value.trim();
+      const password        = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      const termsChecked    = document.getElementById('terms').checked;
+
+      /* Client-side checks */
+      if (password !== confirmPassword) {
+        showMessage('Passwords do not match.', 'error', 'ti-alert-circle');
+        document.getElementById('confirm-password').classList.add('is-invalid');
+        return;
       }
 
-      // Redirect on page load
-      window.onload = redirectToDevicePage;
-    </script>
-    <script>
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              primary: "#13a4ec",
-              "background-light": "#f6f7f8",
-              "background-dark": "#101c22",
-              "content-light": "#1a2a33",
-              "content-dark": "#e0e5e8",
-              "subtle-light": "#667f8d",
-              "subtle-dark": "#8fa7b3",
-              "border-light": "#e0e5e8",
-              "border-dark": "#2a424f",
-            },
-            fontFamily: {
-              display: ["Work Sans", "sans-serif"],
-            },
-            borderRadius: {
-              DEFAULT: "0.5rem",
-              lg: "0.75rem",
-              xl: "1rem",
-              full: "9999px",
-            },
-          },
-        },
-      };
-    </script>
-  </head>
-  <body class="font-display bg-background-light dark:bg-background-dark">
-    <div class="flex flex-col min-h-screen">
-      <header class="border-b border-border-light dark:border-border-dark">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="flex items-center justify-between h-16">
-            <div
-              class="flex items-center gap-4 text-content-light dark:text-content-dark"
-            >
-              <svg
-                class="h-6 w-6 text-primary"
-                fill="none"
-                viewBox="0 0 48 48"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  clip-rule="evenodd"
-                  d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z"
-                  fill="currentColor"
-                  fill-rule="evenodd"
-                ></path>
-              </svg>
-              <h2 class="text-xl font-bold">Career Pilot</h2>
-            </div>
-            <nav class="hidden md:flex items-center gap-8">
-              <a
-                class="text-sm font-medium text-content-light dark:text-content-dark hover:text-primary dark:hover:text-primary transition-colors"
-                href="#"
-                >Home</a
-              >
-              <a
-                class="text-sm font-medium text-content-light dark:text-content-dark hover:text-primary dark:hover:text-primary transition-colors"
-                href="#"
-                >About</a
-              >
-            </nav>
-            <div class="flex items-center gap-4">
-              <button
-                class="hidden md:flex min-w-[84px] items-center justify-center rounded-lg h-10 px-4 text-content-light dark:text-content-dark bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 dark:hover:bg-primary/20 text-sm font-bold transition-colors"
-              >
-                Log in
-              </button>
-              <button
-                class="md:hidden text-content-light dark:text-content-dark"
-              >
-                <svg
-                  class="h-6 w-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M4 6h16M4 12h16m-7 6h7"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                  ></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-      <main
-        class="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8"
-      >
-        <div class="w-full max-w-md space-y-8">
-          <div>
-            <h2
-              class="mt-6 text-center text-3xl font-extrabold text-content-light dark:text-content-dark"
-            >
-              Create your account
-            </h2>
-            <p
-              class="mt-2 text-center text-sm text-subtle-light dark:text-subtle-dark"
-            >
-              Start your journey to find the perfect job.
-            </p>
-          </div>
+      if (!termsChecked) {
+        showMessage('Please accept the Terms of Service to continue.', 'error', 'ti-alert-circle');
+        return;
+      }
 
-          <!-- Error/Success Messages -->
-          <div id="message" class="mt-4 p-3 rounded-lg hidden"></div>
+      const btn     = document.getElementById('signupBtn');
+      const btnText = document.getElementById('btnText');
+      btn.disabled  = true;
+      btnText.textContent = 'Creating account…';
 
-          <form id="signupForm" class="mt-8 space-y-6">
-            <div class="rounded-lg shadow-sm -space-y-px">
-              <div>
-                <label class="sr-only" for="name">Full name</label>
-                <input
-                  class="appearance-none rounded-none relative block w-full px-3 py-3 border border-border-light dark:border-border-dark placeholder-subtle-light dark:placeholder-subtle-dark text-content-light dark:text-content-dark bg-background-light dark:bg-background-dark rounded-t-lg focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                  id="name"
-                  name="name"
-                  placeholder="Full name"
-                  required=""
-                  type="text"
-                />
-              </div>
-              <div>
-                <label class="sr-only" for="email">Email address</label>
-                <input
-                  autocomplete="email"
-                  class="appearance-none rounded-none relative block w-full px-3 py-3 border-t-0 border border-border-light dark:border-border-dark placeholder-subtle-light dark:placeholder-subtle-dark text-content-light dark:text-content-dark bg-background-light dark:bg-background-dark focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                  id="email"
-                  name="email"
-                  placeholder="Email address"
-                  required=""
-                  type="email"
-                />
-              </div>
-              <div>
-                <label class="sr-only" for="password">Password</label>
-                <input
-                  autocomplete="new-password"
-                  class="appearance-none rounded-none relative block w-full px-3 py-3 border-t-0 border border-border-light dark:border-border-dark placeholder-subtle-light dark:placeholder-subtle-dark text-content-light dark:text-content-dark bg-background-light dark:bg-background-dark focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                  id="password"
-                  name="password"
-                  placeholder="Password"
-                  required=""
-                  type="password"
-                />
-              </div>
-              <div>
-                <label class="sr-only" for="confirm-password"
-                  >Confirm password</label
-                >
-                <input
-                  autocomplete="new-password"
-                  class="appearance-none rounded-none relative block w-full px-3 py-3 border-t-0 border border-border-light dark:border-border-dark placeholder-subtle-light dark:placeholder-subtle-dark text-content-light dark:text-content-dark bg-background-light dark:bg-background-dark rounded-b-lg focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                  id="confirm-password"
-                  name="confirm-password"
-                  placeholder="Confirm password"
-                  required=""
-                  type="password"
-                />
-              </div>
-            </div>
-            <div>
-              <button
-                id="signupBtn"
-                class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-background-light dark:focus:ring-offset-background-dark disabled:opacity-50"
-                type="submit"
-              >
-                Create account
-              </button>
-            </div>
-          </form>
-
-          <!-- Social Login Section -->
-          <div class="mt-6">
-            <div class="relative">
-              <div class="absolute inset-0 flex items-center">
-                <div class="w-full border-t border-border-light dark:border-border-dark"></div>
-              </div>
-              <div class="relative flex justify-center text-sm">
-                <span class="px-2 bg-background-light dark:bg-background-dark text-subtle-light dark:text-subtle-dark">Or continue with</span>
-              </div>
-            </div>
-            <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <a
-                class="w-full flex items-center justify-center px-4 py-3 border border-border-light dark:border-border-dark rounded-lg shadow-sm bg-background-light dark:bg-background-dark hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors"
-                href="/api/oauth/google"
-              >
-                <img
-                  alt="Google"
-                  class="h-5 w-5"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdxeqeA4_ImNGUjQD20GMYQOmwv1m1QB1FWMU-OtKn1-0_osE6YKfcRhfk8diYEbOtgD0PKC0enEk7fcogYY03i82C4zAWJAys6y2MdlJ7NZiaWJrkmSZoy8NB4WhufX90Ykgt6yy2UnLZDdjp7uF3RdDufHNBJFzwqUhNnrdLzFf1shJ_XboQbu2VqdyFQeAzdsG6tHSzxv8KAoGuX-Miqpvf0eMAxjYSn3_cgIZ0HkFDlfRdyki-JnmzBjg6I_ZcPBL03Rc5cQ"
-                />
-                <span class="ml-3 text-sm font-medium">Google</span>
-              </a>
-              <a
-                class="w-full flex items-center justify-center px-4 py-3 border border-border-light dark:border-border-dark rounded-lg shadow-sm bg-background-light dark:bg-background-dark hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors"
-                href="/api/oauth/github"
-              >
-                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="#333">
-                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                </svg>
-                <span class="ml-3 text-sm font-medium">GitHub</span>
-              </a>
-            </div>
-          </div>
-
-          <div class="text-sm text-center">
-            <a class="font-medium text-primary hover:text-primary/90" href="login.html">
-              Already have an account? Log in
-            </a>
-          </div>
-        </div>
-      </main>
-    </div>
-
-    <script>
-  const API_BASE_URL = "/api"; // Adjust port as needed
-
-      document
-        .getElementById("signupForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-
-          const name = document.getElementById("name").value;
-          const email = document.getElementById("email").value;
-          const password = document.getElementById("password").value;
-          const confirmPassword =
-            document.getElementById("confirm-password").value;
-          const signupBtn = document.getElementById("signupBtn");
-
-          // Validate password confirmation
-          if (password !== confirmPassword) {
-            showMessage("Passwords do not match", "error");
-            return;
-          }
-
-          // Show loading state
-          signupBtn.disabled = true;
-          signupBtn.textContent = "Creating account...";
-
-          try {
-            const response = await fetch(`${API_BASE_URL}/auth/register`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ name, email, password }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-              showMessage(
-                "Registration successful! Redirecting to login...",
-                "success"
-              );
-              // Redirect to login after 2 seconds
-              setTimeout(() => {
-                window.location.href = "login.html";
-              }, 2000);
-            } else {
-              showMessage(data.msg || "Registration failed", "error");
-            }
-          } catch (error) {
-            console.error("Registration error:", error);
-            showMessage("Network error. Please try again.", "error");
-          } finally {
-            // Reset button
-            signupBtn.disabled = false;
-            signupBtn.textContent = "Create account";
-          }
+      try {
+        const res  = await fetch(`${API_BASE}/auth/register`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ name, email, password }),
         });
 
-      function showMessage(message, type) {
-        const messageDiv = document.getElementById("message");
-        messageDiv.textContent = message;
-        messageDiv.className = `mt-4 p-3 rounded-lg ${
-          type === "success"
-            ? "bg-green-100 text-green-700 border border-green-300"
-            : "bg-red-100 text-red-700 border border-red-300"
-        }`;
-        messageDiv.classList.remove("hidden");
+        const data = await res.json();
 
-        // Hide message after 5 seconds
-        setTimeout(() => {
-          messageDiv.classList.add("hidden");
-        }, 5000);
+        if (res.ok) {
+          showMessage('Account created! Redirecting to sign in…', 'success', 'ti-circle-check');
+          setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+        } else {
+          showMessage(data.msg || 'Registration failed. Please try again.', 'error', 'ti-alert-circle');
+        }
+      } catch (err) {
+        console.error(err);
+        showMessage('Network error. Please try again.', 'error', 'ti-wifi-off');
+      } finally {
+        btn.disabled = false;
+        btnText.textContent = 'Create your account';
       }
-    </script>
-  </body>
+    });
+  </script>
+
+</body>
 </html>

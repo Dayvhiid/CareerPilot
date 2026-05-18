@@ -29,6 +29,26 @@ const resumeSchema = new mongoose.Schema({
   extractedText: {
     type: String,
   },
+  processingStage: {
+    type: String,
+    default: 'queued',
+  },
+  processingProgress: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100,
+  },
+  processingMessage: {
+    type: String,
+    default: 'Waiting to start processing',
+  },
+  processingStartedAt: {
+    type: Date,
+  },
+  processingUpdatedAt: {
+    type: Date,
+  },
   extractedData: {
     name: String,
     email: String,

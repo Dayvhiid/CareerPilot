@@ -12,6 +12,141 @@ const mongoose = require("mongoose");
 // Create a test user ObjectId for when auth is disabled
 const TEST_USER_ID = new mongoose.Types.ObjectId("507f1f77bcf86cd799439011");
 
+async function updateProcessingState(resumeId, { stage, progress, message }) {
+  const update = {
+    processingUpdatedAt: new Date(),
+  };
+
+  if (stage) update.processingStage = stage;
+  if (typeof progress === 'number') update.processingProgress = Math.max(0, Math.min(100, progress));
+  if (message) update.processingMessage = message;
+
+  console.log(`📌 Resume ${resumeId} -> ${stage || 'status'} (${typeof progress === 'number' ? progress + '%' : 'n/a'}): ${message || ''}`);
+  await Resume.findByIdAndUpdate(resumeId, update);
+}
+
+function withTimeout(promise, timeoutMs, label) {
+  let timeoutId;
+
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeoutMs / 1000} seconds`));
+    }, timeoutMs);
+  });
+
+  return Promise.race([
+    promise.finally(() => clearTimeout(timeoutId)),
+    timeoutPromise,
+  ]);
+}
+
+function normalizeEducationEntry(entry) {
+  if (!entry) {
+    return null;
+  }
+
+  if (typeof entry === 'string') {
+    const cleanValue = entry.trim();
+    if (!cleanValue) {
+      return null;
+    }
+
+    return {
+      degree: cleanValue,
+      institution: '',
+      year: '',
+      location: '',
+    };
+  }
+
+  if (typeof entry === 'object') {
+    const degree = String(entry.degree || entry.title || entry.name || '').trim();
+    const institution = String(entry.institution || entry.school || entry.university || '').trim();
+    const year = String(entry.year || entry.date || '').trim();
+    const location = String(entry.location || '').trim();
+
+    if (!degree && !institution && !year && !location) {
+      return null;
+    }
+
+    return {
+      degree,
+      institution,
+      year,
+      location,
+    };
+  }
+
+  return null;
+}
+
+function normalizeEmbeddedArray(entries, mapper) {
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+
+  return entries.map(mapper).filter(Boolean);
+}
+
+function normalizeExtractedData(extractedData) {
+  if (!extractedData || typeof extractedData !== 'object') {
+    return getEmptyResumeData();
+  }
+
+  return {
+    ...extractedData,
+    education: normalizeEmbeddedArray(extractedData.education, normalizeEducationEntry),
+    workExperience: normalizeEmbeddedArray(extractedData.workExperience, value => {
+      if (!value) return null;
+      if (typeof value === 'string') {
+        const text = value.trim();
+        return text ? { position: text, company: '', duration: '', location: '', responsibilities: '', contact: '' } : null;
+      }
+      if (typeof value === 'object') {
+        return {
+          position: String(value.position || value.title || value.role || '').trim(),
+          company: String(value.company || value.employer || '').trim(),
+          duration: String(value.duration || value.period || '').trim(),
+          location: String(value.location || '').trim(),
+          responsibilities: String(value.responsibilities || value.description || '').trim(),
+          contact: String(value.contact || '').trim(),
+        };
+      }
+      return null;
+    }),
+    projects: normalizeEmbeddedArray(extractedData.projects, value => {
+      if (!value) return null;
+      if (typeof value === 'string') {
+        const text = value.trim();
+        return text ? { name: text, description: '', dates: '' } : null;
+      }
+      if (typeof value === 'object') {
+        return {
+          name: String(value.name || value.title || '').trim(),
+          description: String(value.description || '').trim(),
+          dates: String(value.dates || value.date || '').trim(),
+        };
+      }
+      return null;
+    }),
+    certificates: normalizeEmbeddedArray(extractedData.certificates, value => {
+      if (!value) return null;
+      if (typeof value === 'string') {
+        const text = value.trim();
+        return text ? { name: text, issuer: '', date: '' } : null;
+      }
+      if (typeof value === 'object') {
+        return {
+          name: String(value.name || value.title || '').trim(),
+          issuer: String(value.issuer || value.organization || '').trim(),
+          date: String(value.date || value.year || '').trim(),
+        };
+      }
+      return null;
+    }),
+  };
+}
+
 // Upload and process resume
 exports.uploadResume = async (req, res) => {
   try {
@@ -42,12 +177,20 @@ exports.uploadResume = async (req, res) => {
       fileSize: size,
       fileType: mimetype,
       filePath,
+      processingStage: 'queued',
+      processingProgress: 0,
+      processingMessage: 'Resume uploaded and waiting to be processed',
+      processingStartedAt: new Date(),
+      processingUpdatedAt: new Date(),
     });
 
     await resume.save();
 
     // Start text extraction in background
-    extractTextFromFile(resume._id, filePath, mimetype);
+    console.log(`🚀 Starting background resume extraction for ${resume._id}`);
+    extractTextFromFile(resume._id, filePath, mimetype).catch(error => {
+      console.error(`❌ Background resume extraction failed for ${resume._id}:`, error);
+    });
 
     res.json({
       msg: "Resume uploaded successfully",
@@ -56,6 +199,10 @@ exports.uploadResume = async (req, res) => {
         filename: resume.originalName,
         size: resume.fileSize,
         uploadedAt: resume.createdAt,
+        isProcessed: resume.isProcessed,
+        processingStage: resume.processingStage,
+        processingProgress: resume.processingProgress,
+        processingMessage: 'Processing has started',
       },
     });
   } catch (error) {
@@ -81,6 +228,10 @@ exports.getResume = async (req, res) => {
         size: resume.fileSize,
         uploadedAt: resume.createdAt,
         isProcessed: resume.isProcessed,
+        processingStage: resume.processingStage,
+        processingProgress: resume.processingProgress,
+        processingMessage: resume.processingMessage,
+        processingError: resume.processingError,
         extractedData: resume.extractedData,
       },
     });
@@ -117,6 +268,13 @@ exports.deleteResume = async (req, res) => {
 // Advanced NLP-based text extraction
 async function extractTextFromFile(resumeId, filePath, mimeType) {
   try {
+    console.log(`🧪 extractTextFromFile invoked for ${resumeId} (${mimeType})`);
+    await updateProcessingState(resumeId, {
+      stage: 'reading-file',
+      progress: 10,
+      message: 'Reading uploaded file',
+    });
+
     let extractedText = "";
 
     // Extract text based on file type
@@ -140,6 +298,12 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
       extractedText = fs.readFileSync(filePath, 'utf8');
     }
 
+    await updateProcessingState(resumeId, {
+      stage: 'text-extracted',
+      progress: 25,
+      message: 'Text extracted successfully, analyzing content',
+    });
+
     console.log("Extracted text length:", extractedText.length);
     console.log("🚀 Processing with Universal Python NLP Service...");
 
@@ -149,8 +313,19 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
     // Try HuggingFace Resume NER parser first for specialized resume parsing
     try {
       console.log("🤗 Processing with HuggingFace Resume NER (resume-ner-bert-v2)...");
+      await updateProcessingState(resumeId, {
+        stage: 'hf-parser',
+        progress: 45,
+        message: 'Running AI resume parser',
+      });
+
       const hfParser = new HuggingFaceResumeParser();
-      extractedData = await hfParser.parseResume(extractedText);
+      console.log(`🔌 Calling HuggingFaceResumeParser.parseResume for ${resumeId}`);
+      extractedData = await withTimeout(
+        hfParser.parseResume(extractedText),
+        20000,
+        'HuggingFace resume parsing'
+      );
       
       if (extractedData && typeof extractedData === 'object') {
         processingMethod = "HuggingFace Resume NER (resume-ner-bert-v2)";
@@ -166,16 +341,32 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
     } catch (hfError) {
       console.log("⚠️ HuggingFace parser failed, falling back to Advanced Node.js parser:", hfError.message);
       extractedData = null; // Ensure fallback is triggered
+      await updateProcessingState(resumeId, {
+        stage: 'fallback-parser',
+        progress: 60,
+        message: 'AI parser took too long, using fallback parser',
+      });
     }
 
     // Fallback to Advanced Resume Parser if HuggingFace parser fails
     if (!extractedData) {
       console.log("📋 Using Advanced Resume Parser as fallback...");
+      await updateProcessingState(resumeId, {
+        stage: 'fallback-parser',
+        progress: 60,
+        message: 'Using fallback parser',
+      });
       const parser = new AdvancedResumeParser();
       extractedData = await parser.parseResume(extractedText);
       processingMethod = "Advanced Node.js Parser (Fallback)";
       console.log("✅ Processed with Advanced Node.js Parser fallback");
     }
+
+    await updateProcessingState(resumeId, {
+      stage: 'finalizing',
+      progress: 85,
+      message: 'Finalizing extracted profile data',
+    });
 
     // Ensure extractedData has the required structure
     if (!extractedData || typeof extractedData !== 'object') {
@@ -188,12 +379,34 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
     extractedData.processingMethod = processingMethod;
     extractedData.processedAt = new Date().toISOString();
 
+    // Normalize parser output so it matches the Resume schema before saving.
+    extractedData = normalizeExtractedData(extractedData);
+
     // Update resume with extracted data
-    await Resume.findByIdAndUpdate(resumeId, {
-      extractedText,
-      extractedData,
-      isProcessed: true,
-    });
+    try {
+      await Resume.findByIdAndUpdate(resumeId, {
+        extractedText,
+        extractedData,
+        isProcessed: true,
+        processingStage: 'completed',
+        processingProgress: 100,
+        processingMessage: 'Resume processing complete',
+        processingUpdatedAt: new Date(),
+      });
+    } catch (saveError) {
+      console.error('❌ Failed to save normalized extracted data:', saveError);
+
+      const safeFallbackData = normalizeExtractedData(getEmptyResumeData());
+      await Resume.findByIdAndUpdate(resumeId, {
+        extractedText,
+        extractedData: safeFallbackData,
+        isProcessed: true,
+        processingStage: 'completed',
+        processingProgress: 100,
+        processingMessage: 'Resume processing complete with fallback data',
+        processingUpdatedAt: new Date(),
+      });
+    }
 
     console.log(`✅ Resume ${resumeId} processed successfully with ${processingMethod}`);
     console.log("📊 Extracted data preview:", {
@@ -209,7 +422,11 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
     await Resume.findByIdAndUpdate(resumeId, {
       isProcessed: false,
       extractedText: "Error extracting text: " + error.message,
-      processingError: error.message
+      processingError: error.message,
+      processingStage: 'error',
+      processingProgress: 100,
+      processingMessage: `Processing failed: ${error.message}`,
+      processingUpdatedAt: new Date(),
     });
   }
 }
