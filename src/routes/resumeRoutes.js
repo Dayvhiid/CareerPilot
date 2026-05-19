@@ -4,6 +4,8 @@ const path = require("path");
 const { v4: uuidv4 } = require("uuid");
 const router = express.Router();
 const auth = require("../middleware/authMiddleware");
+const { uploadLimiter } = require("../middleware/rateLimiters");
+const { validateFile } = require("../services/fileValidator");
 const {
   uploadResume,
   getResume,
@@ -29,17 +31,17 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
+  // Only allow PDF, DOCX, DOC (not plain text - removed for security)
   const allowedTypes = [
     "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "text/plain", // Temporarily allow text files for testing
   ];
   
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Invalid file type. Only PDF, DOC, DOCX, and TXT are allowed."), false);
+    cb(new Error("Invalid file type. Only PDF, DOC, and DOCX are allowed."), false);
   }
 };
 
@@ -51,14 +53,30 @@ const upload = multer({
   },
 });
 
-// Routes - Temporarily removing auth for testing
-router.post("/upload", upload.single("resume"), uploadResume);
-router.get("/", getResume);
-router.delete("/", deleteResume);
+// File validation middleware
+const validateFileMiddleware = async (req, res, next) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: "No file uploaded" });
+  }
 
-// Original routes with auth (uncomment when ready):
-// router.post("/upload", auth, upload.single("resume"), uploadResume);
-// router.get("/", auth, getResume);
-// router.delete("/", auth, deleteResume);
+  const validation = await validateFile(req.file, req.file.path);
+  
+  if (!validation.valid) {
+    // Delete invalid file
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    return res.status(400).json({ success: false, message: validation.error });
+  }
+
+  // Store sanitized filename
+  req.file.sanitized = validation.sanitized;
+  next();
+};
+
+// Routes with authentication and rate limiting
+router.post("/upload", auth, uploadLimiter, upload.single("resume"), validateFileMiddleware, uploadResume);
+router.get("/", auth, getResume);
+router.delete("/", auth, deleteResume);
 
 module.exports = router;

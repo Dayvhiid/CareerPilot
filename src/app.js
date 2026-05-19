@@ -4,12 +4,16 @@ const path = require('path');
 const passport = require('./config/passport');
 const session = require('express-session');
 const redisService = require('./services/redisService');
+const { validateEnv } = require('./config/validateEnv');
 const authRoutes = require('./routes/authRoutes');
 const oauthRoutes = require('./routes/oauthRoutes');
 const resumeRoutes = require('./routes/resumeRoutes'); // Add this
 const jobRoutes = require('./routes/jobRoutes');
 const coverLetterRoutes = require('./routes/coverLetterRoutes');
 const chatbotRoutes = require('./routes/chatbotRoutes');
+
+// Validate environment variables on startup
+validateEnv();
 
 const app = express();
 
@@ -44,7 +48,7 @@ app.use('/public', express.static(path.join(__dirname, '../public')));
 
 // Sessions (needed for OAuth)
 app.use(session({
-  secret: process.env.SESSION_SECRET || "supersecret",
+  secret: process.env.SESSION_SECRET || process.env.JWT_SECRET,
   resave: false,
   saveUninitialized: false,
 }));
