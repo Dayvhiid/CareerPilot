@@ -1,6 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const cookieParser = require('cookie-parser');
+
+// Initialize logger (replaces console.log/error/warn globally)
+require('./config/logger');
 const passport = require('./config/passport');
 const session = require('express-session');
 const redisService = require('./services/redisService');
@@ -11,6 +15,7 @@ const resumeRoutes = require('./routes/resumeRoutes'); // Add this
 const jobRoutes = require('./routes/jobRoutes');
 const coverLetterRoutes = require('./routes/coverLetterRoutes');
 const chatbotRoutes = require('./routes/chatbotRoutes');
+const healthRoutes = require('./routes/healthRoutes');
 
 // Validate environment variables on startup
 validateEnv();
@@ -59,6 +64,7 @@ app.use(passport.session());
 
 // Body parsing
 app.use(express.json());
+app.use(cookieParser());
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -67,6 +73,7 @@ app.use('/api/resume', resumeRoutes); // Add this
 app.use('/api/jobs', jobRoutes);
 app.use('/api/coverletter', coverLetterRoutes);
 app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/health', healthRoutes);
 
 // Serve landing page at root
 app.get('/', (req, res) => {
@@ -75,5 +82,9 @@ app.get('/', (req, res) => {
 
 // Serve static files from root (for direct access to HTML files)
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Error handler must be registered after all routes
+const errorHandler = require('./middleware/errorHandler');
+app.use(errorHandler);
 
 module.exports = app;

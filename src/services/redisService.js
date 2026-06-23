@@ -172,13 +172,20 @@ class RedisService {
         return false;
       }
 
-      const keys = await this.client.keys('jobs:*');
+      const keys = [];
+      for await (const key of this.client.scanIterator({ MATCH: 'jobs:*', COUNT: 100 })) {
+        keys.push(key);
+        // Delete in batches of 100 to avoid large multi-key operations
+        if (keys.length >= 100) {
+          await this.client.del(keys);
+          keys.length = 0;
+        }
+      }
       if (keys.length > 0) {
         await this.client.del(keys);
-        console.log(`🗑️ Cleared ${keys.length} cached job entries`);
-      } else {
-        console.log('🗑️ No job cache entries to clear');
       }
+
+      console.log(`🗑️ Cleared job cache entries`);
       return true;
     } catch (error) {
       console.error('❌ Error clearing jobs cache:', error.message);
@@ -195,12 +202,16 @@ class RedisService {
         return { connected: false };
       }
 
-      const keys = await this.client.keys('jobs:*');
+      let cachedJobKeys = 0;
+      for await (const _ of this.client.scanIterator({ MATCH: 'jobs:*', COUNT: 1000 })) {
+        cachedJobKeys++;
+      }
+
       const info = await this.client.info('memory');
       
       return {
         connected: true,
-        cachedJobKeys: keys.length,
+        cachedJobKeys,
         memoryInfo: info
       };
     } catch (error) {

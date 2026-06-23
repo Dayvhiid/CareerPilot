@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/authMiddleware');
+const auth = require('../middleware/auth');
 const { cacheLimiter, apiLimiter } = require('../middleware/rateLimiters');
 const { jobValidators } = require('../middleware/validators');
 const {
@@ -9,7 +9,9 @@ const {
   getResumeBasedJobs,
   bookmarkJob,
   markJobApplied,
-  getJobDetails
+  getJobDetails,
+  getCacheStats,
+  clearCache
 } = require('../controllers/jobController');
 
 // Routes with authentication and rate limiting
@@ -19,19 +21,8 @@ router.get('/recommended', auth, apiLimiter, getRecommendedJobs);
 router.get('/resume-based', auth, apiLimiter, getResumeBasedJobs);
 
 // Cache management routes (admin only, rate limited)
-router.get('/cache/stats', auth, cacheLimiter, async (req, res) => {
-  // TODO: Add admin check
-  const redisService = require('../services/redisService');
-  const stats = await redisService.getCacheStats();
-  res.json({ success: true, stats });
-});
-
-router.delete('/cache/clear', auth, cacheLimiter, async (req, res) => {
-  // TODO: Add admin check
-  const redisService = require('../services/redisService');
-  const cleared = await redisService.clearJobsCache();
-  res.json({ success: cleared, message: cleared ? 'Cache cleared' : 'Failed to clear cache' });
-});
+router.get('/cache/stats', auth, cacheLimiter, getCacheStats);
+router.delete('/cache/clear', auth, cacheLimiter, clearCache);
 
 router.post('/:jobId/bookmark', auth, apiLimiter, bookmarkJob);
 router.post('/:jobId/apply', auth, apiLimiter, markJobApplied);

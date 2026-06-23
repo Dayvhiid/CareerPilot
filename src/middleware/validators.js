@@ -119,14 +119,19 @@ const jobValidators = {
  */
 const coverLetterValidators = {
   generate: [
-    body('jobDescription')
+    body('customInstructions')
+      .optional()
       .trim()
-      .isLength({ min: 10, max: 10000 })
-      .withMessage('Job description must be between 10 and 10000 characters'),
+      .isLength({ max: 5000 })
+      .withMessage('Custom instructions too long'),
     body('tone')
-      .if(body('tone').exists())
+      .optional()
       .isIn(['professional', 'casual', 'formal'])
       .withMessage('Invalid tone'),
+    body('length')
+      .optional()
+      .isIn(['short', 'medium', 'long'])
+      .withMessage('Invalid length'),
     handleValidationErrors
   ]
 };

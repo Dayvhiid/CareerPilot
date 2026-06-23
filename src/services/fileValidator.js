@@ -4,6 +4,7 @@
  */
 
 const fs = require('fs');
+const fsp = require('fs').promises;
 const path = require('path');
 
 /**
@@ -117,12 +118,14 @@ async function verifyFileMagic(filePath, mimeType) {
 async function validateFile(file, filePath) {
   try {
     // Check if file exists
-    if (!fs.existsSync(filePath)) {
+    try {
+      await fsp.access(filePath);
+    } catch {
       return { valid: false, error: 'File not found after upload' };
     }
 
     // Check file size
-    const stats = fs.statSync(filePath);
+    const stats = await fsp.stat(filePath);
     if (stats.size > MAX_FILE_SIZE) {
       return { valid: false, error: `File size exceeds maximum of ${MAX_FILE_SIZE / 1024 / 1024}MB` };
     }

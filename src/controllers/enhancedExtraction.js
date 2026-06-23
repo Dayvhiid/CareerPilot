@@ -47,6 +47,29 @@ function extractLocationEnhanced(text) {
   return "";
 }
 
+// Enhanced contact info extraction
+function extractContactInfoEnhanced(text, data) {
+  const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+  const phonePattern = /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
+
+  const emailMatch = text.match(emailPattern);
+  if (emailMatch && emailMatch[0]) {
+    data.email = emailMatch[0].toLowerCase();
+  }
+
+  // Filter phone numbers to avoid matching large numbers
+  const phoneCandidates = [...text.matchAll(phonePattern)];
+  for (const match of phoneCandidates) {
+    const phone = match[0].trim();
+    // Validate: strip non-digits, check length 7-15
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length >= 7 && digits.length <= 15) {
+      data.phone = phone;
+      break;
+    }
+  }
+}
+
 // Enhanced URL extraction with validation
 function extractUrlsEnhanced(text, data) {
   const urlPatterns = {
@@ -255,6 +278,7 @@ function extractSoftSkillsEnhanced(text) {
 }
 
 module.exports = {
+  extractContactInfoEnhanced,
   extractLocationEnhanced,
   extractUrlsEnhanced,
   extractSkillsEnhanced,

@@ -76,6 +76,11 @@ const jobSchema = new mongoose.Schema({
     type: String,
     enum: ['remote', 'onsite', 'hybrid'],
     default: 'onsite'
+  },
+  category: {
+    type: String,
+    enum: ['IT/Software', 'Design/Creative', 'Finance/Accounting', 'Sales/Marketing', 'Construction/Engineering', 'Healthcare', 'Operations/Admin', 'Other'],
+    default: 'Other'
   }
 }, {
   timestamps: true

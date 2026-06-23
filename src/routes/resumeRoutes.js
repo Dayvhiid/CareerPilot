@@ -3,7 +3,7 @@ const multer = require("multer");
 const path = require("path");
 const { v4: uuidv4 } = require("uuid");
 const router = express.Router();
-const auth = require("../middleware/authMiddleware");
+const auth = require("../middleware/auth");
 const { uploadLimiter } = require("../middleware/rateLimiters");
 const { validateFile } = require("../services/fileValidator");
 const {
@@ -13,11 +13,9 @@ const {
 } = require("../controllers/resumeController");
 
 // Create uploads directory if it doesn't exist
-const fs = require("fs");
+const fsp = require("fs").promises;
 const uploadsDir = path.join(__dirname, "../../uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+fsp.mkdir(uploadsDir, { recursive: true }).catch(() => {});
 
 // Multer configuration
 const storage = multer.diskStorage({
@@ -62,9 +60,10 @@ const validateFileMiddleware = async (req, res, next) => {
   const validation = await validateFile(req.file, req.file.path);
   
   if (!validation.valid) {
-    // Delete invalid file
-    if (fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    try {
+      await fsp.unlink(req.file.path);
+    } catch {
+      // File may not exist, ignore
     }
     return res.status(400).json({ success: false, message: validation.error });
   }

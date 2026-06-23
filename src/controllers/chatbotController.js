@@ -1,12 +1,13 @@
 const Resume = require('../models/Resume');
 const mongoose = require('mongoose');
 const puppeteer = require('puppeteer');
+const path = require('path');
+const ejs = require('ejs');
 const fs = require('fs-extra');
 
 // Database cleanup removed to avoid startup issues
 
-// Create a test user ObjectId for when auth is disabled
-const TEST_USER_ID = new mongoose.Types.ObjectId("507f1f77bcf86cd799439011");
+
 
 // Conversation states
 const CONVERSATION_STATES = {
@@ -27,12 +28,31 @@ const CONVERSATION_STATES = {
 // In-memory storage for conversation states (in production, use Redis or database)
 const userSessions = new Map();
 
+const MAX_SESSION_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+const MAX_SESSIONS_PER_USER = 10;
+
+// Periodic cleanup of expired sessions
+setInterval(() => {
+  const now = Date.now();
+  let removed = 0;
+  for (const [key, session] of userSessions) {
+    if (now - session.lastActivity > MAX_SESSION_AGE_MS) {
+      userSessions.delete(key);
+      removed++;
+    }
+  }
+  if (removed > 0) {
+    console.log(`🧹 Cleaned up ${removed} expired chatbot sessions`);
+  }
+}, CLEANUP_INTERVAL_MS).unref();
+
 /**
  * Main chatbot message handler
  */
 const processMessage = async (req, res) => {
   try {
-    const userId = req.user?.id || TEST_USER_ID;
+    const userId = req.user.id;
     const { message, sessionId } = req.body;
     
     console.log(`💬 Processing message from user ${userId}: "${message}"`);
@@ -81,9 +101,11 @@ const processMessage = async (req, res) => {
  */
 const startConversation = async (req, res) => {
   try {
-    const userId = req.user?.id || TEST_USER_ID;
+    const userId = req.user.id;
     const sessionId = generateSessionId();
-    
+
+    evictOldestSessionIfNeeded(userId, '');
+
     const session = {
       sessionId,
       userId,
@@ -92,7 +114,7 @@ const startConversation = async (req, res) => {
       startedAt: new Date(),
       lastActivity: new Date()
     };
-    
+
     userSessions.set(getUserSessionKey(userId, sessionId), session);
     
     const welcomeMessage = "You dey find job you no get resume/cv, no lele nothing spoil. Career Pilot is here to help you! 🚀\n\nI go ask you some questions to build your professional resume. Ready to start?";
@@ -120,7 +142,7 @@ const startConversation = async (req, res) => {
  */
 const generateResume = async (req, res) => {
   try {
-    const userId = req.user?.id || TEST_USER_ID;
+    const userId = req.user.id;
     const { sessionId } = req.body;
     
     const session = userSessions.get(getUserSessionKey(userId, sessionId));
@@ -193,8 +215,8 @@ const generateResume = async (req, res) => {
  */
 const getProgress = async (req, res) => {
   try {
-    const userId = req.user?.id || TEST_USER_ID;
-    const { sessionId } = req.params;
+    const userId = req.user.id;
+    const { sessionId } = req.query;
     
     const session = userSessions.get(getUserSessionKey(userId, sessionId));
     if (!session) {
@@ -228,8 +250,16 @@ const getProgress = async (req, res) => {
 function getUserSession(userId, sessionId) {
   const key = getUserSessionKey(userId, sessionId);
   let session = userSessions.get(key);
-  
+
+  if (session) {
+    if (Date.now() - session.lastActivity > MAX_SESSION_AGE_MS) {
+      userSessions.delete(key);
+      session = null;
+    }
+  }
+
   if (!session) {
+    evictOldestSessionIfNeeded(userId, key);
     session = {
       sessionId: sessionId || generateSessionId(),
       userId,
@@ -238,10 +268,25 @@ function getUserSession(userId, sessionId) {
       startedAt: new Date(),
       lastActivity: new Date()
     };
+    userSessions.set(getUserSessionKey(userId, session.sessionId), session);
   }
-  
+
   session.lastActivity = new Date();
   return session;
+}
+
+function evictOldestSessionIfNeeded(userId, currentKey) {
+  const userSessionKeys = [];
+  for (const [key, session] of userSessions) {
+    if (session.userId === userId && key !== currentKey) {
+      userSessionKeys.push({ key, lastActivity: session.lastActivity });
+    }
+  }
+
+  if (userSessionKeys.length >= MAX_SESSIONS_PER_USER) {
+    userSessionKeys.sort((a, b) => a.lastActivity - b.lastActivity);
+    userSessions.delete(userSessionKeys[0].key);
+  }
 }
 
 function getUserSessionKey(userId, sessionId) {
@@ -1116,12 +1161,8 @@ function convertChatDataToResume(chatData) {
     githubUrl: chatData.links?.find(link => link.type === 'github')?.url || '',
     portfolioUrl: chatData.links?.find(link => link.type === 'medium')?.url || '',
     
-    // Store links as simple strings for now to avoid schema conflicts
-    languages: [], // placeholder
-    summary: chatData.professionalSummary?.summary || '',
-    linkedinUrl: chatData.additionalInfo?.links?.includes('linkedin') ? chatData.additionalInfo.links : '',
-    githubUrl: chatData.additionalInfo?.links?.includes('github') ? chatData.additionalInfo.links : '',
-    portfolioUrl: chatData.additionalInfo?.links || ''
+    languages: [],
+    summary: chatData.professionalSummary?.summary || ''
   };
 }
 
@@ -1130,7 +1171,7 @@ function convertChatDataToResume(chatData) {
  */
 const downloadResume = async (req, res) => {
   try {
-    const userId = req.user?.id || TEST_USER_ID;
+    const userId = req.user.id;
     
     // Find the user's resume
     const resume = await Resume.findOne({ userId }).sort({ createdAt: -1 });
@@ -1183,7 +1224,7 @@ async function generateProfessionalPDF(data) {
     const page = await browser.newPage();
     
     // Generate the stunning HTML template
-    const htmlContent = generateStunningHTML(data);
+    const htmlContent = await generateStunningHTML(data);
     
     await page.setContent(htmlContent);
     
@@ -1212,616 +1253,13 @@ async function generateProfessionalPDF(data) {
 }
 
 /**
- * Generate ULTRA-PREMIUM, DESIGNER-QUALITY HTML template 🔥💎✨
+ * Generate HTML template using EJS
  */
-function generateStunningHTML(data) {
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${data.name || 'Professional'} Resume</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        @page {
-            margin: 0;
-            size: A4;
-        }
-        
-        body {
-            font-family: 'Poppins', sans-serif;
-            line-height: 1.5;
-            color: #1a1a1a;
-            background: #ffffff;
-            font-size: 14px;
-        }
-        
-        .resume-container {
-            width: 210mm;
-            min-height: 297mm;
-            background: white;
-            position: relative;
-            margin: 0 auto;
-            display: flex;
-        }
-        
-        /* LEFT SIDEBAR - DARK ELEGANT */
-        .sidebar {
-            width: 35%;
-            background: linear-gradient(180deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
-            padding: 0;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .sidebar::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.03)"/><circle cx="20" cy="20" r="1" fill="rgba(255,255,255,0.02)"/><circle cx="80" cy="30" r="1.5" fill="rgba(255,255,255,0.02)"/></svg>');
-            opacity: 0.4;
-        }
-        
-        .sidebar-content {
-            padding: 40px 30px;
-            position: relative;
-            z-index: 2;
-            height: 100%;
-        }
-        
-        /* PROFILE SECTION */
-        .profile-section {
-            text-align: center;
-            margin-bottom: 40px;
-            position: relative;
-        }
-        
-        .profile-avatar {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #3498db, #e74c3c);
-            margin: 0 auto 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 48px;
-            font-weight: 700;
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .profile-avatar::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%);
-            animation: shimmer 3s infinite;
-        }
-        
-        @keyframes shimmer {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .profile-name {
-            font-size: 24px;
-            font-weight: 700;
-            color: white;
-            margin-bottom: 8px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-        }
-        
-        .profile-title {
-            font-size: 14px;
-            color: #ecf0f1;
-            font-weight: 300;
-            opacity: 0.9;
-            font-style: italic;
-        }
-        
-        /* SIDEBAR SECTIONS */
-        .sidebar-section {
-            margin-bottom: 35px;
-        }
-        
-        .sidebar-heading {
-            font-size: 16px;
-            font-weight: 600;
-            color: #ecf0f1;
-            margin-bottom: 15px;
-            position: relative;
-            padding-left: 20px;
-        }
-        
-        .sidebar-heading::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 12px;
-            height: 12px;
-            background: linear-gradient(135deg, #3498db, #e74c3c);
-            border-radius: 50%;
-            box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
-        }
-        
-        .contact-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 12px;
-            color: #bdc3c7;
-            font-size: 12px;
-        }
-        
-        .contact-icon {
-            width: 16px;
-            height: 16px;
-            margin-right: 12px;
-            color: #3498db;
-            font-size: 14px;
-        }
-        
-        .skill-item {
-            margin-bottom: 15px;
-        }
-        
-        .skill-name {
-            color: #ecf0f1;
-            font-size: 12px;
-            font-weight: 500;
-            margin-bottom: 6px;
-        }
-        
-        .skill-bar {
-            height: 8px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 4px;
-            overflow: hidden;
-            position: relative;
-        }
-        
-        .skill-progress {
-            height: 100%;
-            background: linear-gradient(90deg, #3498db, #e74c3c);
-            border-radius: 4px;
-            width: 85%;
-            position: relative;
-            box-shadow: 0 0 10px rgba(52, 152, 219, 0.3);
-        }
-        
-        .skill-progress::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 30%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            animation: skillShine 2s infinite;
-        }
-        
-        @keyframes skillShine {
-            0% { left: -30%; }
-            100% { left: 100%; }
-        }
-        
-        /* MAIN CONTENT AREA */
-        .main-content {
-            flex: 1;
-            padding: 40px;
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        }
-        
-        /* SECTION STYLING */
-        .section {
-            margin-bottom: 40px;
-            position: relative;
-        }
-        
-        .section-header {
-            position: relative;
-            margin-bottom: 25px;
-        }
-        
-        .section-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: #2c3e50;
-            position: relative;
-            display: inline-block;
-            padding-bottom: 8px;
-        }
-        
-        .section-title::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 60px;
-            height: 3px;
-            background: linear-gradient(90deg, #3498db, #e74c3c);
-            border-radius: 2px;
-        }
-        
-        /* SUMMARY STYLING */
-        .summary-content {
-            background: linear-gradient(135deg, #fff 0%, #f1f3f4 100%);
-            padding: 25px;
-            border-radius: 15px;
-            border-left: 5px solid #3498db;
-            position: relative;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-            font-family: 'Crimson Text', serif;
-            font-size: 15px;
-            line-height: 1.7;
-            color: #34495e;
-        }
-        
-        .summary-content::before {
-            content: '"';
-            position: absolute;
-            top: -5px;
-            left: 20px;
-            font-size: 40px;
-            color: #3498db;
-            opacity: 0.3;
-            font-family: 'Crimson Text', serif;
-        }
-        
-        /* EXPERIENCE STYLING */
-        .experience-item {
-            position: relative;
-            margin-bottom: 30px;
-            padding-left: 25px;
-        }
-        
-        .experience-item::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 10px;
-            width: 12px;
-            height: 12px;
-            background: linear-gradient(135deg, #3498db, #2ecc71);
-            border-radius: 50%;
-            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2);
-            z-index: 2;
-        }
-        
-        .experience-item::after {
-            content: '';
-            position: absolute;
-            left: 5px;
-            top: 22px;
-            width: 2px;
-            height: calc(100% - 12px);
-            background: linear-gradient(to bottom, #3498db, transparent);
-        }
-        
-        .experience-item:last-child::after {
-            display: none;
-        }
-        
-        .experience-content {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 3px 15px rgba(0,0,0,0.06);
-            border: 1px solid #ecf0f1;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .experience-content::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: linear-gradient(180deg, #3498db, #2ecc71);
-        }
-        
-        .experience-text {
-            color: #34495e;
-            font-size: 14px;
-            line-height: 1.6;
-            padding-left: 15px;
-        }
-        
-        /* EDUCATION STYLING */
-        .education-item {
-            background: linear-gradient(135deg, #fff5f5 0%, #fef5e7 100%);
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 15px;
-            border-left: 4px solid #f39c12;
-            position: relative;
-            box-shadow: 0 3px 15px rgba(243, 156, 18, 0.1);
-        }
-        
-        .education-item::before {
-            content: '🎓';
-            position: absolute;
-            top: 50%;
-            right: 20px;
-            transform: translateY(-50%);
-            font-size: 24px;
-            opacity: 0.3;
-        }
-        
-        .education-text {
-            color: #34495e;
-            font-size: 14px;
-            font-weight: 500;
-        }
-        
-        /* PROJECTS STYLING */
-        .project-item {
-            background: linear-gradient(135deg, #f0fff4 0%, #e8f8f5 100%);
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 15px;
-            border-left: 4px solid #27ae60;
-            position: relative;
-            box-shadow: 0 3px 15px rgba(39, 174, 96, 0.1);
-        }
-        
-        .project-item::before {
-            content: '🚀';
-            position: absolute;
-            top: 50%;
-            right: 20px;
-            transform: translateY(-50%);
-            font-size: 24px;
-            opacity: 0.3;
-        }
-        
-        /* DECORATIVE ELEMENTS */
-        .decorative-line {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100px;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #3498db, transparent);
-            opacity: 0.3;
-        }
-        
-        /* FOOTER */
-        .footer {
-            position: absolute;
-            bottom: 0;
-            left: 35%;
-            right: 0;
-            background: linear-gradient(90deg, #34495e, #2c3e50);
-            color: white;
-            text-align: center;
-            padding: 15px;
-            font-size: 11px;
-        }
-        
-        .footer::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, #3498db, #e74c3c, #f39c12, #27ae60);
-        }
-        
-        @media print {
-            body { 
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            .resume-container {
-                box-shadow: none !important;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="resume-container">
-        <!-- PREMIUM SIDEBAR -->
-        <div class="sidebar">
-            <div class="sidebar-content">
-                <!-- PROFILE SECTION -->
-                <div class="profile-section">
-                    <div class="profile-avatar">
-                        ${(data.name || 'YN').charAt(0).toUpperCase()}
-                    </div>
-                    <h1 class="profile-name">${data.name || 'Your Name'}</h1>
-                    <p class="profile-title">${data.currentJobTitle || 'Professional'}</p>
-                </div>
-                
-                <!-- CONTACT INFO -->
-                <div class="sidebar-section">
-                    <h3 class="sidebar-heading">CONTACT</h3>
-                    ${data.email ? `
-                    <div class="contact-item">
-                        <div class="contact-icon">✉</div>
-                        <span>${data.email}</span>
-                    </div>
-                    ` : ''}
-                    ${data.phone ? `
-                    <div class="contact-item">
-                        <div class="contact-icon">📱</div>
-                        <span>${data.phone}</span>
-                    </div>
-                    ` : ''}
-                    ${data.location ? `
-                    <div class="contact-item">
-                        <div class="contact-icon">📍</div>
-                        <span>${data.location}</span>
-                    </div>
-                    ` : ''}
-                    ${data.linkedinUrl ? `
-                    <div class="contact-item">
-                        <div class="contact-icon">🔗</div>
-                        <span>LinkedIn</span>
-                    </div>
-                    ` : ''}
-                    ${data.githubUrl ? `
-                    <div class="contact-item">
-                        <div class="contact-icon">💻</div>
-                        <span>GitHub</span>
-                    </div>
-                    ` : ''}
-                    ${data.portfolioUrl ? `
-                    <div class="contact-item">
-                        <div class="contact-icon">🌐</div>
-                        <span>Portfolio</span>
-                    </div>
-                    ` : ''}
-                </div>
-                
-                <!-- SKILLS -->
-                ${data.skills && data.skills.length > 0 ? `
-                <div class="sidebar-section">
-                    <h3 class="sidebar-heading">EXPERTISE</h3>
-                    ${data.skills.slice(0, 8).map(skill => `
-                        <div class="skill-item">
-                            <div class="skill-name">${skill}</div>
-                            <div class="skill-bar">
-                                <div class="skill-progress"></div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                ` : ''}
-            </div>
-        </div>
-        
-        <!-- MAIN CONTENT -->
-        <div class="main-content">
-            <div class="decorative-line"></div>
-            
-            ${data.summary ? `
-            <div class="section">
-                <div class="section-header">
-                    <h2 class="section-title">PROFESSIONAL SUMMARY</h2>
-                </div>
-                <div class="summary-content">
-                    ${data.summary}
-                </div>
-            </div>
-            ` : ''}
-            
-            ${data.workExperience && data.workExperience.length > 0 ? `
-            <div class="section">
-                <div class="section-header">
-                    <h2 class="section-title">WORK EXPERIENCE</h2>
-                </div>
-                ${data.workExperience.map(job => `
-                    <div class="experience-item">
-                        <div class="experience-content">
-                            <div class="experience-title">${job.position || job}</div>
-                            ${job.company ? `<div style="font-weight: 600; color: #3498db; margin: 5px 0;">${job.company}</div>` : ''}
-                            ${job.duration ? `<div style="color: #7f8c8d; font-size: 12px; margin: 2px 0;">${job.duration}${job.location ? `, ${job.location}` : ''}</div>` : ''}
-                            ${job.responsibilities ? `<div class="experience-text" style="margin-top: 8px;">${job.responsibilities}</div>` : ''}
-                            ${job.contact ? `<div style="color: #27ae60; font-size: 11px; margin-top: 5px; font-style: italic;">Contact: ${job.contact}</div>` : ''}
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-            ` : ''}
-            
-            ${data.education && data.education.length > 0 ? `
-            <div class="section">
-                <div class="section-header">
-                    <h2 class="section-title">EDUCATION</h2>
-                </div>
-                ${data.education.map(edu => `
-                    <div class="education-item">
-                        <div class="education-text">
-                            <div style="font-weight: 600; color: #2c3e50;">${edu.degree || edu}</div>
-                            ${edu.institution ? `<div style="color: #3498db; margin: 2px 0;">${edu.institution}</div>` : ''}
-                            ${edu.year ? `<div style="color: #7f8c8d; font-size: 12px;">${edu.year}${edu.location ? `, ${edu.location}` : ''}</div>` : ''}
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-            ` : ''}
-            
-            ${data.projects && data.projects.length > 0 ? `
-            <div class="section">
-                <div class="section-header">
-                    <h2 class="section-title">PERSONAL PROJECTS</h2>
-                </div>
-                ${data.projects.map(project => `
-                    <div class="project-item">
-                        <div class="project-text">
-                            <div style="font-weight: 600; color: #2c3e50;">${project.name || project}</div>
-                            ${project.dates ? `<div style="color: #7f8c8d; font-size: 12px; margin: 2px 0;">${project.dates}</div>` : ''}
-                            ${project.description ? `<div style="margin-top: 5px;">${project.description}</div>` : ''}
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-            ` : ''}
-            
-            ${data.certificates && data.certificates.length > 0 ? `
-            <div class="section">
-                <div class="section-header">
-                    <h2 class="section-title">CERTIFICATES</h2>
-                </div>
-                ${data.certificates.map(cert => `
-                    <div class="education-item" style="background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%); border-left-color: #ff9800;">
-                        <div class="education-text">
-                            <div style="font-weight: 600; color: #2c3e50;">${cert.name || cert}</div>
-                            ${cert.issuer ? `<div style="color: #ff9800; margin: 2px 0;">${cert.issuer}</div>` : ''}
-                            ${cert.date ? `<div style="color: #7f8c8d; font-size: 12px;">${cert.date}</div>` : ''}
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-            ` : ''}
-            
-            ${data.achievements && data.achievements.length > 0 ? `
-            <div class="section">
-                <div class="section-header">
-                    <h2 class="section-title">ACHIEVEMENTS</h2>
-                </div>
-                <div style="background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); padding: 20px; border-radius: 12px; border-left: 4px solid #9c27b0;">
-                    ${data.achievements.map(achievement => `
-                        <div style="margin-bottom: 8px; display: flex; align-items: flex-start; gap: 8px;">
-                            <div style="color: #9c27b0; font-weight: bold;">•</div>
-                            <div style="color: #2c3e50; font-size: 14px;">${achievement}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-            ` : ''}
-        </div>
-        
-        <!-- PREMIUM FOOTER -->
-        <div class="footer">
-            <p>Professionally crafted with CareerPilot AI • ${new Date().toLocaleDateString()}</p>
-        </div>
-    </div>
-</body>
-</html>
-  `;
+async function generateStunningHTML(data) {
+  return ejs.renderFile(
+    path.join(__dirname, '../templates/resume-template.ejs'),
+    { data }
+  );
 }
 
 /**

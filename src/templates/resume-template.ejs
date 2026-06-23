@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= data.name || 'Professional' %> Resume</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @page { margin: 0; size: A4; }
+        body { font-family: 'Poppins', sans-serif; line-height: 1.5; color: #1a1a1a; background: #ffffff; font-size: 14px; }
+        .resume-container { width: 210mm; min-height: 297mm; background: white; position: relative; margin: 0 auto; display: flex; }
+        .sidebar { width: 35%; background: linear-gradient(180deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%); padding: 0; position: relative; overflow: hidden; }
+        .sidebar::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.03)"/><circle cx="20" cy="20" r="1" fill="rgba(255,255,255,0.02)"/><circle cx="80" cy="30" r="1.5" fill="rgba(255,255,255,0.02)"/></svg>'); opacity: 0.4; }
+        .sidebar-content { padding: 40px 30px; position: relative; z-index: 2; height: 100%; }
+        .profile-section { text-align: center; margin-bottom: 40px; position: relative; }
+        .profile-avatar { width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, #3498db, #e74c3c); margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 700; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; overflow: hidden; }
+        .profile-avatar::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%); animation: shimmer 3s infinite; }
+        @keyframes shimmer { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .profile-name { font-size: 24px; font-weight: 700; color: white; margin-bottom: 8px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+        .profile-title { font-size: 14px; color: #ecf0f1; font-weight: 300; opacity: 0.9; font-style: italic; }
+        .sidebar-section { margin-bottom: 35px; }
+        .sidebar-heading { font-size: 16px; font-weight: 600; color: #ecf0f1; margin-bottom: 15px; position: relative; padding-left: 20px; }
+        .sidebar-heading::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; background: linear-gradient(135deg, #3498db, #e74c3c); border-radius: 50%; box-shadow: 0 0 10px rgba(52, 152, 219, 0.5); }
+        .contact-item { display: flex; align-items: center; margin-bottom: 12px; color: #bdc3c7; font-size: 12px; }
+        .contact-icon { width: 16px; height: 16px; margin-right: 12px; color: #3498db; font-size: 14px; }
+        .skill-item { margin-bottom: 15px; }
+        .skill-name { color: #ecf0f1; font-size: 12px; font-weight: 500; margin-bottom: 6px; }
+        .skill-bar { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; position: relative; }
+        .skill-progress { height: 100%; background: linear-gradient(90deg, #3498db, #e74c3c); border-radius: 4px; width: 85%; position: relative; box-shadow: 0 0 10px rgba(52, 152, 219, 0.3); }
+        .skill-progress::after { content: ''; position: absolute; top: 0; left: 0; height: 100%; width: 30%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); animation: skillShine 2s infinite; }
+        @keyframes skillShine { 0% { left: -30%; } 100% { left: 100%; } }
+        .main-content { flex: 1; padding: 40px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); }
+        .section { margin-bottom: 40px; position: relative; }
+        .section-header { position: relative; margin-bottom: 25px; }
+        .section-title { font-size: 20px; font-weight: 700; color: #2c3e50; position: relative; display: inline-block; padding-bottom: 8px; }
+        .section-title::after { content: ''; position: absolute; bottom: 0; left: 0; width: 60px; height: 3px; background: linear-gradient(90deg, #3498db, #e74c3c); border-radius: 2px; }
+        .summary-content { background: linear-gradient(135deg, #fff 0%, #f1f3f4 100%); padding: 25px; border-radius: 15px; border-left: 5px solid #3498db; position: relative; box-shadow: 0 5px 20px rgba(0,0,0,0.08); font-family: 'Crimson Text', serif; font-size: 15px; line-height: 1.7; color: #34495e; }
+        .summary-content::before { content: '"'; position: absolute; top: -5px; left: 20px; font-size: 40px; color: #3498db; opacity: 0.3; font-family: 'Crimson Text', serif; }
+        .experience-item { position: relative; margin-bottom: 30px; padding-left: 25px; }
+        .experience-item::before { content: ''; position: absolute; left: 0; top: 10px; width: 12px; height: 12px; background: linear-gradient(135deg, #3498db, #2ecc71); border-radius: 50%; box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2); z-index: 2; }
+        .experience-item::after { content: ''; position: absolute; left: 5px; top: 22px; width: 2px; height: calc(100% - 12px); background: linear-gradient(to bottom, #3498db, transparent); }
+        .experience-item:last-child::after { display: none; }
+        .experience-content { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 3px 15px rgba(0,0,0,0.06); border: 1px solid #ecf0f1; position: relative; overflow: hidden; }
+        .experience-content::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #3498db, #2ecc71); }
+        .experience-text { color: #34495e; font-size: 14px; line-height: 1.6; padding-left: 15px; }
+        .education-item { background: linear-gradient(135deg, #fff5f5 0%, #fef5e7 100%); padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #f39c12; position: relative; box-shadow: 0 3px 15px rgba(243, 156, 18, 0.1); }
+        .education-item::before { content: '\1F393'; position: absolute; top: 50%; right: 20px; transform: translateY(-50%); font-size: 24px; opacity: 0.3; }
+        .education-text { color: #34495e; font-size: 14px; font-weight: 500; }
+        .project-item { background: linear-gradient(135deg, #f0fff4 0%, #e8f8f5 100%); padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #27ae60; position: relative; box-shadow: 0 3px 15px rgba(39, 174, 96, 0.1); }
+        .project-item::before { content: '\1F680'; position: absolute; top: 50%; right: 20px; transform: translateY(-50%); font-size: 24px; opacity: 0.3; }
+        .decorative-line { position: absolute; top: 0; right: 0; width: 100px; height: 2px; background: linear-gradient(90deg, transparent, #3498db, transparent); opacity: 0.3; }
+        .footer { position: absolute; bottom: 0; left: 35%; right: 0; background: linear-gradient(90deg, #34495e, #2c3e50); color: white; text-align: center; padding: 15px; font-size: 11px; }
+        .footer::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #3498db, #e74c3c, #f39c12, #27ae60); }
+        @media print { body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .resume-container { box-shadow: none !important; } }
+    </style>
+</head>
+<body>
+    <div class="resume-container">
+        <div class="sidebar">
+            <div class="sidebar-content">
+                <div class="profile-section">
+                    <div class="profile-avatar"><%= (data.name || 'YN').charAt(0).toUpperCase() %></div>
+                    <h1 class="profile-name"><%= data.name || 'Your Name' %></h1>
+                    <p class="profile-title"><%= data.currentJobTitle || 'Professional' %></p>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="sidebar-heading">CONTACT</h3>
+                    <% if (data.email) { %>
+                    <div class="contact-item"><div class="contact-icon">✉</div><span><%= data.email %></span></div>
+                    <% } %>
+                    <% if (data.phone) { %>
+                    <div class="contact-item"><div class="contact-icon">📱</div><span><%= data.phone %></span></div>
+                    <% } %>
+                    <% if (data.location) { %>
+                    <div class="contact-item"><div class="contact-icon">📍</div><span><%= data.location %></span></div>
+                    <% } %>
+                    <% if (data.linkedinUrl) { %>
+                    <div class="contact-item"><div class="contact-icon">🔗</div><span>LinkedIn</span></div>
+                    <% } %>
+                    <% if (data.githubUrl) { %>
+                    <div class="contact-item"><div class="contact-icon">💻</div><span>GitHub</span></div>
+                    <% } %>
+                    <% if (data.portfolioUrl) { %>
+                    <div class="contact-item"><div class="contact-icon">🌐</div><span>Portfolio</span></div>
+                    <% } %>
+                </div>
+
+                <% if (data.skills && data.skills.length > 0) { %>
+                <div class="sidebar-section">
+                    <h3 class="sidebar-heading">EXPERTISE</h3>
+                    <% data.skills.slice(0, 8).forEach(function(skill) { %>
+                    <div class="skill-item">
+                        <div class="skill-name"><%= skill %></div>
+                        <div class="skill-bar"><div class="skill-progress"></div></div>
+                    </div>
+                    <% }) %>
+                </div>
+                <% } %>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="decorative-line"></div>
+
+            <% if (data.summary) { %>
+            <div class="section">
+                <div class="section-header"><h2 class="section-title">PROFESSIONAL SUMMARY</h2></div>
+                <div class="summary-content"><%= data.summary %></div>
+            </div>
+            <% } %>
+
+            <% if (data.workExperience && data.workExperience.length > 0) { %>
+            <div class="section">
+                <div class="section-header"><h2 class="section-title">WORK EXPERIENCE</h2></div>
+                <% data.workExperience.forEach(function(job) { %>
+                <div class="experience-item">
+                    <div class="experience-content">
+                        <div class="experience-title" style="font-weight: 600; color: #2c3e50;"><%= typeof job === 'string' ? job : (job.position || job.title || '') %></div>
+                        <% if (job.company) { %><div style="font-weight: 600; color: #3498db; margin: 5px 0;"><%= job.company %></div><% } %>
+                        <% if (job.duration) { %><div style="color: #7f8c8d; font-size: 12px; margin: 2px 0;"><%= job.duration %><%= job.location ? ', ' + job.location : '' %></div><% } %>
+                        <% if (job.responsibilities || job.description) { %><div class="experience-text" style="margin-top: 8px;"><%= job.responsibilities || job.description %></div><% } %>
+                        <% if (job.contact) { %><div style="color: #27ae60; font-size: 11px; margin-top: 5px; font-style: italic;">Contact: <%= job.contact %></div><% } %>
+                    </div>
+                </div>
+                <% }) %>
+            </div>
+            <% } %>
+
+            <% if (data.education && data.education.length > 0) { %>
+            <div class="section">
+                <div class="section-header"><h2 class="section-title">EDUCATION</h2></div>
+                <% data.education.forEach(function(edu) { %>
+                <div class="education-item">
+                    <div class="education-text">
+                        <div style="font-weight: 600; color: #2c3e50;"><%= typeof edu === 'string' ? edu : (edu.degree || edu.institution || '') %></div>
+                        <% if (edu.institution && edu.degree) { %><div style="color: #3498db; margin: 2px 0;"><%= edu.institution %></div><% } %>
+                        <% if (edu.year) { %><div style="color: #7f8c8d; font-size: 12px;"><%= edu.year %><%= edu.location ? ', ' + edu.location : '' %></div><% } %>
+                    </div>
+                </div>
+                <% }) %>
+            </div>
+            <% } %>
+
+            <% if (data.projects && data.projects.length > 0) { %>
+            <div class="section">
+                <div class="section-header"><h2 class="section-title">PERSONAL PROJECTS</h2></div>
+                <% data.projects.forEach(function(project) { %>
+                <div class="project-item">
+                    <div class="project-text">
+                        <div style="font-weight: 600; color: #2c3e50;"><%= typeof project === 'string' ? project : (project.name || '') %></div>
+                        <% if (project.dates) { %><div style="color: #7f8c8d; font-size: 12px; margin: 2px 0;"><%= project.dates %></div><% } %>
+                        <% if (project.description) { %><div style="margin-top: 5px;"><%= project.description %></div><% } %>
+                    </div>
+                </div>
+                <% }) %>
+            </div>
+            <% } %>
+
+            <% if (data.certificates && data.certificates.length > 0) { %>
+            <div class="section">
+                <div class="section-header"><h2 class="section-title">CERTIFICATES</h2></div>
+                <% data.certificates.forEach(function(cert) { %>
+                <div class="education-item" style="background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%); border-left-color: #ff9800;">
+                    <div class="education-text">
+                        <div style="font-weight: 600; color: #2c3e50;"><%= typeof cert === 'string' ? cert : (cert.name || '') %></div>
+                        <% if (cert.issuer) { %><div style="color: #ff9800; margin: 2px 0;"><%= cert.issuer %></div><% } %>
+                        <% if (cert.date) { %><div style="color: #7f8c8d; font-size: 12px;"><%= cert.date %></div><% } %>
+                    </div>
+                </div>
+                <% }) %>
+            </div>
+            <% } %>
+
+            <% if (data.achievements && data.achievements.length > 0) { %>
+            <div class="section">
+                <div class="section-header"><h2 class="section-title">ACHIEVEMENTS</h2></div>
+                <div style="background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); padding: 20px; border-radius: 12px; border-left: 4px solid #9c27b0;">
+                    <% data.achievements.forEach(function(achievement) { %>
+                    <div style="margin-bottom: 8px; display: flex; align-items: flex-start; gap: 8px;">
+                        <div style="color: #9c27b0; font-weight: bold;">•</div>
+                        <div style="color: #2c3e50; font-size: 14px;"><%= achievement %></div>
+                    </div>
+                    <% }) %>
+                </div>
+            </div>
+            <% } %>
+        </div>
+
+        <div class="footer">
+            <p>Professionally crafted with CareerPilot AI • <%= new Date().toLocaleDateString() %></p>
+        </div>
+    </div>
+</body>
+</html>

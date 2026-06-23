@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/authMiddleware');
+const auth = require('../middleware/auth');
 const multer = require('multer');
 const { chatbotLimiter, uploadLimiter } = require('../middleware/rateLimiters');
 const { chatbotValidators } = require('../middleware/validators');

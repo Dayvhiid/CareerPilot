@@ -6,8 +6,88 @@ const redisService = require('../services/redisService');
 const natural = require('natural');
 const mongoose = require('mongoose');
 
-// Create a test user ObjectId for when auth is disabled
-const TEST_USER_ID = new mongoose.Types.ObjectId("507f1f77bcf86cd799439011");
+
+
+// Domain category keywords for structural classification
+const CATEGORY_KEYWORDS = {
+  'IT/Software': {
+    keywords: ['software', 'developer', 'engineer', 'frontend', 'backend', 'full stack', 'react', 'node', 'python', 'java', 'javascript', 'typescript', 'web', 'app', 'coding', 'programming', 'it', 'database', 'devops', 'cloud', 'aws', 'azure', 'tech'],
+    minMatches: 1
+  },
+  'Design/Creative': {
+    keywords: ['designer', 'design', 'ux', 'ui', 'graphic', 'creative', 'photoshop', 'figma', 'illustrator', 'branding', 'visual', 'art', 'animation'],
+    minMatches: 1
+  },
+  'Finance/Accounting': {
+    keywords: ['accountant', 'accounting', 'finance', 'financial', 'cpa', 'bookkeeper', 'auditor', 'analyst', 'tax', 'payroll', 'banking', 'investment', 'forex'],
+    minMatches: 1
+  },
+  'Sales/Marketing': {
+    keywords: ['sales', 'marketing', 'seo', 'digital marketing', 'social media', 'sales representative', 'business development', 'account executive', 'brand', 'advertising'],
+    minMatches: 1
+  },
+  'Construction/Engineering': {
+    keywords: ['construction', 'engineer', 'civil', 'structural', 'architect', 'project manager', 'contractor', 'autocad', 'bim', 'welding', 'electrical', 'mechanical', 'building'],
+    minMatches: 1
+  },
+  'Healthcare': {
+    keywords: ['nurse', 'doctor', 'physician', 'healthcare', 'medical', 'therapist', 'pharmacist', 'dentist', 'psychiatrist', 'hospital', 'clinical'],
+    minMatches: 1
+  },
+  'Operations/Admin': {
+    keywords: ['operations', 'administrator', 'admin', 'executive assistant', 'office manager', 'coordinator', 'receptionist', 'human resources', 'hr'],
+    minMatches: 1
+  }
+};
+
+/**
+ * Classify job into domain category based on title and description
+ */
+const classifyJobCategory = (jobTitle, jobDescription) => {
+  const text = `${jobTitle} ${jobDescription}`.toLowerCase();
+  let bestCategory = 'Other';
+  let bestScore = 0;
+
+  for (const [category, config] of Object.entries(CATEGORY_KEYWORDS)) {
+    let matches = 0;
+    config.keywords.forEach(keyword => {
+      if (text.includes(keyword)) matches++;
+    });
+
+    if (matches >= config.minMatches && matches > bestScore) {
+      bestScore = matches;
+      bestCategory = category;
+    }
+  }
+
+  return bestCategory;
+};
+
+/**
+ * Determine resume category from parsed resume data
+ */
+const determineResumeCategory = (resumeData) => {
+  if (!resumeData) return 'Other';
+
+  const { jobTitles = [], skills = [], summary = '' } = resumeData;
+  const text = `${jobTitles.join(' ')} ${skills.join(' ')} ${summary}`.toLowerCase();
+  let bestCategory = 'Other';
+  let bestScore = 0;
+
+  for (const [category, config] of Object.entries(CATEGORY_KEYWORDS)) {
+    let matches = 0;
+    config.keywords.forEach(keyword => {
+      if (text.includes(keyword)) matches++;
+    });
+
+    if (matches >= config.minMatches && matches > bestScore) {
+      bestScore = matches;
+      bestCategory = category;
+    }
+  }
+
+  return bestCategory;
+};
 
 /**
  * Search and fetch jobs from external APIs
@@ -50,6 +130,9 @@ exports.searchJobs = async (req, res) => {
     const savedJobs = [];
     for (const jobData of normalizedJobs) {
       try {
+        // Classify job into domain category before saving
+        jobData.category = classifyJobCategory(jobData.title, jobData.description);
+
         const job = await Job.findOneAndUpdate(
           { externalId: jobData.externalId },
           jobData,
@@ -60,7 +143,7 @@ exports.searchJobs = async (req, res) => {
           }
         );
         savedJobs.push(job);
-        console.log(`💾 Saved job: ${job.title} at ${job.company}`);
+        console.log(`💾 Saved job: ${job.title} at ${job.company} [category: ${job.category}]`);
       } catch (saveError) {
         console.error(`❌ Failed to save job: ${jobData.title}`, saveError.message);
       }
@@ -91,11 +174,37 @@ exports.searchJobs = async (req, res) => {
 };
 
 /**
+ * Get Redis cache statistics
+ */
+exports.getCacheStats = async (req, res) => {
+  try {
+    const redisService = require('../services/redisService');
+    const stats = await redisService.getCacheStats();
+    res.json({ success: true, stats });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to get cache stats', error: error.message });
+  }
+};
+
+/**
+ * Clear Redis job cache
+ */
+exports.clearCache = async (req, res) => {
+  try {
+    const redisService = require('../services/redisService');
+    const cleared = await redisService.clearJobsCache();
+    res.json({ success: cleared, message: cleared ? 'Cache cleared' : 'Failed to clear cache' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to clear cache', error: error.message });
+  }
+};
+
+/**
  * Get recommended jobs for user based on their resume
  */
 exports.getRecommendedJobs = async (req, res) => {
   try {
-    const userId = req.user?.id || TEST_USER_ID;
+    const userId = req.user.id;
     const { page = 1, limit = 20 } = req.query;
     
     console.log(` Getting recommended jobs for user: ${userId}`);
@@ -183,27 +292,48 @@ const getRecentJobs = async (req, res) => {
 
 /**
  * Generate job matches based on user's resume
+ * Skip irrelevant jobs (no meaningful skill/title overlap) to reduce noise
  */
 const generateJobMatches = async (userId, resumeData) => {
   try {
     console.log(`🤖 Generating job matches for user: ${userId}`);
 
+    const resumeCategory = determineResumeCategory(resumeData);
+    console.log(`📂 Resume classified as: ${resumeCategory}`);
+
     // Get all active jobs
     const jobs = await Job.find({ isActive: true });
     console.log(`📊 Found ${jobs.length} active jobs to match against`);
 
+    // Bulk fetch existing matches for the user to avoid N+1 lookups
+    const jobIds = jobs.map(j => j._id);
+    const existingMatchDocs = await JobMatch.find({ userId, jobId: { $in: jobIds } }, { jobId: 1 });
+    const existingJobIds = new Set(existingMatchDocs.map(m => m.jobId.toString()));
+
+    const newMatches = [];
+    let skipped = 0;
+    let categorySkipped = 0;
+
     for (const job of jobs) {
-      // Check if match already exists
-      const existingMatch = await JobMatch.findOne({ userId, jobId: job._id });
-      if (existingMatch) {
-        continue; // Skip if already matched
+      if (existingJobIds.has(job._id.toString())) {
+        continue;
       }
 
-      // Calculate match score
+      if (resumeCategory !== 'Other' && job.category !== 'Other' && resumeCategory !== job.category) {
+        console.log(`↩️ Skipped cross-domain match: resume[${resumeCategory}] ≠ job[${job.category}] - ${job.title} at ${job.company}`);
+        categorySkipped++;
+        continue;
+      }
+
       const matchResult = calculateJobMatch(resumeData, job);
 
-      // Create job match record
-      await JobMatch.create({
+      if (matchResult.irrelevant) {
+        console.log(`⏭️ Skipped irrelevant job: ${job.title}`);
+        skipped++;
+        continue;
+      }
+
+      newMatches.push({
         userId,
         jobId: job._id,
         matchScore: matchResult.totalScore,
@@ -213,9 +343,13 @@ const generateJobMatches = async (userId, resumeData) => {
         experienceMatch: matchResult.experienceMatch,
         titleMatch: matchResult.titleMatch
       });
-
-      console.log(`✅ Created match: ${job.title} (Score: ${matchResult.totalScore})`);
     }
+
+    if (newMatches.length > 0) {
+      await JobMatch.insertMany(newMatches, { ordered: false });
+    }
+
+    console.log(`📊 Match generation complete: ${newMatches.length} created, ${skipped} skipped as irrelevant, ${categorySkipped} skipped as cross-domain`);
 
   } catch (error) {
     console.error('❌ Error generating job matches:', error);
@@ -224,26 +358,43 @@ const generateJobMatches = async (userId, resumeData) => {
 
 /**
  * Calculate job match score based on resume data
+ * Hard gate: zero meaningful skill/title overlap → irrelevant, don't store match
  */
 const calculateJobMatch = (resumeData, job) => {
   const weights = {
-    skills: 0.35,
-    title: 0.25,
-    experience: 0.20,
-    location: 0.20
+    skills: 0.50,
+    title: 0.30,
+    experience: 0.10,
+    location: 0.10
   };
 
   // Skills matching
   const skillsMatch = calculateSkillsMatch(resumeData.skills || [], job.skills || []);
-  
+
   // Title matching
   const titleMatch = calculateTitleMatch(resumeData.jobTitles || [], job.title);
-  
-  // Experience matching (basic implementation)
+
+  // Experience matching
   const experienceMatch = calculateExperienceMatch(resumeData, job);
-  
+
   // Location matching
   const locationMatch = calculateLocationMatch(resumeData.location || '', job.location);
+
+  // HARD GATE: no skill overlap AND no meaningful title overlap = irrelevant.
+  // Don't let location/experience defaults rescue an irrelevant job.
+  const irrelevant = skillsMatch.matched.length === 0 && titleMatch < 50;
+
+  if (irrelevant) {
+    return {
+      totalScore: 0,
+      irrelevant: true,
+      reasons: [],
+      skillsMatch,
+      titleMatch,
+      experienceMatch,
+      locationMatch
+    };
+  }
 
   // Calculate total score
   const totalScore = Math.round(
@@ -269,7 +420,8 @@ const calculateJobMatch = (resumeData, job) => {
   }
 
   return {
-    totalScore: Math.max(1, Math.min(100, totalScore)), // Ensure score is between 1-100
+    totalScore: Math.max(1, Math.min(100, totalScore)),
+    irrelevant: false,
     reasons,
     skillsMatch,
     titleMatch,
@@ -279,24 +431,31 @@ const calculateJobMatch = (resumeData, job) => {
 };
 
 /**
- * Calculate skills matching score
+ * Normalize skill name using Porter stemming for robust matching
+ */
+const normalizeSkill = (skill) => {
+  return natural.PorterStemmer.tokenizeAndStem(skill.toLowerCase()).join(' ');
+};
+
+/**
+ * Calculate skills matching score with stemming and Jaro-Winkler similarity
  */
 const calculateSkillsMatch = (resumeSkills, jobSkills) => {
   if (!resumeSkills.length || !jobSkills.length) {
     return { score: 0, matched: [], missing: jobSkills || [] };
   }
 
-  const resumeSkillsLower = resumeSkills.map(s => s.toLowerCase());
-  const jobSkillsLower = jobSkills.map(s => s.toLowerCase());
-
+  const resumeNormalized = resumeSkills.map(normalizeSkill);
   const matched = [];
   const missing = [];
 
-  jobSkillsLower.forEach(jobSkill => {
-    const found = resumeSkillsLower.find(resumeSkill => 
-      resumeSkill.includes(jobSkill) || jobSkill.includes(resumeSkill)
+  jobSkills.forEach(jobSkill => {
+    const jobNormalized = normalizeSkill(jobSkill);
+    const found = resumeNormalized.some(resumeNorm =>
+      resumeNorm === jobNormalized ||
+      natural.JaroWinklerDistance(resumeNorm, jobNormalized) > 0.92
     );
-    
+
     if (found) {
       matched.push(jobSkill);
     } else {
@@ -304,7 +463,7 @@ const calculateSkillsMatch = (resumeSkills, jobSkills) => {
     }
   });
 
-  const score = jobSkillsLower.length > 0 ? (matched.length / jobSkillsLower.length) * 100 : 0;
+  const score = jobSkills.length > 0 ? (matched.length / jobSkills.length) * 100 : 0;
 
   return {
     score: Math.round(score),
@@ -314,7 +473,17 @@ const calculateSkillsMatch = (resumeSkills, jobSkills) => {
 };
 
 /**
- * Calculate title matching score
+ * Generic title words that cause false positives across unrelated domains
+ */
+const GENERIC_TITLE_WORDS = new Set([
+  'engineer', 'developer', 'manager', 'analyst', 'specialist',
+  'officer', 'associate', 'executive', 'lead', 'consultant',
+  'coordinator', 'administrator', 'assistant', 'director',
+  'senior', 'junior', 'and', 'the', 'of', 'for'
+]);
+
+/**
+ * Calculate title matching score (excludes generic words that cause cross-domain false positives)
  */
 const calculateTitleMatch = (resumeTitles, jobTitle) => {
   if (!resumeTitles.length || !jobTitle) return 0;
@@ -324,18 +493,20 @@ const calculateTitleMatch = (resumeTitles, jobTitle) => {
 
   resumeTitles.forEach(resumeTitle => {
     const resumeTitleLower = resumeTitle.toLowerCase();
-    
+
     // Exact match
     if (resumeTitleLower === jobTitleLower) {
       bestMatch = Math.max(bestMatch, 100);
       return;
     }
 
-    // Partial match
-    const commonWords = resumeTitleLower.split(' ').filter(word => 
-      jobTitleLower.includes(word) && word.length > 2
+    // Partial match using non-generic words only
+    const commonWords = resumeTitleLower.split(' ').filter(word =>
+      jobTitleLower.includes(word) &&
+      word.length > 2 &&
+      !GENERIC_TITLE_WORDS.has(word)
     );
-    
+
     if (commonWords.length > 0) {
       const matchScore = (commonWords.length / jobTitleLower.split(' ').length) * 80;
       bestMatch = Math.max(bestMatch, matchScore);
@@ -346,20 +517,22 @@ const calculateTitleMatch = (resumeTitles, jobTitle) => {
 };
 
 /**
- * Calculate experience matching score
+ * Calculate experience matching score (missing data defaults to neutral, not a match)
  */
 const calculateExperienceMatch = (resumeData, job) => {
-  // Basic experience matching - can be enhanced
+  // If job has no experienceLevel set, it's unknown data - return neutral score, not a match.
+  if (!job.experienceLevel) return 40;
+
   const resumeLevel = determineExperienceLevel(resumeData);
-  const jobLevel = job.experienceLevel || 'mid';
+  const jobLevel = job.experienceLevel;
 
   if (resumeLevel === jobLevel) return 100;
-  
+
   // Adjacent levels get partial credit
   const levels = ['entry', 'mid', 'senior', 'executive'];
   const resumeIndex = levels.indexOf(resumeLevel);
   const jobIndex = levels.indexOf(jobLevel);
-  
+
   const difference = Math.abs(resumeIndex - jobIndex);
   return Math.max(0, 100 - (difference * 30));
 };
@@ -415,7 +588,7 @@ const determineExperienceLevel = (resumeData) => {
  */
 exports.bookmarkJob = async (req, res) => {
   try {
-    const userId = req.user?.id || TEST_USER_ID;
+    const userId = req.user.id;
     const { jobId } = req.params;
     const { bookmark = true } = req.body;
 
@@ -450,7 +623,7 @@ exports.bookmarkJob = async (req, res) => {
  */
 exports.markJobApplied = async (req, res) => {
   try {
-    const userId = req.user?.id || TEST_USER_ID;
+    const userId = req.user.id;
     const { jobId } = req.params;
 
     const jobMatch = await JobMatch.findOneAndUpdate(
@@ -486,7 +659,7 @@ exports.markJobApplied = async (req, res) => {
 exports.getJobDetails = async (req, res) => {
   try {
     const { jobId } = req.params;
-    const userId = req.user?.id || TEST_USER_ID;
+    const userId = req.user.id;
 
     const job = await Job.findById(jobId);
     if (!job) {
@@ -535,7 +708,7 @@ exports.getJobDetails = async (req, res) => {
  */
 exports.getResumeBasedJobs = async (req, res) => {
   try {
-    const userId = req.user?.id || TEST_USER_ID;
+    const userId = req.user.id;
     const { page = 1, limit = 20 } = req.query;
     
     console.log(`🎯 Getting resume-based jobs for user: ${userId}`);

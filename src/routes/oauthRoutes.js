@@ -1,6 +1,20 @@
 const express = require('express');
 const passport = require('passport');
+const jwt = require('jsonwebtoken');
 const router = express.Router();
+
+function setOAuthAccessTokenCookie(res, userId) {
+  const accessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRATION || '15m'
+  });
+
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 15 * 60 * 1000
+  });
+}
 
 function ensureOAuthEnabled(provider) {
   return (req, res, next) => {
@@ -25,6 +39,7 @@ router.get('/google/callback',
   ensureOAuthEnabled('google'),
   passport.authenticate('google', { failureRedirect: '/public/auth/login.html' }),
   (req, res) => {
+    setOAuthAccessTokenCookie(res, req.user._id);
     // Success -> redirect to resume page
     res.redirect('/public/resume/resume.html');
   }
@@ -42,6 +57,7 @@ router.get('/github/callback',
   ensureOAuthEnabled('github'),
   passport.authenticate('github', { failureRedirect: '/public/auth/login.html' }),
   (req, res) => {
+    setOAuthAccessTokenCookie(res, req.user._id);
     // Success -> redirect to resume page
     res.redirect('/public/resume/resume.html');
   }
@@ -50,7 +66,7 @@ router.get('/github/callback',
 // Step 3: Logout
 router.get('/logout', (req, res) => {
   req.logout(err => {
-    if (err) return res.status(500).json({ msg: 'Logout error' });
+    if (err) return res.status(500).json({ success: false, message: 'Logout error' });
     res.redirect('/');
   });
 });

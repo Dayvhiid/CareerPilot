@@ -4,15 +4,14 @@ const huggingFaceService = require('../services/huggingFaceService');
 const mongoose = require('mongoose');
 const { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } = require('docx');
 
-// Create a test user ObjectId for when auth is disabled
-const TEST_USER_ID = new mongoose.Types.ObjectId("507f1f77bcf86cd799439011");
+
 
 /**
  * Generate cover letter for a specific job
  */
 exports.generateCoverLetter = async (req, res) => {
   try {
-    const userId = req.user?.id || TEST_USER_ID;
+    const userId = req.user.id;
     const { jobId } = req.params;
     const { customInstructions, tone = 'professional', length = 'medium' } = req.body;
 

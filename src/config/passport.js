@@ -5,6 +5,16 @@ const User = require('../models/User');
 
 passport.oauthProviders = passport.oauthProviders || {};
 
+function buildFallbackName(profile, email) {
+  const candidate =
+    profile?.displayName ||
+    [profile?.name?.givenName, profile?.name?.familyName].filter(Boolean).join(' ').trim() ||
+    profile?.username ||
+    (email ? email.split('@')[0] : '');
+
+  return (candidate || 'OAuth User').trim();
+}
+
 // Serialize user (stores user ID in session)
 passport.serializeUser((user, done) => {
   done(null, user.id);
@@ -30,6 +40,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     async (accessToken, refreshToken, profile, done) => {
       try {
         const email = profile.emails?.[0]?.value;
+        const normalizedName = buildFallbackName(profile, email);
         
         // First, check if user exists with this Google ID
         let user = await User.findOne({ googleId: profile.id });
@@ -44,13 +55,19 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         if (user) {
           // User exists with email but not Google ID - link the accounts
           user.googleId = profile.id;
+
+          // Some legacy records were created without name; backfill before save to satisfy schema validation.
+          if (!user.name || !user.name.trim()) {
+            user.name = normalizedName;
+          }
+
           await user.save();
           return done(null, user);
         }
         
         // Create new user if doesn't exist
         user = await User.create({
-          name: profile.displayName,
+          name: normalizedName,
           email: email,
           googleId: profile.id
         });
@@ -78,6 +95,7 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
     async (accessToken, refreshToken, profile, done) => {
       try {
         const email = profile.emails?.[0]?.value || `${profile.username}@github.local`;
+        const normalizedName = buildFallbackName(profile, email);
         
         // First, check if user exists with this GitHub ID
         let user = await User.findOne({ githubId: profile.id });
@@ -92,13 +110,19 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
         if (user) {
           // User exists with email but not GitHub ID - link the accounts
           user.githubId = profile.id;
+
+          // Keep OAuth linking resilient for legacy users with incomplete profile data.
+          if (!user.name || !user.name.trim()) {
+            user.name = normalizedName;
+          }
+
           await user.save();
           return done(null, user);
         }
         
         // Create new user if doesn't exist
         user = await User.create({
-          name: profile.displayName || profile.username,
+          name: normalizedName,
           email: email,
           githubId: profile.id
         });
