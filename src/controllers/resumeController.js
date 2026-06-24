@@ -1,4 +1,5 @@
 const Resume = require("../models/Resume");
+const JobMatch = require("../models/JobMatch");
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
 const fs = require("fs").promises;
@@ -56,6 +57,16 @@ exports.uploadResume = async (req, res) => {
         console.log("Error deleting old file:", err);
       }
       await Resume.findByIdAndDelete(existingResume._id);
+    }
+
+    // Invalidate old job matches so recommendations get recalculated with new resume
+    try {
+      const deleted = await JobMatch.deleteMany({ userId });
+      if (deleted.deletedCount > 0) {
+        console.log(`🗑️ Deleted ${deleted.deletedCount} old job matches for user ${userId}`);
+      }
+    } catch (err) {
+      console.log("Error deleting old job matches:", err);
     }
 
     // Create new resume record

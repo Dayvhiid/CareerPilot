@@ -120,42 +120,136 @@ class JSearchService {
   }
 
   /**
-   * Extract skills from job description using keyword matching
+   * Comprehensive technical skills database organized by category
+   */
+  getSkillsDatabase() {
+    return {
+      programming: [
+        'JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'C#', 'PHP', 'Ruby', 'Go', 'Rust',
+        'Swift', 'Kotlin', 'Scala', 'R', 'MATLAB', 'Perl', 'Dart', 'Objective-C', 'VB.NET',
+        'F#', 'Haskell', 'Clojure', 'Elixir', 'Julia', 'Assembly', 'COBOL', 'Fortran'
+      ],
+      web: [
+        'HTML', 'CSS', 'SASS', 'SCSS', 'LESS', 'Bootstrap', 'Tailwind CSS', 'Material-UI',
+        'Chakra UI', 'Ant Design', 'Semantic UI', 'Bulma', 'Foundation', 'Materialize'
+      ],
+      frontend: [
+        'React', 'Angular', 'Vue.js', 'Svelte', 'Next.js', 'Nuxt.js', 'Gatsby', 'Ember.js',
+        'Backbone.js', 'Knockout.js', 'Polymer', 'Lit', 'Alpine.js', 'Stimulus'
+      ],
+      backend: [
+        'Node.js', 'Express.js', 'Django', 'Flask', 'FastAPI', 'Spring Boot', 'Spring Framework',
+        'ASP.NET', 'Laravel', 'Symfony', 'CodeIgniter', 'Rails', 'Sinatra', 'Gin', 'Echo',
+        'Fiber', 'NestJS', 'Koa.js', 'Hapi.js', 'Fastify'
+      ],
+      database: [
+        'MongoDB', 'MySQL', 'PostgreSQL', 'Oracle', 'Redis', 'SQLite', 'Cassandra', 'DynamoDB',
+        'CouchDB', 'Neo4j', 'InfluxDB', 'Elasticsearch', 'Firebase', 'Supabase', 'MariaDB',
+        'Microsoft SQL Server', 'IBM DB2', 'Amazon RDS', 'Google Cloud SQL'
+      ],
+      cloud: [
+        'AWS', 'Azure', 'Google Cloud', 'GCP', 'Heroku', 'Vercel', 'Netlify', 'DigitalOcean',
+        'Linode', 'Vultr', 'Oracle Cloud', 'IBM Cloud', 'Alibaba Cloud'
+      ],
+      devops: [
+        'Docker', 'Kubernetes', 'Jenkins', 'GitLab CI', 'GitHub Actions', 'CircleCI', 'Travis CI',
+        'Terraform', 'Ansible', 'Chef', 'Puppet', 'Vagrant', 'Nginx', 'Apache', 'Prometheus',
+        'Grafana', 'ELK Stack', 'Splunk'
+      ],
+      tools: [
+        'Git', 'GitHub', 'GitLab', 'Bitbucket', 'SVN', 'Jira', 'Confluence', 'Slack', 'Teams',
+        'Trello', 'Asana', 'Monday', 'Notion', 'VS Code', 'IntelliJ', 'Eclipse', 'Xcode'
+      ],
+      testing: [
+        'Jest', 'Mocha', 'Chai', 'Cypress', 'Playwright', 'Selenium', 'WebDriver', 'JUnit',
+        'TestNG', 'PyTest', 'RSpec', 'PHPUnit', 'Karma', 'Jasmine'
+      ],
+      mobile: [
+        'React Native', 'Flutter', 'Ionic', 'Xamarin', 'Cordova', 'PhoneGap', 'Titanium',
+        'iOS Development', 'Android Development', 'Swift UI', 'Jetpack Compose'
+      ],
+      data: [
+        'Pandas', 'NumPy', 'Matplotlib', 'Seaborn', 'Scikit-learn', 'TensorFlow', 'PyTorch',
+        'Keras', 'OpenCV', 'NLTK', 'SpaCy', 'Hadoop', 'Spark', 'Kafka', 'Airflow'
+      ],
+      business: [
+        'Excel', 'PowerPoint', 'Word', 'Outlook', 'QuickBooks', 'Salesforce', 'SAP', 'Oracle ERP',
+        'Tableau', 'Power BI', 'Accounting', 'Finance', 'Project Management', 'Agile', 'Scrum',
+        'Kanban', 'JIRA', 'Confluence'
+      ],
+      design: [
+        'Photoshop', 'Figma', 'Adobe', 'UI/UX', 'Graphic Design', 'Digital Marketing', 'SEO',
+        'Illustrator', 'InDesign', 'After Effects', 'Premiere Pro', 'Sketch', 'InVision',
+        'Zeplin', 'Framer', 'Webflow'
+      ],
+      industry: [
+        'Fintech', 'Mobile Money', 'Banking', 'Insurance', 'Oil & Gas', 'Agriculture',
+        'Telecommunications', 'E-commerce', 'EdTech', 'HealthTech'
+      ]
+    };
+  }
+
+  /**
+   * Generate skill variations for common abbreviations and alternate names
+   */
+  generateSkillVariations(skill) {
+    const skillMap = {
+      'JavaScript': ['JS', 'Javascript', 'ECMAScript'],
+      'TypeScript': ['TS', 'Typescript'],
+      'React': ['ReactJS', 'React.js'],
+      'Vue.js': ['Vue', 'VueJS', 'Vuejs'],
+      'Angular': ['AngularJS', 'Angular 2'],
+      'Node.js': ['NodeJS', 'Node'],
+      'Express.js': ['Express', 'ExpressJS'],
+      'MongoDB': ['Mongo', 'Mongo DB'],
+      'PostgreSQL': ['Postgres', 'PSQL'],
+      'Amazon Web Services': ['AWS'],
+      'Google Cloud Platform': ['GCP'],
+      'Cascading Style Sheets': ['CSS'],
+      'HyperText Markup Language': ['HTML']
+    };
+    return skillMap[skill] || [];
+  }
+
+  /**
+   * Extract skills from job description using comprehensive keyword matching
    * @param {string} description - Job description text
    * @returns {Array} - Array of identified skills
    */
   extractSkills(description) {
-    const commonSkills = [
-      // Programming Languages
-      'JavaScript', 'Python', 'Java', 'C#', 'PHP', 'React', 'Node.js', 'Angular', 'Vue.js',
-      'TypeScript', 'C++', 'Ruby', 'Go', 'Swift', 'Kotlin', 'Dart', 'Flutter',
-      
-      // Databases
-      'MongoDB', 'MySQL', 'PostgreSQL', 'Redis', 'SQLite', 'Oracle', 'SQL Server',
-      
-      // Cloud & DevOps
-      'AWS', 'Azure', 'Google Cloud', 'Docker', 'Kubernetes', 'Jenkins', 'Git', 'GitHub',
-      
-      // Design & Marketing
-      'Photoshop', 'Figma', 'Adobe', 'UI/UX', 'Graphic Design', 'Digital Marketing', 'SEO',
-      
-      // Business & Finance
-      'Excel', 'PowerPoint', 'Accounting', 'Finance', 'Project Management', 'Agile', 'Scrum',
-      
-      // Nigerian specific
-      'Fintech', 'Mobile Money', 'Banking', 'Insurance', 'Oil & Gas', 'Agriculture'
-    ];
-
-    const foundSkills = [];
+    const allSkills = Object.values(this.getSkillsDatabase()).flat();
+    const foundSkills = new Set();
     const lowerDescription = description.toLowerCase();
 
-    commonSkills.forEach(skill => {
-      if (lowerDescription.includes(skill.toLowerCase())) {
-        foundSkills.push(skill);
+    allSkills.forEach(skill => {
+      const lowerSkill = skill.toLowerCase();
+      if (lowerDescription.includes(lowerSkill)) {
+        foundSkills.add(skill);
+        return;
       }
+      const variations = this.generateSkillVariations(skill);
+      variations.forEach(variation => {
+        if (lowerDescription.includes(variation.toLowerCase())) {
+          foundSkills.add(skill);
+        }
+      });
     });
 
-    return foundSkills.slice(0, 10); // Limit to 10 skills
+    // Fuzzy match: check each word for partial skill match
+    const words = description.split(/[\s,;.()]+/).filter(w => w.length > 2);
+    allSkills.forEach(skill => {
+      if (foundSkills.has(skill)) return;
+      const lowerSkill = skill.toLowerCase();
+      const skillWords = lowerSkill.split(' ');
+      const matched = words.some(word => {
+        if (word.length < 3) return false;
+        const cleanWord = word.replace(/[^a-z0-9+#.]/g, '').toLowerCase();
+        return cleanWord === lowerSkill || skillWords.includes(cleanWord) || lowerSkill.includes(cleanWord) || cleanWord.includes(lowerSkill);
+      });
+      if (matched) foundSkills.add(skill);
+    });
+
+    return Array.from(foundSkills).slice(0, 15);
   }
 
   /**

@@ -312,20 +312,18 @@ const generateJobMatches = async (userId, resumeData) => {
 
     const newMatches = [];
     let skipped = 0;
-    let categorySkipped = 0;
+    let categoryMatched = 0;
 
     for (const job of jobs) {
       if (existingJobIds.has(job._id.toString())) {
         continue;
       }
 
-      if (resumeCategory !== 'Other' && job.category !== 'Other' && resumeCategory !== job.category) {
-        console.log(`↩️ Skipped cross-domain match: resume[${resumeCategory}] ≠ job[${job.category}] - ${job.title} at ${job.company}`);
-        categorySkipped++;
-        continue;
-      }
+      // Soft category boost: same-category jobs get a scoring bonus
+      const categoryBonus = (resumeCategory !== 'Other' && resumeCategory === job.category) ? 10 : 0;
+      if (categoryBonus > 0) categoryMatched++;
 
-      const matchResult = calculateJobMatch(resumeData, job);
+      const matchResult = calculateJobMatch(resumeData, job, categoryBonus);
 
       if (matchResult.irrelevant) {
         console.log(`⏭️ Skipped irrelevant job: ${job.title}`);
@@ -349,7 +347,7 @@ const generateJobMatches = async (userId, resumeData) => {
       await JobMatch.insertMany(newMatches, { ordered: false });
     }
 
-    console.log(`📊 Match generation complete: ${newMatches.length} created, ${skipped} skipped as irrelevant, ${categorySkipped} skipped as cross-domain`);
+    console.log(`📊 Match generation complete: ${newMatches.length} created, ${skipped} skipped as irrelevant, ${categoryMatched} in same category`);
 
   } catch (error) {
     console.error('❌ Error generating job matches:', error);
@@ -358,9 +356,12 @@ const generateJobMatches = async (userId, resumeData) => {
 
 /**
  * Calculate job match score based on resume data
+ * @param {Object} resumeData - Parsed resume data
+ * @param {Object} job - Job listing from DB
+ * @param {number} categoryBonus - Extra points for same-category match (0 or 10)
  * Hard gate: zero meaningful skill/title overlap → irrelevant, don't store match
  */
-const calculateJobMatch = (resumeData, job) => {
+const calculateJobMatch = (resumeData, job, categoryBonus = 0) => {
   const weights = {
     skills: 0.50,
     title: 0.30,
@@ -382,7 +383,7 @@ const calculateJobMatch = (resumeData, job) => {
 
   // HARD GATE: no skill overlap AND no meaningful title overlap = irrelevant.
   // Don't let location/experience defaults rescue an irrelevant job.
-  const irrelevant = skillsMatch.matched.length === 0 && titleMatch < 50;
+  const irrelevant = skillsMatch.matched.length === 0 && titleMatch < 30;
 
   if (irrelevant) {
     return {
@@ -401,7 +402,8 @@ const calculateJobMatch = (resumeData, job) => {
     (skillsMatch.score * weights.skills) +
     (titleMatch * weights.title) +
     (experienceMatch * weights.experience) +
-    (locationMatch * weights.location)
+    (locationMatch * weights.location) +
+    categoryBonus
   );
 
   // Generate reasons
@@ -418,6 +420,9 @@ const calculateJobMatch = (resumeData, job) => {
   if (skillsMatch.matched.length >= 3) {
     reasons.push('Multiple skill matches');
   }
+  if (categoryBonus > 0 && resumeData.jobTitles?.length) {
+    reasons.push('Matches your industry');
+  }
 
   return {
     totalScore: Math.max(1, Math.min(100, totalScore)),
@@ -432,13 +437,18 @@ const calculateJobMatch = (resumeData, job) => {
 
 /**
  * Normalize skill name using Porter stemming for robust matching
+ * Handles symbol-heavy skills (C++, C#, Node.js, etc.) that tokenizeAndStem can strip to empty
  */
 const normalizeSkill = (skill) => {
-  return natural.PorterStemmer.tokenizeAndStem(skill.toLowerCase()).join(' ');
+  if (!skill || typeof skill !== 'string') return '';
+  const lower = skill.toLowerCase().trim();
+  const stemmed = natural.PorterStemmer.tokenizeAndStem(lower).join(' ');
+  if (stemmed.length > 0) return stemmed;
+  return lower.replace(/[^a-z0-9+#.]/g, '').trim();
 };
 
 /**
- * Calculate skills matching score with stemming and Jaro-Winkler similarity
+ * Calculate skills matching score with stemming, Jaro-Winkler similarity, and substring matching
  */
 const calculateSkillsMatch = (resumeSkills, jobSkills) => {
   if (!resumeSkills.length || !jobSkills.length) {
@@ -451,10 +461,25 @@ const calculateSkillsMatch = (resumeSkills, jobSkills) => {
 
   jobSkills.forEach(jobSkill => {
     const jobNormalized = normalizeSkill(jobSkill);
-    const found = resumeNormalized.some(resumeNorm =>
+    let found = resumeNormalized.some(resumeNorm =>
+      // Exact stem match
       resumeNorm === jobNormalized ||
-      natural.JaroWinklerDistance(resumeNorm, jobNormalized) > 0.92
+      // Jaro-Winkler fuzzy match (lowered threshold for practical matching)
+      natural.JaroWinklerDistance(resumeNorm, jobNormalized) > 0.8 ||
+      // Substring match: one contains the other
+      (resumeNorm.length > 2 && jobNormalized.length > 2 &&
+        (resumeNorm.includes(jobNormalized) || jobNormalized.includes(resumeNorm)))
     );
+
+    // Second pass: check original skill names (before stemming) for substring/partial matches
+    if (!found) {
+      const jobLower = jobSkill.toLowerCase();
+      found = resumeSkills.some(rs => {
+        const rsl = rs.toLowerCase();
+        return rsl.length > 2 && jobLower.length > 2 &&
+          (rsl.includes(jobLower) || jobLower.includes(rsl));
+      });
+    }
 
     if (found) {
       matched.push(jobSkill);
@@ -474,46 +499,54 @@ const calculateSkillsMatch = (resumeSkills, jobSkills) => {
 
 /**
  * Generic title words that cause false positives across unrelated domains
+ * Note: 'engineer' and 'developer' are intentionally NOT excluded —
+ * they are meaningful domain signals, not generic filler words.
  */
 const GENERIC_TITLE_WORDS = new Set([
-  'engineer', 'developer', 'manager', 'analyst', 'specialist',
+  'manager', 'analyst', 'specialist',
   'officer', 'associate', 'executive', 'lead', 'consultant',
   'coordinator', 'administrator', 'assistant', 'director',
   'senior', 'junior', 'and', 'the', 'of', 'for'
 ]);
 
 /**
- * Calculate title matching score (excludes generic words that cause cross-domain false positives)
+ * Calculate title matching score using Jaccard-like similarity on meaningful words
  */
 const calculateTitleMatch = (resumeTitles, jobTitle) => {
   if (!resumeTitles.length || !jobTitle) return 0;
 
-  const jobTitleLower = jobTitle.toLowerCase();
+  const tokenize = (s) => s.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !GENERIC_TITLE_WORDS.has(w));
+
+  const jobWords = tokenize(jobTitle);
+  if (jobWords.length === 0) return 0;
+
   let bestMatch = 0;
 
   resumeTitles.forEach(resumeTitle => {
-    const resumeTitleLower = resumeTitle.toLowerCase();
+    const resumeWords = tokenize(resumeTitle);
+    if (resumeWords.length === 0) return;
 
-    // Exact match
-    if (resumeTitleLower === jobTitleLower) {
-      bestMatch = Math.max(bestMatch, 100);
-      return;
-    }
+    // Jaccard similarity: intersection / union
+    const intersection = resumeWords.filter(w => jobWords.includes(w));
+    const uniqueIntersection = [...new Set(intersection)];
+    const union = new Set([...resumeWords, ...jobWords]);
 
-    // Partial match using non-generic words only
-    const commonWords = resumeTitleLower.split(' ').filter(word =>
-      jobTitleLower.includes(word) &&
-      word.length > 2 &&
-      !GENERIC_TITLE_WORDS.has(word)
-    );
+    // Score: (matched words / union size) * 100, but cap at 95 so exact match still gets 100
+    const jaccard = uniqueIntersection.length / union.size;
+    const matchScore = Math.min(95, Math.round(jaccard * 100));
 
-    if (commonWords.length > 0) {
-      const matchScore = (commonWords.length / jobTitleLower.split(' ').length) * 80;
+    // Bonus: if all resume title words appear in job title, boost
+    if (resumeWords.every(w => jobWords.includes(w)) && resumeWords.length > 0) {
+      bestMatch = Math.max(bestMatch, 90);
+    } else {
       bestMatch = Math.max(bestMatch, matchScore);
     }
   });
 
-  return Math.round(bestMatch);
+  return bestMatch;
 };
 
 /**
