@@ -4,10 +4,9 @@ const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
 const fs = require("fs").promises;
 const path = require("path");
-const HuggingFaceResumeParser = require("./HuggingFaceResumeParser");
 const mongoose = require("mongoose");
 const extractor = require("../services/resumeExtractor");
-const enhancedExtraction = require("./enhancedExtraction");
+const geminiExtractor = require("../services/geminiExtractor");
 
 async function updateProcessingState(resumeId, { stage, progress, message }) {
   const update = {
@@ -67,6 +66,15 @@ exports.uploadResume = async (req, res) => {
       }
     } catch (err) {
       console.log("Error deleting old job matches:", err);
+    }
+
+    // Clear Redis job cache so next request fetches fresh data based on new resume
+    try {
+      const redisService = require('../services/redisService');
+      await redisService.clearJobsCache();
+      console.log('🗑️ Cleared Redis job cache after resume upload');
+    } catch (err) {
+      console.log("Error clearing Redis cache:", err);
     }
 
     // Create new resume record
@@ -206,50 +214,38 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
     });
 
     console.log("Extracted text length:", extractedText.length);
-    console.log("🚀 Processing with Universal Python NLP Service...");
+    console.log("🤖 Processing with Gemini LLM extraction...");
 
     let extractedData = null;
     let processingMethod = "unknown";
 
-    // Try HuggingFace Resume NER parser first for specialized resume parsing
+    // Extract structured data using Gemini
     try {
-      console.log("🤗 Processing with HuggingFace Resume NER (resume-ner-bert-v2)...");
       await updateProcessingState(resumeId, {
-        stage: 'hf-parser',
+        stage: 'gemini-extraction',
         progress: 45,
-        message: 'Running AI resume parser',
+        message: 'Running AI extraction via Gemini',
       });
-
-      const hfParser = new HuggingFaceResumeParser();
-      console.log(`🔌 Calling HuggingFaceResumeParser.parseResume for ${resumeId}`);
       extractedData = await withTimeout(
-        hfParser.parseResume(extractedText),
-        20000,
-        'HuggingFace resume parsing'
+        geminiExtractor.extractResumeData(extractedText),
+        30000,
+        'Gemini resume parsing'
       );
-      
       if (extractedData && typeof extractedData === 'object') {
-        processingMethod = "HuggingFace Resume NER (resume-ner-bert-v2)";
-        console.log("✅ Successfully processed with HuggingFace Resume NER");
-        console.log("🎯 Industry detected:", extractedData.industryExperience?.[0] || 'general');
+        processingMethod = "Gemini (gemini-2.0-flash)";
+        console.log("✅ Successfully processed with Gemini");
         console.log("🔧 Skills found:", extractedData.skills?.length || 0);
         console.log("💼 Job titles found:", extractedData.jobTitles?.length || 0);
-        console.log("� Companies found:", extractedData.companies?.length || 0);
-        console.log("� Name extracted:", extractedData.name || 'Not found');
-        console.log("� Email extracted:", extractedData.email || 'Not found');
-        console.log("📱 Phone extracted:", extractedData.phone || 'Not found');
+        console.log("🏢 Companies found:", extractedData.companies?.length || 0);
+        console.log("👤 Name extracted:", extractedData.name || 'Not found');
+        console.log("📧 Email extracted:", extractedData.email || 'Not found');
       }
-    } catch (hfError) {
-      console.log("⚠️ HuggingFace parser failed, falling back to Advanced Node.js parser:", hfError.message);
-      extractedData = null; // Ensure fallback is triggered
-      await updateProcessingState(resumeId, {
-        stage: 'fallback-parser',
-        progress: 60,
-        message: 'AI parser took too long, using fallback parser',
-      });
+    } catch (geminiError) {
+      console.log("⚠️ Gemini extraction failed:", geminiError.message);
+      extractedData = null;
     }
 
-    // If no data was extracted, use empty structure
+    // Ultimate fallback: empty structure
     if (!extractedData) {
       console.log("❌ No extraction method available, using empty structure");
       extractedData = extractor.getEmptyResumeData();
@@ -325,69 +321,5 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
   }
 }
 
-// Comprehensive NLP-based data extraction system
-async function extractStructuredDataWithNLP(text) {
-  const data = {
-    name: "",
-    email: "",
-    phone: "",
-    location: "",
-    skills: [],
-    jobTitles: [],
-    companies: [],
-    experience: [],
-    education: [],
-    languages: [],
-    certifications: [],
-    summary: "",
-    yearsOfExperience: 0,
-    currentJobTitle: "",
-    linkedinUrl: "",
-    githubUrl: "",
-    portfolioUrl: "",
-    softSkills: [],
-    industryExperience: [],
-    generatedSummary: ""
-  };
 
-  try {
-    const cleanText = extractor.cleanTextForNLP(text);
-    const lines = cleanText.split(/\n+/).filter(line => line.trim().length > 0);
-    
-    console.log("Starting enhanced NLP extraction...");
-
-    enhancedExtraction.extractContactInfoEnhanced(cleanText, data);
-    
-    data.name = extractor.extractNameEnhanced(lines, cleanText);
-    
-    data.location = enhancedExtraction.extractLocationEnhanced(cleanText);
-    
-    extractor.extractUrls(cleanText, data);
-    
-    data.skills = enhancedExtraction.extractSkillsEnhanced ? enhancedExtraction.extractSkillsEnhanced(cleanText) : extractor.extractSkills(cleanText);
-    data.softSkills = enhancedExtraction.extractSoftSkillsEnhanced ? enhancedExtraction.extractSoftSkillsEnhanced(cleanText) : extractor.extractSoftSkills(cleanText);
-    
-    const jobInfo = extractor.extractJobExperience(cleanText);
-    data.jobTitles = jobInfo.titles;
-    data.companies = jobInfo.companies;
-    data.experience = jobInfo.experience;
-    data.currentJobTitle = jobInfo.currentTitle;
-    data.yearsOfExperience = jobInfo.yearsOfExperience;
-    data.industryExperience = jobInfo.industries;
-    
-    data.education = extractor.extractEducation(cleanText);
-    data.languages = extractor.extractLanguages(cleanText);
-    data.certifications = extractor.extractCertifications(cleanText);
-    data.summary = extractor.extractSummaryEnhanced(cleanText);
-    data.generatedSummary = extractor.generateProfessionalSummary(data, cleanText);
-
-    console.log("Enhanced NLP extraction completed successfully");
-    console.log("Generated summary length:", data.generatedSummary.length);
-    return data;
-
-  } catch (error) {
-    console.error("NLP extraction error:", error);
-    return data;
-  }
-}
 

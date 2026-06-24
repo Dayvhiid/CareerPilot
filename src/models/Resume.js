@@ -97,6 +97,11 @@ const resumeSchema = new mongoose.Schema({
     languages: [String],
     // Temporarily removed links field to avoid schema conflicts
     // Will store individual URLs in linkedinUrl, githubUrl, portfolioUrl instead
+    jobTitles: [String],
+    companies: [String],
+    linkedinUrl: String,
+    githubUrl: String,
+    portfolioUrl: String,
     generatedSummary: String,
   },
   processingError: String,

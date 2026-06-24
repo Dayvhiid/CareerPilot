@@ -1101,9 +1101,12 @@
       }
 
       /* Name */
-      if (data.name) document.getElementById('extractedName').textContent = data.name;
+      if (data.name) {
+        document.getElementById('extractedName').textContent = data.name;
+        show('scorePanel');
+      }
 
-      /* Score */
+      /* Score (optional, backend doesn't always provide it) */
       if (data.score) renderScore(data.score);
 
       /* Links */
@@ -1155,10 +1158,11 @@
         show('languagesSection');
       }
 
-      /* Certifications */
-      if (data.certifications && data.certifications.length) {
+      /* Certifications (backend returns as 'certificates') */
+      const certs = data.certifications || data.certificates;
+      if (certs && certs.length) {
         document.getElementById('extractedCertifications').innerHTML =
-          data.certifications.map(c => `<span class="tag">${esc(c)}</span>`).join('');
+          certs.map(c => `<span class="tag">${esc(c.name || c)}</span>`).join('');
         show('certsSection');
       }
 
@@ -1182,9 +1186,9 @@
 
     function renderLinks(data) {
       const links = [];
-      if (data.linkedin)  links.push({ icon:'ti-brand-linkedin', href: data.linkedin, label: 'LinkedIn' });
-      if (data.github)    links.push({ icon:'ti-brand-github',   href: data.github,   label: 'GitHub'   });
-      if (data.portfolio) links.push({ icon:'ti-world',          href: data.portfolio, label: 'Portfolio'});
+      if (data.linkedin || data.linkedinUrl)  links.push({ icon:'ti-brand-linkedin', href: data.linkedin || data.linkedinUrl, label: 'LinkedIn' });
+      if (data.github || data.githubUrl)      links.push({ icon:'ti-brand-github',   href: data.github || data.githubUrl,     label: 'GitHub'   });
+      if (data.portfolio || data.portfolioUrl) links.push({ icon:'ti-world',          href: data.portfolio || data.portfolioUrl, label: 'Portfolio'});
       if (data.email)     links.push({ icon:'ti-mail',           href:'mailto:'+data.email, label: data.email });
       if (data.phone)     links.push({ icon:'ti-phone',          href:'tel:'+data.phone, label: data.phone });
 

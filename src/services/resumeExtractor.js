@@ -22,6 +22,16 @@ function normalizeEmbeddedArray(entries, mapper) {
 
 function normalizeExtractedData(extractedData) {
   if (!extractedData || typeof extractedData !== 'object') return getEmptyResumeData();
+
+  // Map legacy snake_case fields to camelCase schema names
+  if (extractedData.job_titles && !extractedData.jobTitles) extractedData.jobTitles = extractedData.job_titles;
+  if (extractedData.years_experience !== undefined && !extractedData.yearsOfExperience) extractedData.yearsOfExperience = extractedData.years_experience;
+  if (extractedData.soft_skills && !extractedData.softSkills) extractedData.softSkills = extractedData.soft_skills;
+  if (extractedData.generated_summary && !extractedData.generatedSummary) extractedData.generatedSummary = extractedData.generated_summary;
+  if (extractedData.industry && !extractedData.industryExperience) extractedData.industryExperience = [extractedData.industry];
+  if (extractedData.certifications && !extractedData.certificates) extractedData.certificates = extractedData.certifications;
+  if (extractedData.experience && !extractedData.workExperience) extractedData.workExperience = extractedData.experience;
+
   return {
     ...extractedData,
     education: normalizeEmbeddedArray(extractedData.education, normalizeEducationEntry),
@@ -417,7 +427,16 @@ function generateCareerObjective(data) {
 }
 
 function getEmptyResumeData() {
-  return { name: '', email: '', phone: '', location: '', skills: [], experience: [], education: [], certifications: [], languages: [], summary: '', years_experience: 0, job_titles: [], companies: [], industry: '', soft_skills: [], generated_summary: '', processingMethod: '', processedAt: '' };
+  return {
+    name: '', email: '', phone: '', location: '', summary: '',
+    currentJobTitle: '', yearsOfExperience: 0,
+    skills: [], softSkills: [], industryExperience: [],
+    jobTitles: [], companies: [],
+    education: [], workExperience: [], projects: [],
+    certificates: [], interests: [], achievements: [],
+    languages: [], linkedinUrl: '', githubUrl: '', portfolioUrl: '',
+    generatedSummary: '',
+  };
 }
 
 module.exports = {

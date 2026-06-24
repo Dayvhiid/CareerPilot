@@ -320,13 +320,19 @@ const generateJobMatches = async (userId, resumeData) => {
       }
 
       // Soft category boost: same-category jobs get a scoring bonus
-      const categoryBonus = (resumeCategory !== 'Other' && resumeCategory === job.category) ? 10 : 0;
+      const categoryBonus = (resumeCategory !== 'Other' && resumeCategory === job.category) ? 25 : 0;
       if (categoryBonus > 0) categoryMatched++;
 
       const matchResult = calculateJobMatch(resumeData, job, categoryBonus);
 
       if (matchResult.irrelevant) {
         console.log(`⏭️ Skipped irrelevant job: ${job.title}`);
+        skipped++;
+        continue;
+      }
+
+      if (matchResult.totalScore < 15) {
+        console.log(`⏭️ Skipped low-score job: ${job.title} (score: ${matchResult.totalScore})`);
         skipped++;
         continue;
       }
@@ -381,9 +387,11 @@ const calculateJobMatch = (resumeData, job, categoryBonus = 0) => {
   // Location matching
   const locationMatch = calculateLocationMatch(resumeData.location || '', job.location);
 
-  // HARD GATE: no skill overlap AND no meaningful title overlap = irrelevant.
-  // Don't let location/experience defaults rescue an irrelevant job.
-  const irrelevant = skillsMatch.matched.length === 0 && titleMatch < 30;
+  // HARD GATE: must have meaningful skill overlap OR strong title overlap OR same category
+  const hasSkillOverlap = skillsMatch.matched.length >= 1 && skillsMatch.score >= 15;
+  const hasStrongTitleMatch = titleMatch >= 40;
+  const sameCategory = categoryBonus > 0;
+  const irrelevant = !(hasSkillOverlap || hasStrongTitleMatch || sameCategory);
 
   if (irrelevant) {
     return {
@@ -464,11 +472,12 @@ const calculateSkillsMatch = (resumeSkills, jobSkills) => {
     let found = resumeNormalized.some(resumeNorm =>
       // Exact stem match
       resumeNorm === jobNormalized ||
-      // Jaro-Winkler fuzzy match (lowered threshold for practical matching)
-      natural.JaroWinklerDistance(resumeNorm, jobNormalized) > 0.8 ||
-      // Substring match: one contains the other
-      (resumeNorm.length > 2 && jobNormalized.length > 2 &&
-        (resumeNorm.includes(jobNormalized) || jobNormalized.includes(resumeNorm)))
+      // Jaro-Winkler fuzzy match (0.88 threshold to avoid cross-domain false positives)
+      natural.JaroWinklerDistance(resumeNorm, jobNormalized) > 0.88 ||
+      // Substring match: min 4 chars and length ratio >= 0.5 to avoid cross-domain false positives
+      (resumeNorm.length >= 4 && jobNormalized.length >= 4 &&
+        (resumeNorm.includes(jobNormalized) || jobNormalized.includes(resumeNorm)) &&
+        (Math.min(resumeNorm.length, jobNormalized.length) / Math.max(resumeNorm.length, jobNormalized.length)) >= 0.5)
     );
 
     // Second pass: check original skill names (before stemming) for substring/partial matches
@@ -476,8 +485,9 @@ const calculateSkillsMatch = (resumeSkills, jobSkills) => {
       const jobLower = jobSkill.toLowerCase();
       found = resumeSkills.some(rs => {
         const rsl = rs.toLowerCase();
-        return rsl.length > 2 && jobLower.length > 2 &&
-          (rsl.includes(jobLower) || jobLower.includes(rsl));
+        return rsl.length >= 4 && jobLower.length >= 4 &&
+          (rsl.includes(jobLower) || jobLower.includes(rsl)) &&
+          (Math.min(rsl.length, jobLower.length) / Math.max(rsl.length, jobLower.length)) >= 0.5;
       });
     }
 
@@ -538,8 +548,10 @@ const calculateTitleMatch = (resumeTitles, jobTitle) => {
     const jaccard = uniqueIntersection.length / union.size;
     const matchScore = Math.min(95, Math.round(jaccard * 100));
 
-    // Bonus: if all resume title words appear in job title, boost
-    if (resumeWords.every(w => jobWords.includes(w)) && resumeWords.length > 0) {
+    // Bonus: if resume and job title share all words bidirectionally, boost
+    if (resumeWords.every(w => jobWords.includes(w)) &&
+        jobWords.every(w => resumeWords.includes(w)) &&
+        resumeWords.length > 0) {
       bestMatch = Math.max(bestMatch, 90);
     } else {
       bestMatch = Math.max(bestMatch, matchScore);

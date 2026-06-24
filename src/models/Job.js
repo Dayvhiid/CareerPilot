@@ -90,6 +90,4 @@ const jobSchema = new mongoose.Schema({
 jobSchema.index({ title: 'text', description: 'text', company: 'text' });
 jobSchema.index({ location: 1, postedDate: -1 });
 jobSchema.index({ skills: 1 });
-jobSchema.index({ externalId: 1 });
-
 module.exports = mongoose.model('Job', jobSchema);
