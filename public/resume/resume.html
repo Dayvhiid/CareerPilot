@@ -304,60 +304,64 @@
       border-radius: 20px; color: var(--tt);
     }
 
-    /* ─── PROGRESS SECTION ───────────────────── */
-    .progress-wrap { display: none; }
-    .progress-wrap.visible { display: block; }
+    /* ─── INLINE LOADING STATE ──────────────── */
+    .drop-zone.loading {
+      border-style: solid;
+      border-color: var(--gold-d);
+      cursor: default;
+    }
+    .drop-zone.loading input[type="file"] { pointer-events: none; }
 
-    .progress-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 0.6rem;
+    .drop-loading {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 0.75rem;
+      padding: 0.25rem 0;
     }
-    .progress-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.62rem; letter-spacing: 0.1em;
-      text-transform: uppercase; color: var(--tt);
+    .drop-loading-title {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500; font-size: 0.95rem; color: var(--tp);
     }
-    .progress-pct {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.62rem; letter-spacing: 0.06em; color: var(--gold);
+    .drop-loading-sub {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300; font-size: 0.82rem; color: var(--ts);
     }
-    .progress-track {
-      width: 100%; height: 3px;
+    .drop-loading-track {
+      width: 100%; max-width: 240px; height: 3px;
       background: var(--surf2); border-radius: 2px; overflow: hidden;
     }
-    .progress-bar {
+    .drop-loading-bar {
       height: 100%; width: 0%; border-radius: 2px;
       background: var(--gold);
-      transition: width 0.4s ease;
-    }
-    .progress-status {
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 300; font-size: 0.82rem;
-      color: var(--ts); margin-top: 0.5rem;
+      transition: width 0.35s ease;
     }
 
-    /* Processing pulse */
-    .processing-pulse {
-      display: flex; align-items: center; gap: 10px;
-      padding: 1rem 1.25rem;
-      background: rgba(201,151,58,0.05);
-      border: 1px solid var(--bs);
-      border-radius: var(--r-md);
+    /* Spinning ring */
+    .drop-loading-ring {
+      width: 40px; height: 40px;
+      border: 2px solid var(--surf2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
     }
-    .pulse-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--gold); flex-shrink: 0;
-      animation: pulseDot 1.4s ease-in-out infinite;
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
-    @keyframes pulseDot {
-      0%, 100% { opacity: 0.4; transform: scale(0.85); }
-      50%       { opacity: 1;   transform: scale(1); }
+
+    /* Success checkmark */
+    .drop-loading-check {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: rgba(15,110,86,0.15);
+      border: 2px solid #5DCAA5;
+      display: flex; align-items: center; justify-content: center;
+      color: #5DCAA5;
+      animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    .pulse-text {
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 300; font-size: 0.85rem; color: var(--ts);
+    @keyframes popIn {
+      0% { transform: scale(0); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
     }
-    .pulse-text strong { font-weight: 500; color: var(--tp); }
 
     /* ─── SUCCESS FLASH ──────────────────────── */
     .success-banner {
@@ -887,46 +891,27 @@
 
               <form id="resumeUploadForm">
                 <label class="drop-zone" id="dropZone" for="resumeFile">
-                  <div class="drop-icon"><i class="ti ti-cloud-upload" aria-hidden="true"></i></div>
-                  <p class="drop-title">Drop your resume here</p>
-                  <p class="drop-sub">or <span>browse files</span> from your computer</p>
-                  <div class="drop-formats">
-                    <span class="format-pill">PDF</span>
-                    <span class="format-pill">DOC</span>
-                    <span class="format-pill">DOCX</span>
+                  <div id="dropIdleContent" style="display:flex;flex-direction:column;align-items:center;gap:1rem;">
+                    <div class="drop-icon"><i class="ti ti-cloud-upload" aria-hidden="true"></i></div>
+                    <p class="drop-title">Drop your resume here</p>
+                    <p class="drop-sub">or <span>browse files</span> from your computer</p>
+                    <div class="drop-formats">
+                      <span class="format-pill">PDF</span>
+                      <span class="format-pill">DOC</span>
+                      <span class="format-pill">DOCX</span>
+                    </div>
+                  </div>
+                  <div class="drop-loading" id="dropLoading" style="display:none;">
+                    <div class="drop-loading-ring" id="loadingSpinner"></div>
+                    <p class="drop-loading-title" id="loadingTitle">Uploading resume…</p>
+                    <p class="drop-loading-sub" id="loadingSub">preparing upload…</p>
+                    <div class="drop-loading-track">
+                      <div class="drop-loading-bar" id="loadingBar"></div>
+                    </div>
                   </div>
                   <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" aria-label="Upload resume file" />
                 </label>
               </form>
-
-              <!-- Upload progress -->
-              <div class="progress-wrap" id="progressSection" style="margin-top:1.25rem;">
-                <div class="progress-header">
-                  <span class="progress-label">Uploading</span>
-                  <span class="progress-pct" id="progressPct">0%</span>
-                </div>
-                <div class="progress-track">
-                  <div class="progress-bar" id="progressBar"></div>
-                </div>
-                <p class="progress-status" id="progressStatus">Preparing upload…</p>
-              </div>
-
-              <!-- Processing state -->
-              <div class="progress-wrap" id="processingSection" style="margin-top:1.25rem;">
-                <div class="processing-pulse">
-                  <div class="pulse-dot"></div>
-                  <p class="pulse-text"><strong>AI is analysing your resume</strong> — this takes about 15–30 seconds.</p>
-                </div>
-                <div style="margin-top:0.85rem;">
-                  <div class="progress-header">
-                    <span class="progress-label" id="processingLabel">Extracting data</span>
-                    <span class="progress-pct" id="processingPct">0%</span>
-                  </div>
-                  <div class="progress-track">
-                    <div class="progress-bar" id="processingBar"></div>
-                  </div>
-                </div>
-              </div>
 
             </div>
           </div>
@@ -1279,9 +1264,7 @@
       const form = new FormData();
       form.append('resume', file);
 
-      show('progressSection');
-      updateProgress(0, 'Connecting to server…');
-      hide('successSection');
+      enterUploadPhase();
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', `${API_BASE}/resume/upload`);
@@ -1290,14 +1273,14 @@
       xhr.upload.addEventListener('progress', e => {
         if (e.lengthComputable) {
           const pct = Math.round((e.loaded / e.total) * 100);
-          updateProgress(pct, pct < 100 ? `Uploading… ${pct}%` : 'Upload complete, processing…');
+          updateLoadingBar(pct, pct < 100 ? `Uploading… ${pct}%` : 'Upload complete');
         }
       });
 
       xhr.addEventListener('load', () => {
-        hide('progressSection');
         if (xhr.status === 200) {
-          showProcessingState(null);
+          updateLoadingBar(100, 'Upload complete');
+          enterProcessingPhase();
           startProcessingPolling();
         } else {
           try {
@@ -1316,10 +1299,48 @@
       xhr.send(form);
     }
 
-    function updateProgress(pct, status) {
-      document.getElementById('progressBar').style.width = pct + '%';
-      document.getElementById('progressPct').textContent  = pct + '%';
-      document.getElementById('progressStatus').textContent = status;
+    /* ─────────────────────────────────────────
+       INLINE LOADING STATE
+    ───────────────────────────────────────── */
+    function enterUploadPhase() {
+      hide('dropIdleContent');
+      const loading = document.getElementById('dropLoading');
+      loading.style.display = 'flex';
+      document.getElementById('dropZone').classList.add('loading');
+      document.getElementById('loadingSpinner').className = 'drop-loading-ring';
+      document.getElementById('loadingTitle').textContent = 'Uploading resume…';
+      document.getElementById('loadingSub').textContent = 'preparing upload…';
+      document.getElementById('loadingBar').style.width = '0%';
+      document.getElementById('resumeFile').disabled = true;
+      hide('successSection');
+    }
+
+    function enterProcessingPhase() {
+      document.getElementById('loadingTitle').textContent = 'AI is analysing your resume';
+      document.getElementById('loadingSub').textContent = 'Extracting data…';
+      document.getElementById('loadingBar').style.width = '0%';
+    }
+
+    function updateLoadingBar(pct, status) {
+      document.getElementById('loadingBar').style.width = Math.min(pct, 100) + '%';
+      if (status) document.getElementById('loadingSub').textContent = status;
+    }
+
+    function completeLoading() {
+      const spinner = document.getElementById('loadingSpinner');
+      spinner.className = 'drop-loading-check';
+      spinner.innerHTML = '<i class="ti ti-check" style="font-size:18px;"></i>';
+      document.getElementById('loadingTitle').textContent = 'Resume processed!';
+      document.getElementById('loadingSub').textContent = 'Your data is ready below';
+      document.getElementById('loadingBar').style.width = '100%';
+    }
+
+    function hideLoadingState() {
+      const loading = document.getElementById('dropLoading');
+      loading.style.display = 'none';
+      show('dropIdleContent');
+      document.getElementById('dropZone').classList.remove('loading');
+      document.getElementById('resumeFile').disabled = false;
     }
 
     /* ─────────────────────────────────────────
@@ -1340,27 +1361,28 @@
     let _msgIndex     = 0;
 
     function showProcessingState(resume) {
-      show('processingSection');
-      hide('progressSection');
+      hide('dropIdleContent');
+      const loading = document.getElementById('dropLoading');
+      loading.style.display = 'flex';
+      document.getElementById('dropZone').classList.add('loading');
+      document.getElementById('loadingSpinner').className = 'drop-loading-ring';
+      document.getElementById('loadingTitle').textContent = 'AI is analysing your resume';
+      document.getElementById('loadingSub').textContent = 'Extracting data…';
+      document.getElementById('loadingBar').style.width = '0%';
       hide('noResumeSection');
-      document.getElementById('processingBar').style.width = '0%';
-      document.getElementById('processingPct').textContent  = '0%';
     }
 
     function startProcessingPolling() {
       _simProgress = 0; _msgIndex = 0;
 
-      /* Simulate local progress smoothly */
       _simInterval = setInterval(() => {
         _simProgress = Math.min(_simProgress + Math.random() * 4, 88);
-        document.getElementById('processingBar').style.width = _simProgress + '%';
-        document.getElementById('processingPct').textContent  = Math.round(_simProgress) + '%';
-        document.getElementById('processingLabel').textContent =
+        document.getElementById('loadingBar').style.width = _simProgress + '%';
+        document.getElementById('loadingSub').textContent =
           processingMessages[_msgIndex % processingMessages.length];
         _msgIndex++;
       }, 600);
 
-      /* Poll server every 2 s */
       _pollInterval = setInterval(async () => {
         try {
           const res  = await fetch(`${API_BASE}/resume`, {
@@ -1369,26 +1391,23 @@
           const data = await res.json();
           if (!data.resume) return;
 
-          /* Sync server progress if available */
           if (data.resume.processingProgress) {
-            document.getElementById('processingBar').style.width = data.resume.processingProgress + '%';
-            document.getElementById('processingPct').textContent  = data.resume.processingProgress + '%';
+            document.getElementById('loadingBar').style.width = data.resume.processingProgress + '%';
           }
           if (data.resume.processingMessage) {
-            document.getElementById('processingLabel').textContent = data.resume.processingMessage;
+            document.getElementById('loadingSub').textContent = data.resume.processingMessage;
           }
 
           if (data.resume.isProcessed) {
             clearInterval(_pollInterval);
             clearInterval(_simInterval);
-            /* Fill to 100 */
-            document.getElementById('processingBar').style.width = '100%';
-            document.getElementById('processingPct').textContent  = '100%';
+            document.getElementById('loadingBar').style.width = '100%';
+            completeLoading();
             setTimeout(() => {
-              hide('processingSection');
+              hideLoadingState();
               show('successSection');
               showExistingResume(data.resume);
-            }, 600);
+            }, 1500);
           }
         } catch (err) {
           console.error('Polling error:', err);
@@ -1428,8 +1447,7 @@
     function hide(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
 
     function resetUploadState() {
-      hide('progressSection');
-      hide('processingSection');
+      hideLoadingState();
       document.getElementById('resumeFile').value = '';
       if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
       if (_simInterval)  { clearInterval(_simInterval);  _simInterval  = null; }
