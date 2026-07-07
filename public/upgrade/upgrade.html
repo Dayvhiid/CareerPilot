@@ -382,6 +382,136 @@
   .faq-item[open] summary::after { transform: rotate(45deg); }
   .faq-item p { margin-top: 0.9rem; color: var(--text-secondary); font-weight: 300; font-size: 0.9rem; line-height: 1.7; }
 
+  /* ---------- PAYMENT MODAL ---------- */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(8,8,14,0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease;
+    padding: 1rem;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-mid);
+    border-radius: var(--radius-xl);
+    padding: 2.25rem;
+    max-width: 460px;
+    width: 100%;
+    position: relative;
+    box-shadow: var(--glow-gold);
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+  }
+  .modal-overlay.open .modal-card { transform: translateY(0); }
+
+  .modal-close {
+    position: absolute; top: 1rem; right: 1rem;
+    background: none; border: none;
+    color: var(--text-tertiary);
+    font-size: 1.5rem; cursor: pointer;
+    transition: color 0.2s ease; line-height: 1;
+  }
+  .modal-close:hover { color: var(--text-primary); }
+
+  .modal-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.5rem; font-weight: 300;
+    color: var(--text-primary);
+    margin-bottom: 0.3rem;
+  }
+  .modal-sub {
+    font-size: 0.85rem; color: var(--text-secondary);
+    font-weight: 300; margin-bottom: 1.75rem;
+  }
+
+  .payment-summary {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  .payment-summary .plan-label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 300; }
+  .payment-summary .plan-name { font-size: 0.9rem; color: var(--text-primary); font-weight: 400; }
+  .payment-summary .plan-price { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 300; color: var(--accent-gold-bright); }
+
+  .card-preview {
+    background: linear-gradient(135deg, var(--bg-surface-2), var(--bg-surface));
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.75rem;
+    min-height: 96px;
+    display: flex; flex-direction: column; justify-content: flex-end;
+  }
+  .card-preview .card-number-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.15rem; letter-spacing: 0.1em;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+  }
+  .card-preview .card-details-row { display: flex; gap: 2rem; }
+  .card-preview .card-detail-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-tertiary);
+  }
+  .card-preview .card-detail-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem; color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  .form-group { margin-bottom: 1.1rem; }
+  .form-label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-tertiary);
+    margin-bottom: 0.4rem;
+  }
+  .form-input {
+    width: 100%;
+    background: var(--bg-surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 0.7rem 0.9rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem; font-weight: 300;
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .form-input::placeholder { color: var(--text-tertiary); }
+  .form-input:focus {
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 0 2px rgba(201,151,58,0.15);
+  }
+  .form-input.error { border-color: #e74c3c; box-shadow: 0 0 0 2px rgba(231,76,60,0.15); }
+
+  .form-row { display: flex; gap: 0.85rem; }
+  .form-row .form-group { flex: 1; }
+
+  .btn-pay { width: 100%; padding: 0.85rem; justify-content: center; font-size: 0.9rem; margin-top: 0.5rem; }
+  .btn-pay:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+  .btn-pay .spinner { display: none; width: 16px; height: 16px; border: 2px solid rgba(8,8,14,0.2); border-top-color: #08080E; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  .btn-pay.loading .spinner { display: inline-block; }
+  .btn-pay.loading .btn-text { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .modal-error { display: none; font-size: 0.8rem; color: #e74c3c; font-weight: 300; margin-top: 0.65rem; text-align: center; }
+  .modal-error.show { display: block; }
+
+  .modal-secure-note { text-align: center; margin-top: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--text-tertiary); letter-spacing: 0.04em; }
+  .modal-secure-note span { color: var(--accent-gold); }
+
   /* ---------- FINAL CTA ---------- */
   .cta-section { text-align: center; padding: clamp(5rem, 10vw, 8rem) 0; position: relative; }
   .cta-section::before {
@@ -702,6 +832,61 @@
   </div>
 </footer>
 
+<!-- PAYMENT MODAL -->
+<div class="modal-overlay" id="paymentModal">
+  <div class="modal-card">
+    <button class="modal-close" id="modalClose">×</button>
+    <h3 class="modal-title">Complete your upgrade</h3>
+    <p class="modal-sub">Enter your card details to activate Premium.</p>
+
+    <div class="payment-summary">
+      <div>
+        <div class="plan-label">Plan</div>
+        <div class="plan-name" id="modalPlanName">Premium · Monthly</div>
+      </div>
+      <div class="plan-price" id="modalPlanPrice">$14</div>
+    </div>
+
+    <div class="card-preview">
+      <div class="card-number-display" id="cardDisplayNumber">···· ···· ···· ····</div>
+      <div class="card-details-row">
+        <div>
+          <div class="card-detail-label">Expires</div>
+          <div class="card-detail-value" id="cardDisplayExpiry">MM/YY</div>
+        </div>
+        <div>
+          <div class="card-detail-label">CVV</div>
+          <div class="card-detail-value" id="cardDisplayCVV">···</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="cardNumber">Card number</label>
+      <input class="form-input" id="cardNumber" type="text" inputmode="numeric" maxlength="19" placeholder="0000 0000 0000 0000" autocomplete="cc-number">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="cardExpiry">Expiration date</label>
+        <input class="form-input" id="cardExpiry" type="text" inputmode="numeric" maxlength="5" placeholder="MM/YY" autocomplete="cc-exp">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="cardCvv">CVV</label>
+        <input class="form-input" id="cardCvv" type="text" inputmode="numeric" maxlength="4" placeholder="···" autocomplete="cc-csc">
+      </div>
+    </div>
+
+    <button class="btn btn-gold btn-pay" id="payBtn">
+      <span class="spinner"></span>
+      <span class="btn-text">Pay now</span>
+    </button>
+
+    <div class="modal-error" id="modalError"></div>
+    <p class="modal-secure-note"><span>✓</span> Encrypted connection · Your card info is secure</p>
+  </div>
+</div>
+
 <script>
   // Header scroll state
   window.addEventListener('scroll', () => {
@@ -760,22 +945,143 @@
 
   renderBilling();
 
-  /**
-   * Checkout hook — wire this up to your payment provider later.
-   * Both buttons carry data-plan="premium" and data-billing="monthly|annual"
-   * so you can read the selected plan/interval at click time.
-   */
-  function handleCheckout(e) {
-    const plan = e.currentTarget.dataset.plan;
-    const interval = e.currentTarget.dataset.billing;
-    // TODO: replace with real checkout call, e.g.:
-    // window.location.href = `/checkout?plan=${plan}&billing=${interval}`;
-    // or trigger a Stripe/Paystack/Flutterwave session here.
-    console.log('Checkout requested:', { plan, interval });
+  // ── Payment modal ──
+  const modal      = document.getElementById('paymentModal');
+  const modalClose = document.getElementById('modalClose');
+  const payBtn     = document.getElementById('payBtn');
+  const modalError = document.getElementById('modalError');
+
+  function openModal() {
+    const p = PRICING[billing];
+    document.getElementById('modalPlanName').textContent = 'Premium \u00B7 ' + (billing === 'annual' ? 'Annual' : 'Monthly');
+    document.getElementById('modalPlanPrice').textContent = p.amount;
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    modalError.classList.remove('show');
+    payBtn.disabled = false;
+    payBtn.classList.remove('loading');
   }
+
+  function closeModal() {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  modalClose.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+  function handleCheckout() { openModal(); }
 
   checkoutBtn.addEventListener('click', handleCheckout);
   checkoutBtnBottom.addEventListener('click', handleCheckout);
+
+  // ── Card number formatting ──
+  const cardInput = document.getElementById('cardNumber');
+  cardInput.addEventListener('input', () => {
+    let v = cardInput.value.replace(/\D/g, '').slice(0, 16);
+    const formatted = v.replace(/(.{4})/g, '$1 ').trim();
+    cardInput.value = formatted;
+    document.getElementById('cardDisplayNumber').textContent = formatted || '\u00B7\u00B7\u00B7\u00B7 \u00B7\u00B7\u00B7\u00B7 \u00B7\u00B7\u00B7\u00B7 \u00B7\u00B7\u00B7\u00B7';
+  });
+
+  // ── Expiry formatting ──
+  const expiryInput = document.getElementById('cardExpiry');
+  expiryInput.addEventListener('input', () => {
+    let v = expiryInput.value.replace(/\D/g, '').slice(0, 4);
+    if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
+    expiryInput.value = v;
+    document.getElementById('cardDisplayExpiry').textContent = v || 'MM/YY';
+  });
+
+  // ── CVV ──
+  const cvvInput = document.getElementById('cardCvv');
+  cvvInput.addEventListener('input', () => {
+    let v = cvvInput.value.replace(/\D/g, '').slice(0, 4);
+    cvvInput.value = v;
+    document.getElementById('cardDisplayCVV').textContent = v.replace(/./g, '\u00B7') || '\u00B7\u00B7\u00B7';
+  });
+
+  // ── Validation helpers ──
+  function luhnCheck(num) {
+    const digits = num.replace(/\s/g, '');
+    if (!/^\d{16}$/.test(digits)) return false;
+    let sum = 0, alt = false;
+    for (let i = digits.length - 1; i >= 0; i--) {
+      let d = parseInt(digits[i], 10);
+      if (alt) { d *= 2; if (d > 9) d -= 9; }
+      sum += d; alt = !alt;
+    }
+    return sum % 10 === 0;
+  }
+
+  function validateExpiry(val) {
+    const m = val.match(/^(\d{2})\/(\d{2})$/);
+    if (!m) return false;
+    const month = parseInt(m[1], 10);
+    const year  = parseInt(m[2], 10) + 2000;
+    if (month < 1 || month > 12) return false;
+    const now = new Date();
+    const exp = new Date(year, month);
+    return exp > now;
+  }
+
+  function clearErrors() {
+    document.querySelectorAll('.form-input.error').forEach(el => el.classList.remove('error'));
+    modalError.classList.remove('show');
+  }
+
+  function showError(msg) {
+    modalError.textContent = msg;
+    modalError.classList.add('show');
+  }
+
+  // ── Pay button ──
+  payBtn.addEventListener('click', () => {
+    clearErrors();
+    const cardNum = cardInput.value.trim();
+    const expiry  = expiryInput.value.trim();
+    const cvv     = cvvInput.value.trim();
+    let valid = true;
+
+    if (!cardNum || !luhnCheck(cardNum)) {
+      cardInput.classList.add('error');
+      showError('Please enter a valid card number.');
+      valid = false;
+    }
+
+    if (!expiry || !validateExpiry(expiry)) {
+      expiryInput.classList.add('error');
+      if (valid) showError('Please enter a valid expiration date.');
+      valid = false;
+    }
+
+    if (!cvv || cvv.length < 3) {
+      cvvInput.classList.add('error');
+      if (valid) showError('Please enter a valid CVV.');
+      valid = false;
+    }
+
+    if (!valid) return;
+
+    // Simulate payment processing
+    payBtn.disabled = true;
+    payBtn.classList.add('loading');
+
+    setTimeout(() => {
+      console.log('Payment submitted:', {
+        plan: 'premium',
+        billing: billing,
+        last4: cardNum.replace(/\s/g, '').slice(-4),
+        expiry,
+        cvv
+      });
+      // TODO: replace with real payment provider call (Stripe/Paystack/Flutterwave)
+      payBtn.classList.remove('loading');
+      payBtn.disabled = false;
+      closeModal();
+      alert('Payment successful! Welcome to Premium.');
+    }, 1500);
+  });
 </script>
 
 </body>

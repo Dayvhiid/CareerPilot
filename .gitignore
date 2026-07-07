@@ -1,3 +1,37 @@
+# Environment
 .env
-node_modules
-logs
+.env.local
+.env.production
+
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Deployment
+deploy/
+deploy.zip
+deployment.zip
+
+# Test
+coverage/
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Runtime
+.puppeteer-cache/
