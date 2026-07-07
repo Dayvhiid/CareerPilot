@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Chat history persistence** (`src/models/Conversation.js`): Created new `Conversation` Mongoose model to persist chatbot sessions to MongoDB instead of in-memory storage. Each conversation stores full message history (`messages` array with role/content/timestamp), collected resume data (`data`), and session state. MongoDB TTL index on `lastActivity` auto-deletes conversations 7 days after the last message.
+- **Session management endpoints** (`chatbotRoutes.js`): Added `GET /api/chatbot/conversations` to list all user conversations (with preview and progress), and `GET /api/chatbot/conversations/:sessionId` to load full message history for session switching.
+- **Frontend session switcher** (`chatbot.html`, `chatbotmobile_new.html`): Added "History" panel showing all past conversations with preview text. Users can start new conversations, view history, and seamlessly switch between multiple in-progress or completed resume-building sessions.
+
+### Changed
+
+- **Chatbot sessions** (`chatbotController.js`): Replaced in-memory `Map` with MongoDB-backed persistence via the `Conversation` model. Sessions are no longer lost on server restart. Each user message + bot response is stored chronologically. Completed conversations are marked `status: 'completed'` instead of being deleted.
+
 - **Validation**: Cover letter `generate` endpoint now validates `customInstructions`, `tone`, and `length` fields, matching the controller's actual expectations.
 - **Error handling**: Token extraction now verifies `Authorization` header is a string before performing regex operations (`auth.js`).
 - **Recommendation caching**: Added Redis-based caching layer for job recommendations. `getRecommendations` now caches scored results per user with 18-hour TTL, drastically reducing MongoDB queries and Gemini API calls. `triggerIngestion` flushes all caches on new job ingestion. New `src/config/redis.js` module provides `get`/`set`/`del` helpers with graceful fallback when Redis is unavailable.

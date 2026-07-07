@@ -1,15 +1,11 @@
 const Resume = require('../models/Resume');
+const Conversation = require('../models/Conversation');
 const mongoose = require('mongoose');
 const puppeteer = require('puppeteer');
 const path = require('path');
 const ejs = require('ejs');
 const fs = require('fs-extra');
 
-// Database cleanup removed to avoid startup issues
-
-
-
-// Conversation states
 const CONVERSATION_STATES = {
   WELCOME: 'welcome',
   PERSONAL_INFO: 'personal_info',
@@ -25,108 +21,48 @@ const CONVERSATION_STATES = {
   COMPLETED: 'completed'
 };
 
-// In-memory storage for conversation states (in production, use Redis or database)
-const userSessions = new Map();
-
-const MAX_SESSION_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
-const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
-const MAX_SESSIONS_PER_USER = 10;
-
-// Periodic cleanup of expired sessions
-setInterval(() => {
-  const now = Date.now();
-  let removed = 0;
-  for (const [key, session] of userSessions) {
-    if (now - session.lastActivity > MAX_SESSION_AGE_MS) {
-      userSessions.delete(key);
-      removed++;
-    }
-  }
-  if (removed > 0) {
-    console.log(`🧹 Cleaned up ${removed} expired chatbot sessions`);
-  }
-}, CLEANUP_INTERVAL_MS).unref();
-
-/**
- * Main chatbot message handler
- */
-const processMessage = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { message, sessionId } = req.body;
-    
-    console.log(`💬 Processing message from user ${userId}: "${message}"`);
-    
-    // Get or create user session
-    const session = getUserSession(userId, sessionId);
-    
-    // Check if message is resume-related
-    if (!isResumeRelated(message, session.state)) {
-      return res.json({
-        success: true,
-        response: "I'm here to help you build your resume/CV. Let's focus on getting your professional information together! 😊",
-        state: session.state,
-        sessionId: session.sessionId
-      });
-    }
-    
-    // Process the message based on current state
-    const response = await processStateMessage(session, message.trim());
-    
-    // Update session
-    userSessions.set(getUserSessionKey(userId, session.sessionId), session);
-    
-    res.json({
-      success: true,
-      response: response.message,
-      state: session.state,
-      sessionId: session.sessionId,
-      progress: response.progress,
-      options: response.options || null,
-      data: response.data || null
-    });
-    
-  } catch (error) {
-    console.error('❌ Error processing chatbot message:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Sorry, I encountered an error. Please try again.',
-      error: error.message
-    });
-  }
+const STATE_PROGRESS = {
+  [CONVERSATION_STATES.WELCOME]: 0,
+  [CONVERSATION_STATES.PERSONAL_INFO]: 15,
+  [CONVERSATION_STATES.PROFESSIONAL_SUMMARY]: 25,
+  [CONVERSATION_STATES.PROFESSIONAL_LINKS]: 35,
+  [CONVERSATION_STATES.EDUCATION]: 50,
+  [CONVERSATION_STATES.WORK_EXPERIENCE]: 65,
+  [CONVERSATION_STATES.SKILLS]: 75,
+  [CONVERSATION_STATES.PROJECTS]: 80,
+  [CONVERSATION_STATES.CERTIFICATES]: 85,
+  [CONVERSATION_STATES.ACHIEVEMENTS]: 90,
+  [CONVERSATION_STATES.REVIEW]: 95,
+  [CONVERSATION_STATES.COMPLETED]: 100
 };
 
-/**
- * Start a new conversation
- */
 const startConversation = async (req, res) => {
   try {
     const userId = req.user.id;
     const sessionId = generateSessionId();
 
-    evictOldestSessionIfNeeded(userId, '');
-
-    const session = {
-      sessionId,
+    const conversation = new Conversation({
       userId,
+      sessionId,
       state: CONVERSATION_STATES.WELCOME,
+      status: 'active',
       data: {},
+      messages: [],
       startedAt: new Date(),
       lastActivity: new Date()
-    };
+    });
 
-    userSessions.set(getUserSessionKey(userId, sessionId), session);
-    
+    await conversation.save();
+
     const welcomeMessage = "You dey find job you no get resume/cv, no lele nothing spoil. Career Pilot is here to help you! 🚀\n\nI go ask you some questions to build your professional resume. Ready to start?";
-    
+
     res.json({
       success: true,
       response: welcomeMessage,
-      state: session.state,
+      state: conversation.state,
       sessionId: sessionId,
       progress: 0
     });
-    
   } catch (error) {
     console.error('❌ Error starting conversation:', error);
     res.status(500).json({
@@ -137,34 +73,91 @@ const startConversation = async (req, res) => {
   }
 };
 
-/**
- * Generate resume from collected data
- */
+const processMessage = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { message, sessionId } = req.body;
+
+    console.log(`💬 Processing message from user ${userId}: "${message}"`);
+
+    const conversation = await Conversation.findOne({ userId, sessionId });
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found. Please start a new conversation.'
+      });
+    }
+
+    if (conversation.status !== 'active') {
+      return res.status(400).json({
+        success: false,
+        message: 'This conversation has ended. Please start a new one.'
+      });
+    }
+
+    conversation.messages.push({ role: 'user', content: message.trim(), timestamp: new Date() });
+
+    if (!isResumeRelated(message, conversation.state)) {
+      const botResponse = "I'm here to help you build your resume/CV. Let's focus on getting your professional information together! 😊";
+      conversation.messages.push({ role: 'bot', content: botResponse, timestamp: new Date() });
+      conversation.lastActivity = new Date();
+      await conversation.save();
+
+      return res.json({
+        success: true,
+        response: botResponse,
+        state: conversation.state,
+        sessionId: conversation.sessionId
+      });
+    }
+
+    const response = await processStateMessage(conversation, message.trim());
+
+    conversation.messages.push({ role: 'bot', content: response.message, timestamp: new Date() });
+    conversation.lastActivity = new Date();
+    conversation.markModified('data');
+    await conversation.save();
+
+    res.json({
+      success: true,
+      response: response.message,
+      state: conversation.state,
+      sessionId: conversation.sessionId,
+      progress: response.progress,
+      options: response.options || null,
+      data: response.data || null
+    });
+  } catch (error) {
+    console.error('❌ Error processing chatbot message:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sorry, I encountered an error. Please try again.',
+      error: error.message
+    });
+  }
+};
+
 const generateResume = async (req, res) => {
   try {
     const userId = req.user.id;
     const { sessionId } = req.body;
-    
-    const session = userSessions.get(getUserSessionKey(userId, sessionId));
-    if (!session || session.state !== CONVERSATION_STATES.COMPLETED) {
+
+    const conversation = await Conversation.findOne({ userId, sessionId });
+    if (!conversation || conversation.state !== CONVERSATION_STATES.COMPLETED) {
       return res.status(400).json({
         success: false,
         message: 'Complete the conversation first before generating resume'
       });
     }
-    
-    // Debug: Log the raw session data
-    console.log('🔍 Raw session data:', JSON.stringify(session.data, null, 2));
-    
-    // Convert chat data to resume format
-    const resumeData = convertChatDataToResume(session.data);
-    
-    // Debug: Log the converted resume data
+
+    console.log('🔍 Raw session data:', JSON.stringify(conversation.data, null, 2));
+
+    const resumeData = convertChatDataToResume(conversation.data);
+
     console.log('🔍 Converted resume data:', JSON.stringify(resumeData, null, 2));
-    
-    // Save or update resume in database
+
     const existingResume = await Resume.findOne({ userId });
-    
+
     let resume;
     if (existingResume) {
       resume = await Resume.findOneAndUpdate(
@@ -189,17 +182,17 @@ const generateResume = async (req, res) => {
       });
       await resume.save();
     }
-    
-    // Clean up session
-    userSessions.delete(getUserSessionKey(userId, sessionId));
-    
+
+    conversation.status = 'completed';
+    conversation.lastActivity = new Date();
+    await conversation.save();
+
     res.json({
       success: true,
       message: 'Resume generated successfully! 🎉',
       resumeId: resume._id,
       resumeData: resumeData
     });
-    
   } catch (error) {
     console.error('❌ Error generating resume:', error);
     res.status(500).json({
@@ -210,31 +203,27 @@ const generateResume = async (req, res) => {
   }
 };
 
-/**
- * Get conversation progress
- */
 const getProgress = async (req, res) => {
   try {
     const userId = req.user.id;
     const { sessionId } = req.query;
-    
-    const session = userSessions.get(getUserSessionKey(userId, sessionId));
-    if (!session) {
+
+    const conversation = await Conversation.findOne({ userId, sessionId });
+    if (!conversation) {
       return res.status(404).json({
         success: false,
         message: 'Session not found'
       });
     }
-    
-    const progress = calculateProgress(session.state);
-    
+
+    const progress = STATE_PROGRESS[conversation.state] || 0;
+
     res.json({
       success: true,
-      state: session.state,
+      state: conversation.state,
       progress: progress,
-      data: session.data
+      data: conversation.data
     });
-    
   } catch (error) {
     console.error('❌ Error getting progress:', error);
     res.status(500).json({
@@ -245,129 +234,324 @@ const getProgress = async (req, res) => {
   }
 };
 
-// Helper Functions
+const listConversations = async (req, res) => {
+  try {
+    const userId = req.user.id;
 
-function getUserSession(userId, sessionId) {
-  const key = getUserSessionKey(userId, sessionId);
-  let session = userSessions.get(key);
+    const conversations = await Conversation.find(
+      { userId },
+      {
+        sessionId: 1,
+        state: 1,
+        status: 1,
+        startedAt: 1,
+        lastActivity: 1,
+        'messages': { $slice: -1 }
+      }
+    )
+      .sort({ lastActivity: -1 })
+      .lean();
 
-  if (session) {
-    if (Date.now() - session.lastActivity > MAX_SESSION_AGE_MS) {
-      userSessions.delete(key);
-      session = null;
+    const result = conversations.map(c => {
+      const lastMsg = c.messages && c.messages.length > 0 ? c.messages[0].content : null;
+      const preview = lastMsg ? lastMsg.substring(0, 80) : null;
+      return {
+        sessionId: c.sessionId,
+        state: c.state,
+        status: c.status,
+        progress: STATE_PROGRESS[c.state] || 0,
+        startedAt: c.startedAt,
+        lastActivity: c.lastActivity,
+        preview
+      };
+    });
+
+    res.json({
+      success: true,
+      conversations: result
+    });
+  } catch (error) {
+    console.error('❌ Error listing conversations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to list conversations',
+      error: error.message
+    });
+  }
+};
+
+const getConversation = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { sessionId } = req.params;
+
+    const conversation = await Conversation.findOne(
+      { userId, sessionId },
+      {
+        sessionId: 1,
+        state: 1,
+        status: 1,
+        messages: 1,
+        data: 1,
+        startedAt: 1,
+        lastActivity: 1
+      }
+    ).lean();
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Conversation not found'
+      });
     }
+
+    res.json({
+      success: true,
+      conversation: {
+        sessionId: conversation.sessionId,
+        state: conversation.state,
+        status: conversation.status,
+        messages: conversation.messages,
+        data: conversation.data,
+        startedAt: conversation.startedAt,
+        lastActivity: conversation.lastActivity
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error getting conversation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get conversation',
+      error: error.message
+    });
   }
+};
 
-  if (!session) {
-    evictOldestSessionIfNeeded(userId, key);
-    session = {
-      sessionId: sessionId || generateSessionId(),
-      userId,
-      state: CONVERSATION_STATES.WELCOME,
-      data: {},
-      startedAt: new Date(),
-      lastActivity: new Date()
-    };
-    userSessions.set(getUserSessionKey(userId, session.sessionId), session);
-  }
+const downloadResume = async (req, res) => {
+  try {
+    const userId = req.user.id;
 
-  session.lastActivity = new Date();
-  return session;
-}
-
-function evictOldestSessionIfNeeded(userId, currentKey) {
-  const userSessionKeys = [];
-  for (const [key, session] of userSessions) {
-    if (session.userId === userId && key !== currentKey) {
-      userSessionKeys.push({ key, lastActivity: session.lastActivity });
+    const resume = await Resume.findOne({ userId }).sort({ createdAt: -1 });
+    if (!resume || !resume.extractedData) {
+      return res.status(404).json({
+        success: false,
+        message: 'No resume found. Please generate a resume first.'
+      });
     }
-  }
 
-  if (userSessionKeys.length >= MAX_SESSIONS_PER_USER) {
-    userSessionKeys.sort((a, b) => a.lastActivity - b.lastActivity);
-    userSessions.delete(userSessionKeys[0].key);
+    console.log('🔄 Generating PDF for user:', userId);
+    const pdfBuffer = await generateProfessionalPDF(resume.extractedData);
+    console.log('✅ PDF generated, size:', pdfBuffer.length, 'bytes');
+
+    const fileName = `${resume.extractedData.name?.replace(/\s+/g, '_') || 'Professional'}_Resume.pdf`;
+    console.log('📁 Sending PDF file:', fileName);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Cache-Control', 'no-cache');
+
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('❌ Error downloading resume:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to download resume',
+      error: error.message
+    });
+  }
+};
+
+async function generateProfessionalPDF(data) {
+  try {
+    console.log('🚀 Launching Puppeteer for STUNNING PDF generation...');
+
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    const page = await browser.newPage();
+
+    const htmlContent = await generateStunningHTML(data);
+
+    await page.setContent(htmlContent);
+
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '0mm',
+        right: '0mm',
+        bottom: '0mm',
+        left: '0mm'
+      },
+      displayHeaderFooter: false
+    });
+
+    await browser.close();
+
+    console.log('✅ STUNNING PDF generated successfully!');
+    return pdfBuffer;
+  } catch (error) {
+    console.error('❌ Error generating PDF:', error);
+    throw error;
   }
 }
 
-function getUserSessionKey(userId, sessionId) {
-  return `${userId}_${sessionId}`;
+async function generateStunningHTML(data) {
+  return ejs.renderFile(
+    path.join(__dirname, '../templates/resume-template.ejs'),
+    { data }
+  );
 }
+
+const transcribeAudio = async (req, res) => {
+  try {
+    const huggingFaceService = require('../services/huggingFaceService');
+
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({
+        success: false,
+        message: 'No audio file provided'
+      });
+    }
+
+    console.log('🎙️ Received audio for transcription:', req.file.originalname, 'Size:', req.file.size);
+
+    const result = await huggingFaceService.transcribeAudio(req.file.buffer);
+
+    if (result.success) {
+      return res.json({
+        success: true,
+        text: result.text,
+        model: result.model
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: result.error
+      });
+    }
+  } catch (error) {
+    console.error('❌ Transcription error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to transcribe audio',
+      error: error.message
+    });
+  }
+};
+
+const synthesizeSpeech = async (req, res) => {
+  try {
+    const huggingFaceService = require('../services/huggingFaceService');
+    const { text } = req.body;
+
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'No text provided or invalid text'
+      });
+    }
+
+    console.log('🔊 Synthesizing speech for text:', text.substring(0, 50) + '...');
+
+    const result = await huggingFaceService.synthesizeSpeech(text);
+
+    if (result.success) {
+      return res.json({
+        success: true,
+        audio: result.audio,
+        mimeType: result.mimeType,
+        model: result.model
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: result.error
+      });
+    }
+  } catch (error) {
+    console.error('❌ TTS synthesis error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to synthesize speech',
+      error: error.message
+    });
+  }
+};
 
 function generateSessionId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
 
 function isResumeRelated(message, currentState) {
-  // Always allow progression if we're in an active conversation
   if (currentState !== CONVERSATION_STATES.WELCOME) {
     return true;
   }
-  
-  // Check for resume-related keywords or intent
+
   const lowerMessage = message.toLowerCase();
   const resumeKeywords = [
     'resume', 'cv', 'job', 'work', 'career', 'yes', 'start', 'ready', 'help',
     'experience', 'education', 'skill', 'build', 'create', 'need', 'want'
   ];
-  
+
   const offTopicKeywords = [
     'car', 'house', 'money', 'food', 'movie', 'game', 'weather', 'sports',
     'politics', 'religion', 'dating', 'relationship'
   ];
-  
-  // Check for off-topic first
+
   for (const keyword of offTopicKeywords) {
     if (lowerMessage.includes(keyword)) {
       return false;
     }
   }
-  
-  // Check for resume-related
+
   for (const keyword of resumeKeywords) {
     if (lowerMessage.includes(keyword)) {
       return true;
     }
   }
-  
-  // Default to allowing if not clearly off-topic
-  return message.length > 2; // Assume short responses are engagement
+
+  return message.length > 2;
 }
 
 async function processStateMessage(session, message) {
   switch (session.state) {
     case CONVERSATION_STATES.WELCOME:
       return handleWelcomeState(session, message);
-    
+
     case CONVERSATION_STATES.PERSONAL_INFO:
       return handlePersonalInfoState(session, message);
-    
+
     case CONVERSATION_STATES.PROFESSIONAL_SUMMARY:
       return handleProfessionalSummaryState(session, message);
-    
+
     case CONVERSATION_STATES.PROFESSIONAL_LINKS:
       return handleProfessionalLinksState(session, message);
-    
+
     case CONVERSATION_STATES.EDUCATION:
       return handleEducationState(session, message);
-    
+
     case CONVERSATION_STATES.WORK_EXPERIENCE:
       return handleWorkExperienceState(session, message);
-    
+
     case CONVERSATION_STATES.SKILLS:
       return handleSkillsState(session, message);
-    
+
     case CONVERSATION_STATES.PROJECTS:
       return handleProjectsState(session, message);
-    
+
     case CONVERSATION_STATES.CERTIFICATES:
       return handleCertificatesState(session, message);
-    
+
     case CONVERSATION_STATES.ACHIEVEMENTS:
       return handleAchievementsState(session, message);
-    
+
     case CONVERSATION_STATES.REVIEW:
       return handleReviewState(session, message);
-    
+
     default:
       return {
         message: "I'm not sure how to help with that. Let's start over!",
@@ -385,7 +569,7 @@ function handleWelcomeState(session, message) {
       progress: 10
     };
   }
-  
+
   return {
     message: "No wahala! When you ready, just say 'yes' or 'ready' and we go start building your resume together! 😊",
     progress: 0
@@ -396,7 +580,7 @@ function handlePersonalInfoState(session, message) {
   if (!session.data.personalInfo) {
     session.data.personalInfo = {};
   }
-  
+
   if (!session.data.personalInfo.name) {
     session.data.personalInfo.name = message;
     return {
@@ -404,7 +588,7 @@ function handlePersonalInfoState(session, message) {
       progress: 15
     };
   }
-  
+
   if (!session.data.personalInfo.email) {
     if (isValidEmail(message)) {
       session.data.personalInfo.email = message;
@@ -419,7 +603,7 @@ function handlePersonalInfoState(session, message) {
       };
     }
   }
-  
+
   if (!session.data.personalInfo.phone) {
     session.data.personalInfo.phone = message;
     return {
@@ -427,7 +611,7 @@ function handlePersonalInfoState(session, message) {
       progress: 25
     };
   }
-  
+
   if (!session.data.personalInfo.location) {
     session.data.personalInfo.location = message;
     session.state = CONVERSATION_STATES.PROFESSIONAL_SUMMARY;
@@ -442,7 +626,7 @@ function handleProfessionalSummaryState(session, message) {
   if (!session.data.professionalSummary) {
     session.data.professionalSummary = {};
   }
-  
+
   if (!session.data.professionalSummary.currentRole) {
     session.data.professionalSummary.currentRole = message;
     return {
@@ -450,7 +634,7 @@ function handleProfessionalSummaryState(session, message) {
       progress: 35
     };
   }
-  
+
   if (!session.data.professionalSummary.experience) {
     session.data.professionalSummary.experience = message;
     return {
@@ -458,7 +642,7 @@ function handleProfessionalSummaryState(session, message) {
       progress: 35
     };
   }
-  
+
   if (!session.data.professionalSummary.summary) {
     session.data.professionalSummary.summary = message;
     session.state = CONVERSATION_STATES.PROFESSIONAL_LINKS;
@@ -473,7 +657,7 @@ function handleEducationState(session, message) {
   if (!session.data.education) {
     session.data.education = [];
   }
-  
+
   if (session.data.education.length === 0) {
     session.data.education.push({
       degree: message,
@@ -486,9 +670,9 @@ function handleEducationState(session, message) {
       progress: 50
     };
   }
-  
+
   const currentEducation = session.data.education[session.data.education.length - 1];
-  
+
   if (!currentEducation.institution) {
     currentEducation.institution = message;
     return {
@@ -496,7 +680,7 @@ function handleEducationState(session, message) {
       progress: 52
     };
   }
-  
+
   if (!currentEducation.year) {
     currentEducation.year = message;
     return {
@@ -504,7 +688,7 @@ function handleEducationState(session, message) {
       progress: 54
     };
   }
-  
+
   if (!currentEducation.location) {
     currentEducation.location = message;
     session.state = CONVERSATION_STATES.WORK_EXPERIENCE;
@@ -519,7 +703,7 @@ function handleWorkExperienceState(session, message) {
   if (!session.data.workExperience) {
     session.data.workExperience = [];
   }
-  
+
   const lowerMessage = message.toLowerCase();
   if (lowerMessage.includes('no experience') || lowerMessage.includes('fresh graduate')) {
     session.state = CONVERSATION_STATES.SKILLS;
@@ -528,9 +712,8 @@ function handleWorkExperienceState(session, message) {
       progress: 70
     };
   }
-  
+
   if (session.data.workExperience.length === 0 || !session.data.workExperience[session.data.workExperience.length - 1].position) {
-    // Check if this is a combined "position at company" format
     if (message.toLowerCase().includes(' at ')) {
       const parts = message.split(' at ');
       session.data.workExperience.push({
@@ -560,9 +743,9 @@ function handleWorkExperienceState(session, message) {
       };
     }
   }
-  
+
   const currentJob = session.data.workExperience[session.data.workExperience.length - 1];
-  
+
   if (!currentJob.company) {
     currentJob.company = message;
     return {
@@ -570,7 +753,7 @@ function handleWorkExperienceState(session, message) {
       progress: 60
     };
   }
-  
+
   if (!currentJob.duration) {
     currentJob.duration = message;
     return {
@@ -578,7 +761,7 @@ function handleWorkExperienceState(session, message) {
       progress: 62
     };
   }
-  
+
   if (!currentJob.location) {
     currentJob.location = message;
     return {
@@ -586,7 +769,7 @@ function handleWorkExperienceState(session, message) {
       progress: 64
     };
   }
-  
+
   if (!currentJob.responsibilities) {
     currentJob.responsibilities = message;
     return {
@@ -594,7 +777,7 @@ function handleWorkExperienceState(session, message) {
       progress: 66
     };
   }
-  
+
   if (!currentJob.contact) {
     if (!lowerMessage.includes('none')) {
       currentJob.contact = message;
@@ -605,10 +788,8 @@ function handleWorkExperienceState(session, message) {
       options: ['yes', 'no']
     };
   }
-  
-  // Handle adding more jobs
+
   if (lowerMessage.includes('yes')) {
-    // Reset for new job entry
     session.data.workExperience.push({
       position: '',
       company: '',
@@ -640,11 +821,10 @@ function handleSkillsState(session, message) {
   if (!session.data.skills) {
     session.data.skills = [];
   }
-  
-  // Parse skills from comma-separated list
+
   const skills = message.split(',').map(skill => skill.trim()).filter(skill => skill.length > 0);
   session.data.skills = [...session.data.skills, ...skills];
-  
+
   session.state = CONVERSATION_STATES.PROJECTS;
   return {
     message: "Awesome skills! 🔥\n\nDo you have any projects, portfolios, or achievements you'd like to showcase? (e.g., websites you built, campaigns you managed, awards, etc.) Type your projects or 'none' if you don't have any:",
@@ -656,13 +836,13 @@ function handleProfessionalLinksState(session, message) {
   if (!session.data.links) {
     session.data.links = [];
   }
-  
+
   if (!session.data.linkStep) {
     session.data.linkStep = 'linkedin';
   }
-  
+
   const lowerMessage = message.toLowerCase();
-  
+
   if (session.data.linkStep === 'linkedin') {
     if (!lowerMessage.includes('none') && !lowerMessage.includes('no')) {
       session.data.links.push({ type: 'linkedin', url: message });
@@ -673,7 +853,7 @@ function handleProfessionalLinksState(session, message) {
       progress: 42
     };
   }
-  
+
   if (session.data.linkStep === 'github') {
     if (!lowerMessage.includes('none') && !lowerMessage.includes('no')) {
       session.data.links.push({ type: 'github', url: message });
@@ -684,7 +864,7 @@ function handleProfessionalLinksState(session, message) {
       progress: 44
     };
   }
-  
+
   if (session.data.linkStep === 'stackoverflow') {
     if (!lowerMessage.includes('none') && !lowerMessage.includes('no')) {
       session.data.links.push({ type: 'stackoverflow', url: message });
@@ -695,7 +875,7 @@ function handleProfessionalLinksState(session, message) {
       progress: 46
     };
   }
-  
+
   if (session.data.linkStep === 'medium') {
     if (!lowerMessage.includes('none') && !lowerMessage.includes('no')) {
       session.data.links.push({ type: 'medium', url: message });
@@ -713,19 +893,18 @@ function handleProjectsState(session, message) {
   if (!session.data.projects) {
     session.data.projects = [];
   }
-  
+
   const lowerMessage = message.toLowerCase();
-  
+
   if (lowerMessage.includes('none') || lowerMessage.includes('no projects')) {
     session.data.projects = [];
     session.state = CONVERSATION_STATES.CERTIFICATES;
     return {
-      message: "No problem! Now let's add any certificates you have. �\n\nDo you have any professional certificates? (e.g., 'Critical Infrastructure Protection (OPSWAT) - May 2024') or type 'none':",
+      message: "No problem! Now let's add any certificates you have.\n\nDo you have any professional certificates? (e.g., 'Critical Infrastructure Protection (OPSWAT) - May 2024') or type 'none':",
       progress: 85
     };
   }
-  
-  // Handle multiple projects
+
   if (session.data.projects.length === 0) {
     const projectInfo = message.split(' - ');
     session.data.projects.push({
@@ -738,7 +917,7 @@ function handleProjectsState(session, message) {
       progress: 80
     };
   }
-  
+
   const currentProject = session.data.projects[session.data.projects.length - 1];
   if (!currentProject.description) {
     currentProject.description = message;
@@ -747,7 +926,7 @@ function handleProjectsState(session, message) {
       progress: 82
     };
   }
-  
+
   if (!currentProject.dates) {
     currentProject.dates = message;
     return {
@@ -756,9 +935,8 @@ function handleProjectsState(session, message) {
       options: ['yes', 'no']
     };
   }
-  
+
   if (lowerMessage.includes('yes')) {
-    // Reset for new project
     session.data.projects.push({
       name: '',
       description: '',
@@ -787,10 +965,9 @@ function handleCertificatesState(session, message) {
   if (!session.data.certificates) {
     session.data.certificates = [];
   }
-  
+
   const lowerMessage = message.toLowerCase();
-  
-  // First time asking about certificates
+
   if (!session.data.certificateStep) {
     if (lowerMessage.includes('none') || lowerMessage.includes('no certificates')) {
       session.data.certificates = [];
@@ -800,23 +977,21 @@ function handleCertificatesState(session, message) {
         progress: 90
       };
     }
-    
-    // Parse certificate info (Name (Issuer) - Date format)
+
     const certParts = message.split(' - ');
     const nameAndIssuer = certParts[0];
     const date = certParts[1] || '';
-    
-    // Extract issuer from parentheses
+
     const issuerMatch = nameAndIssuer.match(/\(([^)]+)\)/);
     const certName = nameAndIssuer.replace(/\s*\([^)]+\)\s*/, '').trim();
     const issuer = issuerMatch ? issuerMatch[1] : '';
-    
+
     session.data.certificates.push({
       name: certName,
       issuer: issuer,
       date: date
     });
-    
+
     session.data.certificateStep = 'asking_more';
     return {
       message: "Great certificate! Do you have another certificate to add? Type 'yes' to add another, or 'no' to continue:",
@@ -824,8 +999,7 @@ function handleCertificatesState(session, message) {
       options: ['yes', 'no']
     };
   }
-  
-  // Asking if they want to add more certificates
+
   if (session.data.certificateStep === 'asking_more') {
     if (lowerMessage.includes('yes')) {
       session.data.certificateStep = 'adding_more';
@@ -848,23 +1022,22 @@ function handleCertificatesState(session, message) {
       };
     }
   }
-  
-  // Adding another certificate
+
   if (session.data.certificateStep === 'adding_more') {
     const certParts = message.split(' - ');
     const nameAndIssuer = certParts[0];
     const date = certParts[1] || '';
-    
+
     const issuerMatch = nameAndIssuer.match(/\(([^)]+)\)/);
     const certName = nameAndIssuer.replace(/\s*\([^)]+\)\s*/, '').trim();
     const issuer = issuerMatch ? issuerMatch[1] : '';
-    
+
     session.data.certificates.push({
       name: certName,
       issuer: issuer,
       date: date
     });
-    
+
     session.data.certificateStep = 'asking_more';
     return {
       message: "Excellent! Do you have another certificate to add? Type 'yes' for more, or 'no' to continue:",
@@ -876,15 +1049,14 @@ function handleCertificatesState(session, message) {
 
 function handleAchievementsState(session, message) {
   const lowerMessage = message.toLowerCase();
-  
+
   if (lowerMessage.includes('none') || lowerMessage.includes('no achievements')) {
     session.data.achievements = [];
   } else {
-    // Parse multiple achievements separated by newlines or bullet points
     const achievements = message.split(/[•\n]/).map(item => item.trim()).filter(item => item.length > 0);
     session.data.achievements = achievements;
   }
-  
+
   session.state = CONVERSATION_STATES.REVIEW;
   return {
     message: generateReviewMessage(session.data),
@@ -895,7 +1067,7 @@ function handleAchievementsState(session, message) {
 
 function handleReviewState(session, message) {
   const lowerMessage = message.toLowerCase();
-  
+
   if (lowerMessage.includes('yes') || lowerMessage.includes('looks good') || lowerMessage.includes('correct')) {
     session.state = CONVERSATION_STATES.COMPLETED;
     return {
@@ -919,8 +1091,7 @@ function handleReviewState(session, message) {
 
 function generateReviewMessage(data) {
   let review = "Perfect! Here's a comprehensive summary of your information: 📋\n\n";
-  
-  // Personal Info
+
   if (data.personalInfo) {
     review += `👤 **Personal Information:**\n`;
     review += `Name: ${data.personalInfo.name}\n`;
@@ -928,8 +1099,7 @@ function generateReviewMessage(data) {
     review += `Phone: ${data.personalInfo.phone}\n`;
     review += `Location: ${data.personalInfo.location}\n\n`;
   }
-  
-  // Professional Summary
+
   if (data.professionalSummary) {
     review += `💼 **Professional Summary:**\n`;
     review += `Role: ${data.professionalSummary.currentRole}\n`;
@@ -939,8 +1109,7 @@ function generateReviewMessage(data) {
     }
     review += `\n`;
   }
-  
-  // Professional Links
+
   if (data.links && data.links.length > 0) {
     review += `🔗 **Professional Links:**\n`;
     data.links.forEach(link => {
@@ -948,8 +1117,7 @@ function generateReviewMessage(data) {
     });
     review += `\n`;
   }
-  
-  // Education
+
   if (data.education && data.education.length > 0) {
     review += `🎓 **Education:**\n`;
     data.education.forEach(edu => {
@@ -958,8 +1126,7 @@ function generateReviewMessage(data) {
     });
     review += `\n`;
   }
-  
-  // Work Experience
+
   if (data.workExperience && data.workExperience.length > 0) {
     review += `💪 **Work Experience:**\n`;
     data.workExperience.forEach(job => {
@@ -974,13 +1141,11 @@ function generateReviewMessage(data) {
       review += `\n`;
     });
   }
-  
-  // Skills
+
   if (data.skills && data.skills.length > 0) {
     review += `🛠️ **Skills:**\n${data.skills.join(', ')}\n\n`;
   }
-  
-  // Projects
+
   if (data.projects && data.projects.length > 0) {
     review += `🎯 **Projects:**\n`;
     data.projects.forEach(project => {
@@ -992,8 +1157,7 @@ function generateReviewMessage(data) {
       }
     });
   }
-  
-  // Certificates
+
   if (data.certificates && data.certificates.length > 0) {
     review += `🏆 **Certificates:**\n`;
     data.certificates.forEach(cert => {
@@ -1001,8 +1165,7 @@ function generateReviewMessage(data) {
     });
     review += `\n`;
   }
-  
-  // Achievements
+
   if (data.achievements && data.achievements.length > 0) {
     review += `🌟 **Achievements:**\n`;
     data.achievements.forEach(achievement => {
@@ -1010,29 +1173,10 @@ function generateReviewMessage(data) {
     });
     review += `\n`;
   }
-  
-  review += `Does this look correct? Type 'yes' to confirm and I'll show you the generate button, or type 'edit' to make changes:`;
-  
-  return review;
-}
 
-function calculateProgress(state) {
-  const stateProgress = {
-    [CONVERSATION_STATES.WELCOME]: 0,
-    [CONVERSATION_STATES.PERSONAL_INFO]: 15,
-    [CONVERSATION_STATES.PROFESSIONAL_SUMMARY]: 25,
-    [CONVERSATION_STATES.PROFESSIONAL_LINKS]: 35,
-    [CONVERSATION_STATES.EDUCATION]: 50,
-    [CONVERSATION_STATES.WORK_EXPERIENCE]: 65,
-    [CONVERSATION_STATES.SKILLS]: 75,
-    [CONVERSATION_STATES.PROJECTS]: 80,
-    [CONVERSATION_STATES.CERTIFICATES]: 85,
-    [CONVERSATION_STATES.ACHIEVEMENTS]: 90,
-    [CONVERSATION_STATES.REVIEW]: 95,
-    [CONVERSATION_STATES.COMPLETED]: 100
-  };
-  
-  return stateProgress[state] || 0;
+  review += `Does this look correct? Type 'yes' if everything looks correct, or 'edit' if you want to make changes:`;
+
+  return review;
 }
 
 function isValidEmail(email) {
@@ -1041,7 +1185,6 @@ function isValidEmail(email) {
 }
 
 function convertChatDataToResume(chatData) {
-  // Helper function to safely convert years of experience to number
   const parseYearsOfExperience = (exp) => {
     if (!exp) return 0;
     if (typeof exp === 'number') return exp;
@@ -1109,7 +1252,6 @@ function convertChatDataToResume(chatData) {
       .filter(cert => cert && (cert.name || cert.issuer || cert.date));
   };
 
-  // Helper function to validate and clean links
   const cleanLinks = (links) => {
     if (!Array.isArray(links)) return [];
     return links.map(link => {
@@ -1123,7 +1265,6 @@ function convertChatDataToResume(chatData) {
     }).filter(link => link.url.trim().length > 0);
   };
 
-  // Helper function to clean work experience
   const cleanWorkExperience = (workExp) => {
     if (!Array.isArray(workExp)) return [];
     return workExp.filter(job => job.position && job.position.trim().length > 0);
@@ -1137,218 +1278,35 @@ function convertChatDataToResume(chatData) {
     currentJobTitle: chatData.professionalSummary?.currentRole || '',
     summary: chatData.professionalSummary?.summary || '',
     yearsOfExperience: parseYearsOfExperience(chatData.professionalSummary?.experience),
-    
-    // Education with detailed info
+
     education: normalizeEducation(chatData.education),
-    
-    // Work Experience with detailed info - cleaned
+
     workExperience: cleanWorkExperience(chatData.workExperience),
-    
-    // Skills
+
     skills: Array.isArray(chatData.skills) ? chatData.skills : [],
-    
-    // Projects with detailed info
+
     projects: normalizeProjects(chatData.projects),
-    
-    // Certificates with detailed info
+
     certificates: normalizeCertificates(chatData.certificates),
-    
-    // Achievements
+
     achievements: Array.isArray(chatData.achievements) ? chatData.achievements : [],
-    
-    // Extract specific link types for backward compatibility (simplified to avoid schema conflicts)
+
     linkedinUrl: chatData.links?.find(link => link.type === 'linkedin')?.url || '',
     githubUrl: chatData.links?.find(link => link.type === 'github')?.url || '',
     portfolioUrl: chatData.links?.find(link => link.type === 'medium')?.url || '',
-    
+
     languages: [],
     summary: chatData.professionalSummary?.summary || ''
   };
 }
-
-/**
- * Download generated resume as professional PDF
- */
-const downloadResume = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    
-    // Find the user's resume
-    const resume = await Resume.findOne({ userId }).sort({ createdAt: -1 });
-    if (!resume || !resume.extractedData) {
-      return res.status(404).json({
-        success: false,
-        message: 'No resume found. Please generate a resume first.'
-      });
-    }
-    
-    // Generate professional PDF
-    console.log('🔄 Generating PDF for user:', userId);
-    const pdfBuffer = await generateProfessionalPDF(resume.extractedData);
-    console.log('✅ PDF generated, size:', pdfBuffer.length, 'bytes');
-    
-    // Set headers for PDF download
-    const fileName = `${resume.extractedData.name?.replace(/\s+/g, '_') || 'Professional'}_Resume.pdf`;
-    console.log('📁 Sending PDF file:', fileName);
-    
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Length', pdfBuffer.length);
-    res.setHeader('Cache-Control', 'no-cache');
-    
-    // Send the PDF
-    res.send(pdfBuffer);
-    
-  } catch (error) {
-    console.error('❌ Error downloading resume:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to download resume',
-      error: error.message
-    });
-  }
-};
-
-/**
- * Generate ABSOLUTELY STUNNING PDF resume using Puppeteer 🔥💎✨
- */
-async function generateProfessionalPDF(data) {
-  try {
-    console.log('🚀 Launching Puppeteer for STUNNING PDF generation...');
-    
-    const browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-    
-    const page = await browser.newPage();
-    
-    // Generate the stunning HTML template
-    const htmlContent = await generateStunningHTML(data);
-    
-    await page.setContent(htmlContent);
-    
-    // Generate PDF with high quality settings
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '0mm',
-        right: '0mm',
-        bottom: '0mm',
-        left: '0mm'
-      },
-      displayHeaderFooter: false
-    });
-    
-    await browser.close();
-    
-    console.log('✅ STUNNING PDF generated successfully!');
-    return pdfBuffer;
-    
-  } catch (error) {
-    console.error('❌ Error generating PDF:', error);
-    throw error;
-  }
-}
-
-/**
- * Generate HTML template using EJS
- */
-async function generateStunningHTML(data) {
-  return ejs.renderFile(
-    path.join(__dirname, '../templates/resume-template.ejs'),
-    { data }
-  );
-}
-
-/**
- * Handle speech-to-text (audio to text transcription)
- */
-const transcribeAudio = async (req, res) => {
-  try {
-    const huggingFaceService = require('../services/huggingFaceService');
-    
-    if (!req.file || !req.file.buffer) {
-      return res.status(400).json({
-        success: false,
-        message: 'No audio file provided'
-      });
-    }
-
-    console.log('🎙️ Received audio for transcription:', req.file.originalname, 'Size:', req.file.size);
-
-    const result = await huggingFaceService.transcribeAudio(req.file.buffer);
-    
-    if (result.success) {
-      return res.json({
-        success: true,
-        text: result.text,
-        model: result.model
-      });
-    } else {
-      return res.status(500).json({
-        success: false,
-        message: result.error
-      });
-    }
-  } catch (error) {
-    console.error('❌ Transcription error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to transcribe audio',
-      error: error.message
-    });
-  }
-};
-
-/**
- * Handle text-to-speech (text to audio synthesis)
- */
-const synthesizeSpeech = async (req, res) => {
-  try {
-    const huggingFaceService = require('../services/huggingFaceService');
-    const { text } = req.body;
-
-    if (!text || typeof text !== 'string') {
-      return res.status(400).json({
-        success: false,
-        message: 'No text provided or invalid text'
-      });
-    }
-
-    console.log('🔊 Synthesizing speech for text:', text.substring(0, 50) + '...');
-
-    const result = await huggingFaceService.synthesizeSpeech(text);
-
-    if (result.success) {
-      return res.json({
-        success: true,
-        audio: result.audio,
-        mimeType: result.mimeType,
-        model: result.model
-      });
-    } else {
-      return res.status(500).json({
-        success: false,
-        message: result.error
-      });
-    }
-  } catch (error) {
-    console.error('❌ TTS synthesis error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to synthesize speech',
-      error: error.message
-    });
-  }
-};
 
 module.exports = {
   processMessage,
   startConversation,
   generateResume,
   getProgress,
+  listConversations,
+  getConversation,
   downloadResume,
   transcribeAudio,
   synthesizeSpeech

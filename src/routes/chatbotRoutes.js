@@ -9,6 +9,8 @@ const {
   startConversation,
   generateResume,
   getProgress,
+  listConversations,
+  getConversation,
   downloadResume,
   transcribeAudio,
   synthesizeSpeech
@@ -24,6 +26,12 @@ const upload = multer({
 router.post('/start', auth, startConversation);
 router.post('/message', auth, chatbotLimiter, chatbotValidators.message, processMessage);
 router.post('/generate', auth, uploadLimiter, generateResume);
+// List all conversations for the user
+router.get('/conversations', auth, listConversations);
+
+// Get a specific conversation with full message history
+router.get('/conversations/:sessionId', auth, getConversation);
+
 // Get conversation progress
 router.get('/progress', auth, getProgress);
 

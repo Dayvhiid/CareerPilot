@@ -56,13 +56,33 @@
 <body class="bg-background-light dark:bg-background-dark font-display">
 <div class="relative flex flex-col h-screen w-full">
 <header class="fixed top-0 left-0 right-0 z-10 glassmorphism">
-<div class="flex items-center p-4">
+<div class="flex items-center p-4 gap-2">
 <button onclick="goBack()" class="text-slate-800 dark:text-white">
 <span class="material-symbols-outlined">arrow_back_ios_new</span>
 </button>
-<h1 class="flex-1 text-center text-lg font-bold text-slate-900 dark:text-white pr-6">Resume Builder Chat</h1>
+<h1 class="flex-1 text-center text-lg font-bold text-slate-900 dark:text-white">Resume Builder Chat</h1>
+<button onclick="newConversation()" class="text-slate-800 dark:text-white" title="New conversation">
+<span class="material-symbols-outlined">add_circle</span>
+</button>
+<button onclick="toggleConversations()" class="text-slate-800 dark:text-white" title="Conversations">
+<span class="material-symbols-outlined">history</span>
+</button>
 </div>
 </header>
+
+<!-- Conversations Panel -->
+<div id="convOverlay" onclick="toggleConversations()" class="fixed inset-0 z-20 bg-black/50 backdrop-blur-sm hidden"></div>
+<aside id="convPanel" class="fixed top-0 right-0 bottom-0 z-30 w-80 max-w-[85vw] bg-white dark:bg-background-dark shadow-2xl border-l border-slate-200 dark:border-slate-700 translate-x-full transition-transform duration-300 flex flex-col">
+  <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+    <h3 class="font-bold text-slate-900 dark:text-white">Conversations</h3>
+    <button onclick="toggleConversations()" class="text-slate-500 dark:text-slate-400">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  </div>
+  <div id="convList" class="flex-1 overflow-y-auto">
+    <div class="p-4 text-center text-slate-500 text-sm">Loading conversations...</div>
+  </div>
+</aside>
 <main class="flex-1 flex flex-col pt-20 pb-24 px-4 overflow-y-auto">
         <!-- Progress Bar -->
         <div class="mb-4 bg-white/50 dark:bg-black/20 rounded-full h-2">
@@ -383,6 +403,82 @@
       // Go back function
       function goBack() {
         window.history.back();
+      }
+
+      // Session Management
+      async function toggleConversations() {
+        const panel = document.getElementById('convPanel');
+        const overlay = document.getElementById('convOverlay');
+        const isOpen = panel.classList.toggle('translate-x-0');
+        panel.classList.toggle('translate-x-full', !isOpen);
+        overlay.classList.toggle('hidden', !isOpen);
+        if (isOpen) await loadConversations();
+      }
+
+      async function loadConversations() {
+        const list = document.getElementById('convList');
+        list.innerHTML = '<div class="p-4 text-center text-slate-500 text-sm">Loading conversations...</div>';
+        try {
+          const res = await fetch(`${API_BASE_URL}/chatbot/conversations`);
+          const data = await res.json();
+          if (!data.success || !data.conversations.length) {
+            list.innerHTML = '<div class="p-4 text-center text-slate-500 text-sm">No conversations yet.</div>';
+            return;
+          }
+          list.innerHTML = data.conversations.map(c => {
+            const date = new Date(c.lastActivity).toLocaleDateString('en-GB', {
+              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+            });
+            const isActive = c.sessionId === currentSessionId;
+            const badge = c.status === 'completed' ? '✅' : '🔄';
+            const preview = c.preview ? escapeHtml(c.preview.substring(0, 60)) : c.state;
+            return `<button onclick="switchConversation('${c.sessionId}')" class="w-full text-left p-3 border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors ${isActive ? 'bg-primary/5 border-l-2 border-l-primary' : ''}">
+              <div class="text-sm font-medium text-slate-900 dark:text-white">${badge} Resume Chat</div>
+              <div class="text-xs text-slate-500 mt-0.5 truncate">${preview}</div>
+              <div class="text-xs text-slate-400 mt-0.5">${date}</div>
+            </button>`;
+          }).join('');
+        } catch (err) {
+          list.innerHTML = '<div class="p-4 text-center text-slate-500 text-sm">Failed to load.</div>';
+        }
+      }
+
+      async function switchConversation(sessionId) {
+        if (sessionId === currentSessionId) return;
+        toggleConversations();
+        try {
+          const res = await fetch(`${API_BASE_URL}/chatbot/conversations/${sessionId}`);
+          const data = await res.json();
+          if (!data.success || !data.conversation) return;
+          const conv = data.conversation;
+          document.getElementById('chatMessages').innerHTML = '';
+          document.getElementById('generateResumeBtn').classList.add('hidden');
+          if (conv.messages && conv.messages.length) {
+            for (const msg of conv.messages) {
+              if (msg.role === 'user') addUserMessage(msg.content);
+              else addBotMessage(msg.content);
+            }
+          }
+          currentSessionId = conv.sessionId;
+          if (conv.state) {
+            currentState = conv.state;
+            updateProgress(0);
+          }
+          if (conv.state === 'completed') showGenerateButton();
+        } catch (err) {
+          console.error('Switch error:', err);
+        }
+      }
+
+      async function newConversation() {
+        const panel = document.getElementById('convPanel');
+        const overlay = document.getElementById('convOverlay');
+        panel.classList.remove('translate-x-0');
+        panel.classList.add('translate-x-full');
+        overlay.classList.add('hidden');
+        document.getElementById('chatMessages').innerHTML = '';
+        document.getElementById('generateResumeBtn').classList.add('hidden');
+        startConversation();
       }
     </script>
 </body>

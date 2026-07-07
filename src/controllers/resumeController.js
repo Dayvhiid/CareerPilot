@@ -6,6 +6,7 @@ const path = require("path");
 const mongoose = require("mongoose");
 const extractor = require("../services/resumeExtractor");
 const geminiExtractor = require("../services/geminiExtractor");
+const { calculateScore } = require("../services/resumeScoringService");
 
 async function updateProcessingState(resumeId, { stage, progress, message }) {
   const update = {
@@ -285,11 +286,16 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
     // Normalize parser output so it matches the Resume schema before saving.
     extractedData = extractor.normalizeExtractedData(extractedData);
 
+    // Calculate resume quality score (1-10)
+    extractedData.score = calculateScore(extractedData);
+    const resumeScore = extractedData.score;
+
     // Update resume with extracted data
     try {
       await Resume.findByIdAndUpdate(resumeId, {
         extractedText,
         extractedData,
+        resumeScore,
         isProcessed: true,
         processingStage: 'completed',
         processingProgress: 100,
@@ -300,9 +306,11 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
       console.error('❌ Failed to save normalized extracted data:', saveError);
 
       const safeFallbackData = extractor.normalizeExtractedData(extractor.getEmptyResumeData());
+      safeFallbackData.score = calculateScore(safeFallbackData);
       await Resume.findByIdAndUpdate(resumeId, {
         extractedText,
         extractedData: safeFallbackData,
+        resumeScore: safeFallbackData.score,
         isProcessed: true,
         processingStage: 'completed',
         processingProgress: 100,
@@ -317,7 +325,8 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
       email: extractedData.email,
       location: extractedData.location,
       skillsCount: extractedData.skills?.length || 0,
-      jobTitlesCount: extractedData.jobTitles?.length || 0
+      jobTitlesCount: extractedData.jobTitles?.length || 0,
+      score: resumeScore
     });
 
   } catch (error) {

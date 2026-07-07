@@ -49,7 +49,14 @@ const resumeSchema = new mongoose.Schema({
   processingUpdatedAt: {
     type: Date,
   },
+  resumeScore: {
+    type: Number,
+    default: 1,
+    min: 1,
+    max: 10,
+  },
   extractedData: {
+    score: Number,
     name: String,
     email: String,
     phone: String,
