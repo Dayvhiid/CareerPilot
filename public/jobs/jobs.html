@@ -954,7 +954,7 @@
       document.getElementById('jobsList').innerHTML = '';
 
       try {
-        const res  = await fetch(`${API_BASE}/jobs/resume-based`, {
+        const res  = await fetch(`${API_BASE}/recommendations`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
@@ -1096,7 +1096,7 @@
     async function applyToJob(jobId, applyUrl) {
       if (jobId) {
         try {
-          await fetch(`${API_BASE}/jobs/${jobId}/apply`, {
+          await fetch(`${API_BASE}/recommendations/${jobId}/apply`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
           });

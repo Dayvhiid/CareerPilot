@@ -92,29 +92,6 @@ const chatbotValidators = {
 };
 
 /**
- * Job search validators
- */
-const jobValidators = {
-  search: [
-    query('query')
-      .if(query('query').exists())
-      .trim()
-      .isLength({ max: 100 })
-      .withMessage('Search query too long'),
-    query('location')
-      .if(query('location').exists())
-      .trim()
-      .isLength({ max: 100 })
-      .withMessage('Location too long'),
-    query('page')
-      .if(query('page').exists())
-      .isInt({ min: 1 })
-      .withMessage('Invalid page number'),
-    handleValidationErrors
-  ]
-};
-
-/**
  * Cover letter validators
  */
 const coverLetterValidators = {
@@ -141,6 +118,5 @@ module.exports = {
   authValidators,
   fileValidators,
   chatbotValidators,
-  jobValidators,
   coverLetterValidators
 };

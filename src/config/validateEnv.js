@@ -4,16 +4,15 @@
  * Fails fast in production if critical variables are missing
  */
 
-const requiredVars = ['MONGODB_URI', 'JWT_SECRET'];
+const requiredVars = [/* MONGODB_URI | MONGO_URI */ 'JWT_SECRET'];
 
 const optionalVars = [
   'NODE_ENV',
   'SESSION_SECRET',
-  'JSEARCH_API_KEY',
   'HUGGINGFACE_API_KEY',
   'CORS_ORIGINS',
-  'REDIS_URL',
-  'PORT'
+  'PORT',
+  'REDIS_URL'
 ];
 
 /**
@@ -43,9 +42,9 @@ function validateEnv() {
     console.warn(`⚠️  Development: Missing recommended environment variables:\n${missing.map(v => `  - ${v}`).join('\n')}`);
   }
 
-  // Validate specific variable formats
-  if (process.env.MONGODB_URI && !process.env.MONGODB_URI.startsWith('mongodb')) {
-    console.warn('⚠️  MONGODB_URI should be a valid MongoDB connection string');
+  const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+  if (mongoUri && !mongoUri.startsWith('mongodb')) {
+    console.warn('⚠️  MONGO_URI should be a valid MongoDB connection string');
   }
 
   if (process.env.SESSION_SECRET && process.env.SESSION_SECRET.length < 8) {

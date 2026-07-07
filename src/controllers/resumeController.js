@@ -1,5 +1,4 @@
 const Resume = require("../models/Resume");
-const JobMatch = require("../models/JobMatch");
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
 const fs = require("fs").promises;
@@ -56,25 +55,6 @@ exports.uploadResume = async (req, res) => {
         console.log("Error deleting old file:", err);
       }
       await Resume.findByIdAndDelete(existingResume._id);
-    }
-
-    // Invalidate old job matches so recommendations get recalculated with new resume
-    try {
-      const deleted = await JobMatch.deleteMany({ userId });
-      if (deleted.deletedCount > 0) {
-        console.log(`🗑️ Deleted ${deleted.deletedCount} old job matches for user ${userId}`);
-      }
-    } catch (err) {
-      console.log("Error deleting old job matches:", err);
-    }
-
-    // Clear Redis job cache so next request fetches fresh data based on new resume
-    try {
-      const redisService = require('../services/redisService');
-      await redisService.clearJobsCache();
-      console.log('🗑️ Cleared Redis job cache after resume upload');
-    } catch (err) {
-      console.log("Error clearing Redis cache:", err);
     }
 
     // Create new resume record
@@ -243,6 +223,39 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
     } catch (geminiError) {
       console.log("⚠️ Gemini extraction failed:", geminiError.message);
       extractedData = null;
+    }
+
+    // Validate Gemini actually returned data
+    if (extractedData && typeof extractedData === 'object') {
+      const hasContent = extractedData.name || extractedData.skills?.length > 0 || extractedData.jobTitles?.length > 0 || extractedData.summary;
+      if (!hasContent) {
+        console.log('⚠️ Gemini returned valid JSON but all fields are empty — treating as extraction failure');
+        extractedData = null;
+      }
+    }
+
+    // Fallback: text-based extraction from raw text
+    if (!extractedData && extractedText) {
+      console.log('📝 Attempting text-based fallback extraction');
+      const basic = extractor.getEmptyResumeData();
+      basic.name = extractor.extractNameEnhanced(extractedText.split('\n').filter(Boolean), extractedText);
+      basic.email = (extractedText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/) || [])[0] || '';
+      const phoneMatch = extractedText.match(/(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
+      basic.phone = phoneMatch ? phoneMatch[0].trim() : '';
+      basic.location = extractor.extractLocationEnhanced(extractedText);
+      // Extract first 400 chars as summary
+      const cleaned = extractedText.replace(/\s+/g, ' ').trim();
+      basic.summary = cleaned.substring(0, 400);
+      // Extract current job title (first line that looks like a title)
+      const titleMatch = cleaned.match(/(?:^|\n)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/);
+      if (titleMatch) basic.currentJobTitle = titleMatch[1];
+      basic.skills = extractor.extractSkills(extractedText);
+      const experience = extractor.extractJobExperience(extractedText);
+      basic.jobTitles = experience.titles || [];
+      basic.companies = experience.companies || [];
+      extractedData = basic;
+      processingMethod = "Text fallback";
+      console.log(`✅ Text fallback: name=${basic.name}, skills=${basic.skills.length}, titles=${basic.jobTitles.length}`);
     }
 
     // Ultimate fallback: empty structure

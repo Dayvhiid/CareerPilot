@@ -16,9 +16,9 @@
             resultDiv.innerHTML = 'Loading...';
             
             try {
-                console.log('Making request to /api/jobs/resume-based');
+                console.log('Making request to /api/recommendations');
                 
-                const response = await fetch('/api/jobs/resume-based', {
+                const response = await fetch('/api/recommendations', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'

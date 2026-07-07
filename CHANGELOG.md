@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Validation**: Cover letter `generate` endpoint now validates `customInstructions`, `tone`, and `length` fields, matching the controller's actual expectations.
 - **Error handling**: Token extraction now verifies `Authorization` header is a string before performing regex operations (`auth.js`).
+- **Recommendation caching**: Added Redis-based caching layer for job recommendations. `getRecommendations` now caches scored results per user with 18-hour TTL, drastically reducing MongoDB queries and Gemini API calls. `triggerIngestion` flushes all caches on new job ingestion. New `src/config/redis.js` module provides `get`/`set`/`del` helpers with graceful fallback when Redis is unavailable.
 
 ### Changed
 

@@ -7,12 +7,11 @@ const cookieParser = require('cookie-parser');
 require('./config/logger');
 const passport = require('./config/passport');
 const session = require('express-session');
-const redisService = require('./services/redisService');
 const { validateEnv } = require('./config/validateEnv');
 const authRoutes = require('./routes/authRoutes');
 const oauthRoutes = require('./routes/oauthRoutes');
-const resumeRoutes = require('./routes/resumeRoutes'); // Add this
-const jobRoutes = require('./routes/jobRoutes');
+const resumeRoutes = require('./routes/resumeRoutes');
+const recommendationRoutes = require('./routes/recommendationRoutes');
 const coverLetterRoutes = require('./routes/coverLetterRoutes');
 const chatbotRoutes = require('./routes/chatbotRoutes');
 const healthRoutes = require('./routes/healthRoutes');
@@ -21,22 +20,6 @@ const healthRoutes = require('./routes/healthRoutes');
 validateEnv();
 
 const app = express();
-
-// Initialize Redis connection (non-blocking)
-console.log('🔧 Initializing Redis connection if configured...');
-redisService.connect().then(success => {
-  if (success) {
-    console.log('🎉 Redis connection established successfully');
-  } else {
-    console.warn('⚠️ Redis not configured or unavailable; server will continue without cache');
-  }
-}).catch(err => {
-  console.error('❌ Redis connection error details:');
-  console.error('   - Error message:', err.message);
-  console.error('   - Error code:', err.code);
-  console.error('   - Error stack:', err.stack);
-  console.warn('⚠️ Server continuing without Redis cache');
-});
 
 // CORS middleware - Allow requests from frontend
 // Allow origins via environment variable (comma-separated) for easy deployment. Defaults include common localhost dev origins
@@ -70,7 +53,7 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/oauth', oauthRoutes);
 app.use('/api/resume', resumeRoutes); // Add this
-app.use('/api/jobs', jobRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/coverletter', coverLetterRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/health', healthRoutes);

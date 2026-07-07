@@ -191,7 +191,7 @@
         loading.classList.remove('hidden');
         
         try {
-          const response = await fetch('/api/jobs/resume-based');
+          const response = await fetch('/api/recommendations');
           const data = await response.json();
           
           if (data.success && data.jobs && data.jobs.length > 0) {
@@ -293,7 +293,7 @@
         try {
           // Mark as applied in our system
           if (jobId && jobId !== 'undefined' && jobId !== '') {
-            const response = await fetch(`/api/jobs/${jobId}/apply`, {
+            const response = await fetch(`/api/recommendations/${jobId}/apply`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'

@@ -1,5 +1,5 @@
 const Resume = require('../models/Resume');
-const Job = require('../models/Job');
+const JobListing = require('../models/JobListing');
 const huggingFaceService = require('../services/huggingFaceService');
 const mongoose = require('mongoose');
 const { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } = require('docx');
@@ -18,7 +18,7 @@ exports.generateCoverLetter = async (req, res) => {
     console.log(`📝 Generating cover letter for job ${jobId} and user ${userId}`);
 
     // Get job details
-    const job = await Job.findById(jobId);
+    const job = await JobListing.findById(jobId);
     if (!job) {
       return res.status(404).json({
         success: false,
