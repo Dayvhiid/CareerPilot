@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CareerPilot Premium — Get hired faster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #08080E;
+    --bg-surface: #0F0F18;
+    --bg-surface-2: #16162A;
+    --bg-glass: rgba(255,255,255,0.04);
+
+    --accent-gold: #C9973A;
+    --accent-gold-bright: #E8B45A;
+    --accent-gold-dim: #7A5B22;
+
+    --text-primary: #F0EDE6;
+    --text-secondary: #8A8580;
+    --text-tertiary: #504E4A;
+
+    --border-subtle: rgba(201, 151, 58, 0.12);
+    --border-mid: rgba(201, 151, 58, 0.28);
+    --border-strong: rgba(201, 151, 58, 0.55);
+
+    --glow-gold: 0 0 60px rgba(201, 151, 58, 0.15);
+    --glow-gold-intense: 0 0 30px rgba(201, 151, 58, 0.35);
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: var(--bg-primary);
+    background-image:
+      linear-gradient(var(--border-subtle) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
+    background-size: 60px 60px;
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    height: 900px;
+    background: radial-gradient(ellipse, rgba(201,151,58,0.07) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 clamp(1.5rem, 5vw, 5rem); position: relative; z-index: 1; }
+
+  section { padding: clamp(4.5rem, 9vw, 8rem) 0; position: relative; z-index: 1; }
+
+  /* ---------- NAV ---------- */
+  .header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    z-index: 100;
+    background: transparent;
+    transition: all 0.4s ease;
+  }
+  .header.scrolled {
+    background: rgba(8, 8, 14, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .header .wrap { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+  .logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-size: 1.4rem;
+    color: var(--text-primary);
+    display: flex; align-items: center;
+    text-decoration: none;
+  }
+  .logo span { color: var(--accent-gold); margin-right: 6px; }
+  .nav-links { display: flex; gap: 2.25rem; list-style: none; }
+  .nav-links a {
+    font-size: 0.875rem; font-weight: 300; color: var(--text-secondary);
+    text-decoration: none; transition: color 0.3s ease;
+  }
+  .nav-links a:hover { color: var(--text-primary); }
+  .nav-cta { display: flex; gap: 0.75rem; align-items: center; }
+  .btn {
+    font-family: 'DM Sans', sans-serif;
+    border-radius: var(--radius-md);
+    padding: 0.5rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.25s ease;
+  }
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--border-mid);
+    color: var(--text-secondary);
+  }
+  .btn-ghost:hover { border-color: var(--accent-gold); color: var(--accent-gold); }
+  .btn-gold {
+    background: var(--accent-gold);
+    color: #08080E;
+  }
+  .btn-gold:hover { background: var(--accent-gold-bright); box-shadow: var(--glow-gold-intense); transform: translateY(-2px); }
+  .menu-btn { display: none; color: var(--accent-gold); font-size: 1.5rem; background: none; border: none; cursor: pointer; }
+
+  .mobile-menu {
+    position: fixed; inset: 0; background: var(--bg-primary);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2rem; z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  }
+  .mobile-menu.open { opacity: 1; pointer-events: all; }
+  .mobile-menu a { font-family: 'Cormorant Garamond', serif; font-size: 2.25rem; font-weight: 300; color: var(--text-primary); text-decoration: none; }
+  .mobile-menu .close-btn { position: absolute; top: 24px; right: 24px; font-size: 1.75rem; color: var(--accent-gold); background: none; border: none; cursor: pointer; }
+
+  /* ---------- TYPOGRAPHY HELPERS ---------- */
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .eyebrow::before { content: ''; width: 2px; height: 18px; background: var(--accent-gold); display: inline-block; }
+  .section-title { text-align: center; max-width: 640px; margin: 0 auto clamp(2.5rem, 5vw, 4rem); }
+  .section-title .eyebrow { justify-content: center; margin-bottom: 1.25rem; }
+  .section-title .eyebrow::before { display: none; }
+  .section-title h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    line-height: 1.15;
+  }
+  .section-title h2 em { color: var(--accent-gold); font-style: italic; }
+  .section-title p { margin-top: 1rem; color: var(--text-secondary); font-weight: 300; font-size: 0.975rem; line-height: 1.7; }
+
+  /* ---------- HERO ---------- */
+  .hero { min-height: 92vh; display: flex; align-items: center; padding-top: 72px; }
+  .hero-inner { max-width: 760px; }
+  .hero .eyebrow { margin-bottom: 1.5rem; opacity: 0; animation: fadeUp 0.7s ease forwards; animation-delay: 0.1s; }
+  .hero h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: clamp(3rem, 6vw, 5.5rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+  .hero h1 span { display: block; opacity: 0; transform: translateY(20px); animation: fadeUp 0.8s ease forwards; }
+  .hero h1 span:nth-child(1) { animation-delay: 0.2s; }
+  .hero h1 span:nth-child(2) { animation-delay: 0.35s; }
+  .hero h1 em { font-style: italic; color: var(--accent-gold); }
+  .hero p.sub {
+    margin-top: 1.75rem;
+    font-size: 1.05rem;
+    font-weight: 300;
+    color: var(--text-secondary);
+    line-height: 1.75;
+    max-width: 540px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards;
+    animation-delay: 0.55s;
+  }
+  .hero .cta-row {
+    margin-top: 2.25rem;
+    display: flex; gap: 1rem; flex-wrap: wrap;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards;
+    animation-delay: 0.7s;
+  }
+  .hero .cta-row .btn { padding: 0.9rem 2rem; font-size: 0.925rem; }
+  .hero .fine-print {
+    margin-top: 1.25rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards;
+    animation-delay: 0.85s;
+  }
+  .hero .fine-print span { color: var(--accent-gold); }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px);} to { opacity: 1; transform: translateY(0); } }
+
+  /* ---------- COMPARISON TABLE ---------- */
+  .compare-wrap {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+  }
+  table.compare { width: 100%; border-collapse: collapse; }
+  table.compare th, table.compare td {
+    padding: 1.1rem 1.5rem;
+    text-align: left;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  table.compare thead th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    padding-bottom: 1rem;
+  }
+  table.compare thead th.col-premium { color: var(--accent-gold); }
+  table.compare tbody tr:last-child td { border-bottom: none; }
+  table.compare tbody tr:hover { background: rgba(255,255,255,0.02); }
+  table.compare td.feature-name { color: var(--text-primary); font-weight: 400; }
+  table.compare td.col-free { color: var(--text-secondary); font-weight: 300; }
+  table.compare td.col-premium { color: var(--accent-gold-bright); font-weight: 400; }
+  table.compare .check { color: var(--accent-gold); }
+  table.compare .dim { color: var(--text-tertiary); }
+  @media (max-width: 720px) {
+    table.compare thead { display: none; }
+    table.compare, table.compare tbody, table.compare tr, table.compare td { display: block; width: 100%; }
+    table.compare tr { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-subtle); }
+    table.compare td { border-bottom: none; padding: 0.25rem 0; font-size: 0.875rem; }
+    table.compare td.feature-name { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); margin-bottom: 0.35rem; }
+    table.compare td.col-free::before { content: "Free — "; color: var(--text-tertiary); }
+    table.compare td.col-premium::before { content: "Premium — "; color: var(--accent-gold); }
+  }
+
+  /* ---------- PRICING ---------- */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: center; gap: 0.9rem;
+    margin-bottom: 3rem;
+  }
+  .toggle-label { font-size: 0.875rem; color: var(--text-secondary); font-weight: 300; transition: color 0.25s ease; }
+  .toggle-label.active { color: var(--text-primary); font-weight: 500; }
+  .toggle-switch {
+    width: 46px; height: 26px; border-radius: 999px;
+    background: var(--bg-surface-2);
+    border: 1px solid var(--border-mid);
+    position: relative; cursor: pointer;
+  }
+  .toggle-switch .knob {
+    position: absolute; top: 2px; left: 2px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent-gold);
+    transition: transform 0.25s ease;
+  }
+  .toggle-switch.on .knob { transform: translateX(20px); }
+  .save-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+    color: #08080E;
+    background: var(--accent-gold);
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    max-width: 860px;
+    margin: 0 auto;
+    align-items: stretch;
+  }
+  .price-card {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: 2.5rem 2.25rem;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: all 0.3s ease;
+  }
+  .price-card.premium {
+    border: 1px solid var(--border-strong);
+    background: linear-gradient(180deg, rgba(201,151,58,0.06), rgba(255,255,255,0.03));
+    box-shadow: var(--glow-gold);
+  }
+  .price-card .badge {
+    position: absolute;
+    top: -13px; left: 50%; transform: translateX(-50%);
+    background: var(--accent-gold);
+    color: #08080E;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.85rem;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+  .price-card h3 {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+    color: var(--text-primary);
+  }
+  .price-card .plan-desc { margin-top: 0.4rem; font-size: 0.85rem; color: var(--text-secondary); font-weight: 300; min-height: 40px; }
+  .price-card .price-line { margin-top: 1.75rem; display: flex; align-items: baseline; gap: 0.35rem; flex-wrap: wrap; }
+  .price-card .amount { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-size: 3.2rem; line-height: 1; color: var(--text-primary); }
+  .price-card.premium .amount { color: var(--accent-gold-bright); }
+  .price-card .period { font-size: 0.85rem; color: var(--text-tertiary); font-weight: 300; }
+  .price-card .ngn-line {
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+  .price-card .ngn-amount {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 1.15rem;
+    color: var(--text-secondary);
+  }
+  .price-card.premium .ngn-amount { color: var(--text-primary); }
+  .price-card .ngn-period { font-size: 0.78rem; color: var(--text-tertiary); font-weight: 300; }
+  .price-card .billed-as { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--text-tertiary); margin-top: 0.6rem; letter-spacing: 0.04em; min-height: 14px; }
+  .price-card .fx-note { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--text-tertiary); margin-top: 0.3rem; letter-spacing: 0.03em; }
+
+  .price-card ul { list-style: none; margin-top: 2rem; display: flex; flex-direction: column; gap: 0.75rem; flex: 1; }
+  .price-card li { display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.875rem; font-weight: 300; color: var(--text-secondary); line-height: 1.5; }
+  .price-card li .tick { color: var(--text-tertiary); flex-shrink: 0; margin-top: 2px; }
+  .price-card.premium li .tick { color: var(--accent-gold); }
+  .price-card.premium li { color: var(--text-primary); }
+
+  .price-card .btn { margin-top: 2rem; justify-content: center; width: 100%; padding: 0.85rem; font-size: 0.9rem; }
+
+  @media (max-width: 720px) {
+    .pricing-grid { grid-template-columns: 1fr; max-width: 420px; }
+  }
+
+  /* ---------- FAQ ---------- */
+  .faq { max-width: 760px; margin: 0 auto; }
+  .faq-item { border-bottom: 1px solid var(--border-subtle); padding: 1.5rem 0; }
+  .faq-item summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.975rem;
+    font-weight: 400;
+    color: var(--text-primary);
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after {
+    content: '+';
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent-gold);
+    font-size: 1.1rem;
+    transition: transform 0.25s ease;
+  }
+  .faq-item[open] summary::after { transform: rotate(45deg); }
+  .faq-item p { margin-top: 0.9rem; color: var(--text-secondary); font-weight: 300; font-size: 0.9rem; line-height: 1.7; }
+
+  /* ---------- FINAL CTA ---------- */
+  .cta-section { text-align: center; padding: clamp(5rem, 10vw, 8rem) 0; position: relative; }
+  .cta-section::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 70% at 50% 50%, rgba(201,151,58,0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cta-section .rule { width: 120px; height: 1px; background: var(--accent-gold); margin: 0 auto 2rem; }
+  .cta-section h2 { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-size: clamp(2.2rem, 5vw, 3.6rem); }
+  .cta-section h2 em { color: var(--accent-gold); font-style: italic; }
+  .cta-section p { margin-top: 1rem; color: var(--text-secondary); font-weight: 300; max-width: 460px; margin-left: auto; margin-right: auto; }
+  .cta-section .btn { margin-top: 2.25rem; padding: 1rem 2.5rem; font-size: 1rem; }
+  .cta-section .fine-print { margin-top: 1.25rem; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--text-tertiary); }
+
+  /* ---------- FOOTER ---------- */
+  footer { border-top: 1px solid var(--border-subtle); padding: 3rem 0 2rem; }
+  .footer-top { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 2rem; }
+  .footer-brand h4 { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; font-weight: 600; color: var(--text-primary); }
+  .footer-brand p { margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-tertiary); font-weight: 300; max-width: 260px; }
+  .footer-links { display: flex; gap: 3rem; }
+  .footer-links ul { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+  .footer-links a { color: var(--text-tertiary); font-size: 0.875rem; font-weight: 300; text-decoration: none; transition: 0.2s ease; }
+  .footer-links a:hover { color: var(--accent-gold); }
+  .footer-bottom {
+    margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--text-tertiary);
+  }
+
+  @media (max-width: 860px) {
+    .nav-links { display: none; }
+    .menu-btn { display: block; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header" id="header">
+  <div class="wrap">
+    <a href="#" class="logo"><span>·</span>CareerPilot</a>
+    <ul class="nav-links">
+      <li><a href="#compare">Compare plans</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#faq">FAQ</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a href="#" class="btn btn-ghost">Log in</a>
+      <a href="#pricing" class="btn btn-gold">Upgrade →</a>
+    </div>
+    <button class="menu-btn" id="menuBtn">☰</button>
+  </div>
+</header>
+
+<div class="mobile-menu" id="mobileMenu">
+  <button class="close-btn" id="closeMenuBtn">×</button>
+  <a href="#compare">Compare plans</a>
+  <a href="#pricing">Pricing</a>
+  <a href="#faq">FAQ</a>
+  <a href="#pricing" class="btn btn-gold" style="font-family:'DM Sans',sans-serif; font-size:1rem;">Upgrade</a>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-inner">
+      <p class="eyebrow">CareerPilot Premium</p>
+      <h1>
+        <span>Same search.</span>
+        <span>Zero <em>friction.</em></span>
+      </h1>
+      <p class="sub">You've already met CareerPilot's free tools. Premium removes the caps — unlimited resumes, unlimited rewrites, unlimited cover letters — so the only limit left is how many jobs you're willing to apply to.</p>
+      <div class="cta-row">
+        <a href="#pricing" class="btn btn-gold">See plans →</a>
+        <a href="#compare" class="btn btn-ghost">Compare free vs premium</a>
+      </div>
+      <p class="fine-print">No credit card to start · Cancel anytime · <span>7-day money-back guarantee</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARISON TABLE -->
+<section id="compare">
+  <div class="wrap">
+    <div class="section-title">
+      <p class="eyebrow" style="justify-content:center;">Free vs premium</p>
+      <h2>Everything unlocked, <em>nothing metered.</em></h2>
+      <p>Free gets you a real resume and a real job search. Premium removes every monthly cap standing between you and your next interview.</p>
+    </div>
+
+    <div class="compare-wrap">
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th class="col-free">Free</th>
+            <th class="col-premium">Premium</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="feature-name">Resume upload</td>
+            <td class="col-free">1 resume</td>
+            <td class="col-premium">Unlimited resumes</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Resume parsing</td>
+            <td class="col-free"><span class="check">✓</span></td>
+            <td class="col-premium"><span class="check">✓</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name">Resume builder chatbot</td>
+            <td class="col-free">Limited messages / month</td>
+            <td class="col-premium">Unlimited</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Resume PDF download</td>
+            <td class="col-free">2 / month</td>
+            <td class="col-premium">Unlimited</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Resume templates</td>
+            <td class="col-free">2 templates</td>
+            <td class="col-premium">All templates</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Job search</td>
+            <td class="col-free">Unlimited</td>
+            <td class="col-premium">Unlimited</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Job recommendations</td>
+            <td class="col-free">Top 10 matches / day</td>
+            <td class="col-premium">Unlimited + advanced ranking</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Match score</td>
+            <td class="col-free">Basic %</td>
+            <td class="col-premium">Detailed breakdown + suggestions</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Cover letter generation</td>
+            <td class="col-free">3 / month</td>
+            <td class="col-premium">Unlimited</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Saved jobs</td>
+            <td class="col-free">20 jobs</td>
+            <td class="col-premium">Unlimited</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Job tracker</td>
+            <td class="col-free">Basic status tracking</td>
+            <td class="col-premium">Kanban board + reminders</td>
+          </tr>
+          <tr>
+            <td class="feature-name">AI resume rewrite</td>
+            <td class="col-free"><span class="dim">Not included</span></td>
+            <td class="col-premium">Unlimited</td>
+          </tr>
+          <tr>
+            <td class="feature-name">ATS resume analysis</td>
+            <td class="col-free">1 / month</td>
+            <td class="col-premium">Unlimited</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Export cover letter</td>
+            <td class="col-free">Watermarked</td>
+            <td class="col-premium">Clean PDF / DOCX</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Processing speed</td>
+            <td class="col-free">Standard</td>
+            <td class="col-premium">Priority — faster AI generation</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="wrap">
+    <div class="section-title">
+      <p class="eyebrow" style="justify-content:center;">Pricing</p>
+      <h2>Simple, <em>honest</em> pricing.</h2>
+      <p>Start free. Upgrade the moment the caps start slowing you down.<br>Priced in USD, shown in naira — you're charged in ₦ at checkout.</p>
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label active" id="monthlyLabel">Monthly</span>
+      <div class="toggle-switch" id="billingToggle"><div class="knob"></div></div>
+      <span class="toggle-label" id="annualLabel">Annual</span>
+      <span class="save-badge">Save 20%</span>
+    </div>
+
+    <div class="pricing-grid">
+      <!-- FREE CARD -->
+      <div class="price-card">
+        <h3>Free</h3>
+        <p class="plan-desc">Everything you need to start applying.</p>
+        <div class="price-line">
+          <span class="amount">$0</span>
+          <span class="period">/ forever</span>
+        </div>
+        <div class="ngn-line">
+          <span class="ngn-amount">₦0</span>
+          <span class="ngn-period">/ forever</span>
+        </div>
+        <div class="billed-as">&nbsp;</div>
+        <ul>
+          <li><span class="tick">–</span> 1 resume, 2 templates</li>
+          <li><span class="tick">–</span> Unlimited job search</li>
+          <li><span class="tick">–</span> Top 10 matches / day</li>
+          <li><span class="tick">–</span> 3 cover letters / month</li>
+          <li><span class="tick">–</span> 2 PDF downloads / month</li>
+          <li><span class="tick">–</span> 20 saved jobs, basic tracker</li>
+        </ul>
+        <a href="#" class="btn btn-ghost">Continue free</a>
+      </div>
+
+      <!-- PREMIUM CARD -->
+      <div class="price-card premium">
+        <span class="badge">Most popular</span>
+        <h3>Premium</h3>
+        <p class="plan-desc">Every limit removed. Built for an active search.</p>
+        <div class="price-line">
+          <span class="amount" id="priceAmount">$14</span>
+          <span class="period" id="pricePeriod">/ month</span>
+        </div>
+        <div class="ngn-line">
+          <span class="ngn-amount" id="priceAmountNGN">≈ ₦19,000</span>
+          <span class="ngn-period" id="pricePeriodNGN">/ month</span>
+        </div>
+        <div class="billed-as" id="billedAs">Billed monthly</div>
+        <div class="fx-note">Charged in naira at checkout · rate updates daily</div>
+        <ul>
+          <li><span class="tick">✓</span> Unlimited resumes &amp; templates</li>
+          <li><span class="tick">✓</span> Unlimited chatbot messages</li>
+          <li><span class="tick">✓</span> Unlimited AI resume rewrites</li>
+          <li><span class="tick">✓</span> Unlimited cover letters, clean export</li>
+          <li><span class="tick">✓</span> Unlimited downloads, no watermark</li>
+          <li><span class="tick">✓</span> Advanced match ranking &amp; ATS analysis</li>
+          <li><span class="tick">✓</span> Kanban tracker with reminders</li>
+          <li><span class="tick">✓</span> Priority AI processing</li>
+        </ul>
+        <button class="btn btn-gold" id="checkoutBtn" data-plan="premium" data-billing="monthly">Upgrade to Premium →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="wrap">
+    <div class="section-title">
+      <p class="eyebrow" style="justify-content:center;">Questions</p>
+      <h2>Before you <em>upgrade.</em></h2>
+    </div>
+    <div class="faq">
+      <details class="faq-item" open>
+        <summary>Will I lose my resume if I downgrade later?</summary>
+        <p>No. Every resume you've built stays in your account. If you drop back to Free, you'll simply be limited to editing and downloading one of them at a time.</p>
+      </details>
+      <details class="faq-item">
+        <summary>What counts as a "chatbot message"?</summary>
+        <p>Each message you send to the resume builder chatbot counts toward your monthly limit on Free. Premium removes this cap entirely, so you can iterate as many times as you like.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Can I cancel anytime?</summary>
+        <p>Yes. Premium is month-to-month or annual with no lock-in. Cancel from your account settings and you'll keep Premium access until the end of your current billing period.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Do you offer refunds?</summary>
+        <p>If Premium isn't working for you, reach out within 7 days of your first charge and we'll refund it in full — no forms, no back-and-forth.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="cta-section">
+  <div class="wrap">
+    <div class="rule"></div>
+    <p class="eyebrow" style="justify-content:center;">Your next chapter starts here</p>
+    <h2>Stop waiting on <em>monthly limits.</em></h2>
+    <p>Upgrade in under a minute. Keep everything you've already built.</p>
+    <button class="btn btn-gold" id="checkoutBtnBottom" data-plan="premium" data-billing="monthly">Upgrade to Premium →</button>
+    <p class="fine-print">No credit card required to explore · Cancel anytime</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <h4>· CareerPilot</h4>
+        <p>The AI resume builder and job search co-pilot for ambitious professionals.</p>
+      </div>
+      <div class="footer-links">
+        <ul>
+          <li><a href="#compare">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+        <ul>
+          <li><a href="#">Privacy</a></li>
+          <li><a href="#">Terms</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 CareerPilot. All rights reserved.</span>
+      <span>Made for ambitious professionals.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Header scroll state
+  window.addEventListener('scroll', () => {
+    document.getElementById('header').classList.toggle('scrolled', window.scrollY > 40);
+  });
+
+  // Mobile menu
+  const menuBtn = document.getElementById('menuBtn');
+  const closeMenuBtn = document.getElementById('closeMenuBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  menuBtn.addEventListener('click', () => mobileMenu.classList.add('open'));
+  closeMenuBtn.addEventListener('click', () => mobileMenu.classList.remove('open'));
+  mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => mobileMenu.classList.remove('open')));
+
+  // Billing toggle: monthly <-> annual
+  const toggle = document.getElementById('billingToggle');
+  const monthlyLabel = document.getElementById('monthlyLabel');
+  const annualLabel = document.getElementById('annualLabel');
+  const priceAmount = document.getElementById('priceAmount');
+  const pricePeriod = document.getElementById('pricePeriod');
+  const billedAs = document.getElementById('billedAs');
+  const checkoutBtn = document.getElementById('checkoutBtn');
+  const checkoutBtnBottom = document.getElementById('checkoutBtnBottom');
+
+  const priceAmountNGN = document.getElementById('priceAmountNGN');
+  const pricePeriodNGN = document.getElementById('pricePeriodNGN');
+
+  // USD is the reference price; NGN shown alongside is an approximate
+  // conversion (~₦1,370/$ as of Jul 2026) rounded to a clean local price.
+  // Actual charge happens in NGN at checkout via your local payment provider.
+  const PRICING = {
+    monthly: { amount: '$14',  period: '/ month', ngnAmount: '≈ ₦19,000', ngnPeriod: '/ month', billedAs: 'Billed monthly' },
+    annual:  { amount: '$11',  period: '/ month', ngnAmount: '≈ ₦15,000', ngnPeriod: '/ month', billedAs: 'Billed annually — $134 / ≈ ₦180,000 per year' }
+  };
+
+  let billing = 'monthly';
+
+  function renderBilling() {
+    const p = PRICING[billing];
+    priceAmount.textContent = p.amount;
+    pricePeriod.textContent = p.period;
+    priceAmountNGN.textContent = p.ngnAmount;
+    pricePeriodNGN.textContent = p.ngnPeriod;
+    billedAs.textContent = p.billedAs;
+    toggle.classList.toggle('on', billing === 'annual');
+    monthlyLabel.classList.toggle('active', billing === 'monthly');
+    annualLabel.classList.toggle('active', billing === 'annual');
+    checkoutBtn.dataset.billing = billing;
+    checkoutBtnBottom.dataset.billing = billing;
+  }
+
+  toggle.addEventListener('click', () => {
+    billing = billing === 'monthly' ? 'annual' : 'monthly';
+    renderBilling();
+  });
+
+  renderBilling();
+
+  /**
+   * Checkout hook — wire this up to your payment provider later.
+   * Both buttons carry data-plan="premium" and data-billing="monthly|annual"
+   * so you can read the selected plan/interval at click time.
+   */
+  function handleCheckout(e) {
+    const plan = e.currentTarget.dataset.plan;
+    const interval = e.currentTarget.dataset.billing;
+    // TODO: replace with real checkout call, e.g.:
+    // window.location.href = `/checkout?plan=${plan}&billing=${interval}`;
+    // or trigger a Stripe/Paystack/Flutterwave session here.
+    console.log('Checkout requested:', { plan, interval });
+  }
+
+  checkoutBtn.addEventListener('click', handleCheckout);
+  checkoutBtnBottom.addEventListener('click', handleCheckout);
+</script>
+
+</body>
+</html>
