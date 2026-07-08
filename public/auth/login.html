@@ -720,7 +720,7 @@
         const data = await res.json();
 
         if (res.ok) {
-          localStorage.setItem('token', data.token);
+          localStorage.setItem('token', data.accessToken || data.token);
           localStorage.setItem('user', JSON.stringify(data.user));
           showMessage('Login successful! Redirecting…', 'success');
           setTimeout(() => { window.location.href = 'resume.html'; }, 1000);

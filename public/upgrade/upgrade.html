@@ -970,7 +970,32 @@
   modalClose.addEventListener('click', closeModal);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-  function handleCheckout() { openModal(); }
+  async function handleCheckout() {
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch('/api/payments/initialize', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ billing })
+      });
+      if (res.status === 401) {
+        alert('Please log in first to upgrade.');
+        window.location.href = '/auth/login.html';
+        return;
+      }
+      const data = await res.json();
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.message || 'Unable to initiate upgrade. Please try again.');
+      }
+    } catch {
+      alert('Unable to initiate upgrade. Please try again.');
+    }
+  }
 
   checkoutBtn.addEventListener('click', handleCheckout);
   checkoutBtnBottom.addEventListener('click', handleCheckout);

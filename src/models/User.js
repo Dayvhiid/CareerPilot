@@ -7,19 +7,25 @@ const userSchema = new mongoose.Schema(
     password: { 
       type: String, 
       required: function() {
-        // Password is required only if no OAuth provider is used
         return !this.googleId && !this.githubId;
       }
     },
     googleId: {
       type: String,
       unique: true,
-      sparse: true // Allows multiple null values
+      sparse: true
     },
     githubId: {
       type: String,
       unique: true,
-      sparse: true // Allows multiple null values
+      sparse: true
+    },
+    premium: {
+      active: { type: Boolean, default: false },
+      billing: { type: String, enum: ['monthly', 'annual', null], default: null },
+      paystackReference: { type: String },
+      activatedAt: { type: Date },
+      expiresAt: { type: Date }
     }
   },
   { timestamps: true }

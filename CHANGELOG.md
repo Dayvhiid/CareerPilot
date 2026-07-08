@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **PayStack payment integration** (`PAYMENT.md`, `src/services/paystack.js`, `src/routes/paymentRoutes.js`): Full payment processing flow using PayStack's Initialize Transaction API. Includes:
+  - `POST /api/payments/initialize` — authenticated endpoint that creates a dynamic PayStack checkout session per user. Accepts `{ billing }`, calls PayStack `/transaction/initialize` with the user's email, amount (in kobo from env), and a client-side callback URL. Returns `{ url: authorization_url }` for the frontend to redirect to. No public callback URL or tunneling needed — the redirect is browser-side.
+  - `POST /api/payments/webhook` — server-to-server webhook with HMAC-SHA512 signature verification via `x-paystack-signature` header. Processes `charge.success` events by verifying the transaction via PayStack API and activating premium for the matching user. Billing period extracted from `metadata.billing` (set at initialization).
+  - `GET /api/payments/verify` — callback endpoint where users land after PayStack checkout. Verifies the transaction via PayStack API, extracts billing from `metadata`, looks up the user by `customer.email`, activates premium, and renders an inline HTML success/failure page.
+  - Webhook route is registered **before** `express.json()` to capture the raw request body for signature verification, while the callback and initialize routes use standard JSON parsing.
+  - Idempotent activation: both paths check `paystackReference` before updating to prevent duplicate activation from webhook retries or race conditions.
+
+- **Premium fields on User model** (`src/models/User.js`): Added `premium` subdocument with `active`, `billing`, `paystackReference`, `activatedAt`, and `expiresAt` fields for tracking premium subscription state.
+
+- **PayStack configuration variables** (`.env`, `.env.example`): Added `PAYSTACK_SECRET_KEY`, `PAYSTACK_PUBLIC_KEY`, `PAYSTACK_CALLBACK_URL`, `PREMIUM_MONTHLY_KOBO`, and `PREMIUM_ANNUAL_KOBO`.
+
+- **Upgrade redirect** (`public/upgrade/upgrade.html`): "Upgrade to Premium" buttons now call `POST /api/payments/initialize` with the current billing period and auth token, then redirect to the returned PayStack checkout URL. Removed the old inline card-collection modal handler.
+
+- **Payment documentation** (`PAYMENT.md`): Documents the full PayStack flow, endpoints, environment variables, user model changes, edge cases handled, and PayStack dashboard configuration steps.
+
 - **Chat history persistence** (`src/models/Conversation.js`): Created new `Conversation` Mongoose model to persist chatbot sessions to MongoDB instead of in-memory storage. Each conversation stores full message history (`messages` array with role/content/timestamp), collected resume data (`data`), and session state. MongoDB TTL index on `lastActivity` auto-deletes conversations 7 days after the last message.
 - **Session management endpoints** (`chatbotRoutes.js`): Added `GET /api/chatbot/conversations` to list all user conversations (with preview and progress), and `GET /api/chatbot/conversations/:sessionId` to load full message history for session switching.
 - **Frontend session switcher** (`chatbot.html`, `chatbotmobile_new.html`): Added "History" panel showing all past conversations with preview text. Users can start new conversations, view history, and seamlessly switch between multiple in-progress or completed resume-building sessions.

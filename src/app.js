@@ -15,6 +15,7 @@ const recommendationRoutes = require('./routes/recommendationRoutes');
 const coverLetterRoutes = require('./routes/coverLetterRoutes');
 const chatbotRoutes = require('./routes/chatbotRoutes');
 const healthRoutes = require('./routes/healthRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 // Validate environment variables on startup
 validateEnv();
@@ -45,11 +46,15 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// PayStack webhook needs raw body for signature verification (must be before express.json)
+app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), paymentRoutes.webhookHandler);
+
 // Body parsing
 app.use(express.json());
 app.use(cookieParser());
 
 // Routes
+app.use('/api/payments', paymentRoutes.router);
 app.use('/api/auth', authRoutes);
 app.use('/api/oauth', oauthRoutes);
 app.use('/api/resume', resumeRoutes); // Add this
