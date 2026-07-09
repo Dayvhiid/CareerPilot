@@ -7,8 +7,8 @@ const router = express.Router();
 
 // Amounts in kobo (PayStack's smallest currency unit)
 const PREMIUM_AMOUNTS = {
-  monthly: parseInt(process.env.PREMIUM_MONTHLY_KOBO || '1900000', 10),
-  annual:  parseInt(process.env.PREMIUM_ANNUAL_KOBO  || '18000000', 10)
+  monthly: parseInt(process.env.PREMIUM_MONTHLY_KOBO || '500000', 10),
+  annual:  parseInt(process.env.PREMIUM_ANNUAL_KOBO  || '5000000', 10)
 };
 
 const CALLBACK_URL = process.env.PAYSTACK_CALLBACK_URL || 'http://localhost:4000/api/payments/verify';
