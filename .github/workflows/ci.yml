@@ -90,7 +90,8 @@ jobs:
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           application_name: careerpilot
           environment_name: CareerPilot-prod
-          version_label: ${{ github.sha }}
+          version_label: ${{ github.sha }}-${{ github.run_id }}
           region: us-east-1
           deployment_package: deployment.zip
-          use_existing_version_if_exists: true
+          use_existing_version_if_available: true
+          wait_for_deployment: true
