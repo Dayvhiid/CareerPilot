@@ -1000,6 +1000,11 @@
   <!-- ─── SCRIPTS ───────────────────────────── -->
   <script>
     const API_BASE = '/api';
+    const urlToken = new URLSearchParams(window.location.search).get('token');
+    if (urlToken) {
+      localStorage.setItem('token', urlToken);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
     const token    = localStorage.getItem('token') || '';
 
     /* ─────────────────────────────────────────
@@ -1016,7 +1021,7 @@
     document.getElementById('logoutBtn').addEventListener('click', () => {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = 'login.html';
+      window.location.href = '/public/auth/login.html';
     });
 
     /* ─────────────────────────────────────────

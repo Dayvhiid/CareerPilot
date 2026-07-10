@@ -723,7 +723,7 @@
           localStorage.setItem('token', data.accessToken || data.token);
           localStorage.setItem('user', JSON.stringify(data.user));
           showMessage('Login successful! Redirecting…', 'success');
-          setTimeout(() => { window.location.href = 'resume.html'; }, 1000);
+          setTimeout(() => { window.location.href = '/public/resume/resume.html'; }, 1000);
         } else {
           showMessage(data.msg || 'Login failed. Please check your credentials.', 'error');
         }

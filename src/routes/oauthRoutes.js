@@ -3,16 +3,9 @@ const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 
-function setOAuthAccessTokenCookie(res, userId) {
-  const accessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+function getOAuthAccessToken(userId) {
+  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRATION || '15m'
-  });
-
-  res.cookie('accessToken', accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 15 * 60 * 1000
   });
 }
 
@@ -39,9 +32,8 @@ router.get('/google/callback',
   ensureOAuthEnabled('google'),
   passport.authenticate('google', { failureRedirect: '/public/auth/login.html' }),
   (req, res) => {
-    setOAuthAccessTokenCookie(res, req.user._id);
-    // Success -> redirect to resume page
-    res.redirect('/public/resume/resume.html');
+    const token = getOAuthAccessToken(req.user._id);
+    res.redirect('/public/resume/resume.html?token=' + token);
   }
 );
 
@@ -57,9 +49,8 @@ router.get('/github/callback',
   ensureOAuthEnabled('github'),
   passport.authenticate('github', { failureRedirect: '/public/auth/login.html' }),
   (req, res) => {
-    setOAuthAccessTokenCookie(res, req.user._id);
-    // Success -> redirect to resume page
-    res.redirect('/public/resume/resume.html');
+    const token = getOAuthAccessToken(req.user._id);
+    res.redirect('/public/resume/resume.html?token=' + token);
   }
 );
 
