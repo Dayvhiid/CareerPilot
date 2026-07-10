@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { logger } = require('./logger');
 
 function formatConnectionError(error) {
   const details = [];
@@ -38,6 +39,18 @@ function formatConnectionError(error) {
   return details.join('\n   - ');
 }
 
+function logPoolStats() {
+  const pool = mongoose.connection.client?.topology?.s?.pool;
+  if (pool) {
+    logger.info('MongoDB Pool', {
+      total: pool.totalConnectionCount,
+      active: pool.activeConnectionCount,
+      available: pool.availableConnectionCount,
+      pending: pool.pendingConnectionCount
+    });
+  }
+}
+
 const connectDB = async () => {
   try {
     const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
@@ -48,8 +61,40 @@ const connectDB = async () => {
       return false;
     }
 
-    await mongoose.connect(mongoUri);
+    const options = {
+      maxPoolSize: process.env.NODE_ENV === 'production' ? 50 : 10,
+      minPoolSize: 5,
+      w: 'majority',
+      wtimeoutMS: 5000,
+      readPreference: 'primaryPreferred',
+      retryWrites: true,
+      retryReads: true,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      keepAlive: true,
+      keepAliveInitialDelay: 300000,
+      compressors: ['snappy', 'zlib'],
+      heartbeatFrequencyMS: 10000,
+    };
+
+    await mongoose.connect(mongoUri, options);
     console.log("✅ MongoDB connected");
+
+    mongoose.connection.on('error', (err) => {
+      console.error('MongoDB runtime error:', err);
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      console.warn('MongoDB disconnected');
+    });
+
+    mongoose.connection.on('reconnected', () => {
+      console.log('MongoDB reconnected');
+    });
+
+    setInterval(logPoolStats, 300000);
+
     return true;
   } catch (error) {
     console.error("❌ MongoDB connection error details:");

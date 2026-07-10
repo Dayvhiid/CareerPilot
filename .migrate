@@ -1,0 +1,5 @@
+{
+  "uri": "MONGO_URI",
+  "directory": "./migrations",
+  "collection": "migrations"
+}

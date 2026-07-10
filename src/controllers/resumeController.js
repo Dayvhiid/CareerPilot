@@ -122,7 +122,7 @@ exports.uploadResume = async (req, res) => {
 exports.getResume = async (req, res) => {
   try {
     const userId = req.user.id;
-    const resume = await Resume.findOne({ userId });
+    const resume = await Resume.findOne({ userId }).lean();
 
     if (!resume) {
       return res.status(404).json({ success: false, message: "Resume not found" });

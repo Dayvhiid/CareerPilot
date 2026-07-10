@@ -49,7 +49,7 @@ const processMessage = async (req, res) => {
 
     console.log(`💬 Processing message from user ${userId}: "${message}"`);
 
-    const conversation = await Conversation.findOne({ userId, sessionId });
+    const conversation = await Conversation.findOne({ userId, sessionId }).lean();
     if (!conversation) {
       return res.status(404).json({
         success: false,
@@ -111,7 +111,7 @@ const generateResume = async (req, res) => {
     const userId = req.user.id;
     const { sessionId } = req.body;
 
-    const conversation = await Conversation.findOne({ userId, sessionId });
+    const conversation = await Conversation.findOne({ userId, sessionId }).lean();
     if (!conversation || conversation.state !== CONVERSATION_STATES.COMPLETED) {
       return res.status(400).json({
         success: false,
@@ -125,7 +125,7 @@ const generateResume = async (req, res) => {
 
     console.log('🔍 Converted resume data:', JSON.stringify(resumeData, null, 2));
 
-    const existingResume = await Resume.findOne({ userId });
+    const existingResume = await Resume.findOne({ userId }).lean();
 
     let resume;
     if (existingResume) {
@@ -177,7 +177,7 @@ const getProgress = async (req, res) => {
     const userId = req.user.id;
     const { sessionId } = req.query;
 
-    const conversation = await Conversation.findOne({ userId, sessionId });
+    const conversation = await Conversation.findOne({ userId, sessionId }).lean();
     if (!conversation) {
       return res.status(404).json({
         success: false,
@@ -217,7 +217,7 @@ const listConversations = async (req, res) => {
         lastActivity: 1,
         'messages': { $slice: -1 }
       }
-    )
+    ).lean()
       .sort({ lastActivity: -1 })
       .lean();
 
@@ -300,7 +300,7 @@ const downloadResume = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const resume = await Resume.findOne({ userId }).sort({ createdAt: -1 });
+    const resume = await Resume.findOne({ userId }).sort({ createdAt: -1 }).lean();
     if (!resume || !resume.extractedData) {
       return res.status(404).json({
         success: false,

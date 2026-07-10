@@ -4,13 +4,26 @@ const resumeQueryService = require('../services/resumeQueryService');
 const jobRetrievalService = require('../services/jobRetrievalService');
 const jobRankingService = require('../services/jobRankingService');
 const jobIngestionService = require('../services/jobIngestionService');
-const cache = require('../config/redis');
+const cacheService = require('../services/cacheService');
 const recommendationService = require('../services/recommendationService');
+
+const CACHE_TTL = {
+  recommendations: 18 * 60 * 60,
+  jobDetails: 60 * 60,
+};
 
 exports.getRecommendations = async (req, res) => {
   try {
     const userId = req.user.id;
-    const result = await recommendationService.getRecommendations(userId);
+    const cacheKey = `recommendations:${userId}`;
+
+    const result = await cacheService.getOrSet(cacheKey, CACHE_TTL.recommendations, async () => {
+      const data = await recommendationService.getRecommendations(userId);
+      if (data.message === 'Upload a resume first') {
+        return data;
+      }
+      return data;
+    });
 
     if (result.message === 'Upload a resume first') {
       return res.status(404).json({ success: false, message: result.message });
@@ -29,14 +42,18 @@ exports.getRecommendations = async (req, res) => {
 exports.getJobDetails = async (req, res) => {
   try {
     const userId = req.user.id;
-    const job = await jobRetrievalService.retrieveById(req.params.jobId);
-    if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
+    const jobId = req.params.jobId;
 
-    await UserJob.findOneAndUpdate(
-      { userId, jobId: job._id },
-      { userId, jobId: job._id, status: 'viewed' },
-      { upsert: true }
-    );
+    const [job] = await Promise.all([
+      jobRetrievalService.retrieveById(jobId),
+      UserJob.findOneAndUpdate(
+        { userId, jobId },
+        { userId, jobId, status: 'viewed' },
+        { upsert: true }
+      )
+    ]);
+
+    if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
 
     return res.json({ success: true, job });
   } catch (err) {
@@ -82,7 +99,7 @@ exports.markApplied = async (req, res) => {
 exports.triggerIngestion = async (req, res) => {
   jobIngestionService.runIngestionCycle().then(count => {
     console.log(`recommendationController: manual ingestion complete — ${count} jobs`);
-    cache.del('recommendations:*').then(() => {
+    cacheService.invalidate('recommendations:*').then(() => {
       console.log('recommendationController: flushed all recommendation caches after ingestion');
     });
   }).catch(err => {

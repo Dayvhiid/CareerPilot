@@ -18,7 +18,7 @@ exports.generateCoverLetter = async (req, res) => {
     console.log(`📝 Generating cover letter for job ${jobId} and user ${userId}`);
 
     // Get job details
-    const job = await JobListing.findById(jobId);
+    const job = await JobListing.findById(jobId).lean();
     if (!job) {
       return res.status(404).json({
         success: false,
@@ -27,7 +27,7 @@ exports.generateCoverLetter = async (req, res) => {
     }
 
     // Get user's latest resume
-    const resume = await Resume.findOne({ userId }).sort({ createdAt: -1 });
+    const resume = await Resume.findOne({ userId }).sort({ createdAt: -1 }).lean();
     if (!resume || !resume.extractedData) {
       return res.status(404).json({
         success: false,
