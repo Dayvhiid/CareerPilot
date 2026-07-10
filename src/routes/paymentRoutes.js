@@ -2,6 +2,7 @@ const express = require('express');
 const User = require('../models/User');
 const { initializeTransaction, verifyTransaction, verifyWebhookSignature } = require('../services/paystack');
 const auth = require('../middleware/auth');
+const { paymentValidators } = require('../middleware/validators');
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ const PREMIUM_AMOUNTS = {
 const CALLBACK_URL = process.env.PAYSTACK_CALLBACK_URL || 'http://localhost:4000/api/payments/verify';
 
 // ── Initialize a PayStack transaction (called from frontend) ──
-router.post('/initialize', auth, async (req, res) => {
+router.post('/initialize', auth, paymentValidators.initialize, async (req, res) => {
   try {
     const { billing } = req.body;
     const plan = billing === 'annual' ? 'annual' : 'monthly';

@@ -4,7 +4,7 @@
  * Fails fast in production if critical variables are missing
  */
 
-const requiredVars = [/* MONGODB_URI | MONGO_URI */ 'JWT_SECRET'];
+const requiredVars = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'];
 
 const optionalVars = [
   'NODE_ENV',
@@ -45,6 +45,19 @@ function validateEnv() {
   const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
   if (mongoUri && !mongoUri.startsWith('mongodb')) {
     console.warn('⚠️  MONGO_URI should be a valid MongoDB connection string');
+  }
+
+  // Emergency check: refuse to boot with placeholder/default secrets
+  const defaultSecrets = [
+    { key: 'JWT_ACCESS_SECRET', value: 'generate-a-64-char-random-string' },
+    { key: 'JWT_REFRESH_SECRET', value: 'generate-a-different-64-char-random-string' },
+    { key: 'JWT_SECRET', value: 'replace-with-a-long-random-secret' },
+    { key: 'SESSION_SECRET', value: 'replace-with-a-long-random-secret' },
+  ];
+  for (const { key, value } of defaultSecrets) {
+    if (process.env[key] === value) {
+      throw new Error(`❌ CRITICAL: ${key} is still set to the default placeholder value. Rotate immediately.`);
+    }
   }
 
   if (process.env.SESSION_SECRET && process.env.SESSION_SECRET.length < 8) {

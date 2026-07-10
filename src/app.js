@@ -7,7 +7,10 @@ const cookieParser = require('cookie-parser');
 require('./config/logger');
 const passport = require('./config/passport');
 const session = require('express-session');
+const { RedisStore } = require('connect-redis');
 const { validateEnv } = require('./config/validateEnv');
+const secrets = require('./config/secrets');
+const { setupSecurity } = require('./middleware/security');
 const authRoutes = require('./routes/authRoutes');
 const oauthRoutes = require('./routes/oauthRoutes');
 const resumeRoutes = require('./routes/resumeRoutes');
@@ -17,34 +20,22 @@ const chatbotRoutes = require('./routes/chatbotRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 
-// Validate environment variables on startup
-validateEnv();
-
 const app = express();
 
+// Security middleware (helmet, compression, mongo-sanitize, hpp)
+setupSecurity(app);
+
 // CORS middleware - Allow requests from frontend
-// Allow origins via environment variable (comma-separated) for easy deployment. Defaults include common localhost dev origins
 const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5500,http://127.0.0.1:5500,http://localhost:3000,http://localhost:4000').split(',').map(s => s.trim());
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 }));
 
 // Serve static files
 app.use('/public', express.static(path.join(__dirname, '../public')));
-
-// Sessions (needed for OAuth)
-app.use(session({
-  secret: process.env.SESSION_SECRET || process.env.JWT_SECRET,
-  resave: false,
-  saveUninitialized: false,
-}));
-
-// Initialize Passport
-app.use(passport.initialize());
-app.use(passport.session());
 
 // PayStack webhook needs raw body for signature verification (must be before express.json)
 app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), paymentRoutes.webhookHandler);
@@ -53,11 +44,62 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), pay
 app.use(express.json());
 app.use(cookieParser());
 
+// Sessions (needed for OAuth) — Redis-backed if available
+const redisClient = require('./config/redis').getClient();
+const sessionConfig = {
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'strict',
+    maxAge: 24 * 60 * 60 * 1000
+  },
+  name: 'careerpilot.sid'
+};
+if (redisClient) {
+  sessionConfig.store = new RedisStore({ client: redisClient });
+}
+app.use(session(sessionConfig));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+// CSRF protection — double-submit cookie pattern
+app.use((req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    if (!req.cookies['XSRF-TOKEN']) {
+      const crypto = require('crypto');
+      res.cookie('XSRF-TOKEN', crypto.randomBytes(32).toString('hex'), {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      });
+    }
+    return next();
+  }
+
+  const headerToken = req.headers['x-csrf-token'];
+  const cookieToken = req.cookies['XSRF-TOKEN'];
+  if (headerToken && cookieToken && headerToken === cookieToken) {
+    return next();
+  }
+
+  // Skip CSRF for API routes that use bearer tokens (stateless)
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    return next();
+  }
+
+  res.status(403).json({ success: false, message: 'CSRF token validation failed' });
+});
+
 // Routes
 app.use('/api/payments', paymentRoutes.router);
 app.use('/api/auth', authRoutes);
 app.use('/api/oauth', oauthRoutes);
-app.use('/api/resume', resumeRoutes); // Add this
+app.use('/api/resume', resumeRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/coverletter', coverLetterRoutes);
 app.use('/api/chatbot', chatbotRoutes);

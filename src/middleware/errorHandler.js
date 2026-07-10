@@ -1,3 +1,5 @@
+const ApiResponse = require('../utils/apiResponse');
+
 const handleMongooseError = (err) => {
   if (err.name === 'ValidationError') {
     const errors = Object.values(err.errors).map(e => ({
@@ -34,33 +36,20 @@ const handleJwtError = (err) => {
 const errorHandler = (err, req, res, _next) => {
   const mongooseError = handleMongooseError(err);
   if (mongooseError) {
-    return res.status(mongooseError.status).json({
-      success: false,
-      message: mongooseError.message,
-      errors: mongooseError.errors
-    });
+    return ApiResponse.error(res, mongooseError.message, mongooseError.status, mongooseError.errors);
   }
 
   const jwtError = handleJwtError(err);
   if (jwtError) {
-    return res.status(jwtError.status).json({
-      success: false,
-      message: jwtError.message
-    });
+    return ApiResponse.error(res, jwtError.message, jwtError.status);
   }
 
   if (err.name === 'MulterError') {
-    return res.status(400).json({
-      success: false,
-      message: `File upload error: ${err.message}`
-    });
+    return ApiResponse.error(res, `File upload error: ${err.message}`, 400);
   }
 
   console.error('Unhandled error:', err);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal server error'
-  });
+  ApiResponse.error(res, err.message || 'Internal server error', err.status || 500);
 };
 
 module.exports = errorHandler;

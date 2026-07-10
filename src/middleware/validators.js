@@ -113,10 +113,42 @@ const coverLetterValidators = {
   ]
 };
 
+const paymentValidators = {
+  initialize: [
+    body('billing')
+      .isIn(['monthly', 'annual'])
+      .withMessage('Billing must be monthly or annual'),
+    handleValidationErrors
+  ]
+};
+
+const jobValidators = {
+  bookmark: [
+    param('jobId')
+      .isMongoId()
+      .withMessage('Invalid job ID'),
+    handleValidationErrors
+  ],
+  getJobDetails: [
+    param('jobId')
+      .isMongoId()
+      .withMessage('Invalid job ID'),
+    handleValidationErrors
+  ],
+  markApplied: [
+    param('jobId')
+      .isMongoId()
+      .withMessage('Invalid job ID'),
+    handleValidationErrors
+  ]
+};
+
 module.exports = {
   handleValidationErrors,
   authValidators,
   fileValidators,
   chatbotValidators,
-  coverLetterValidators
+  coverLetterValidators,
+  paymentValidators,
+  jobValidators
 };

@@ -74,4 +74,4 @@ async function quit() {
   }
 }
 
-module.exports = { get, set, del, quit };
+module.exports = { getClient, get, set, del, quit };
