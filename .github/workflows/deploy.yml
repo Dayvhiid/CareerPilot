@@ -1,0 +1,31 @@
+name: Deploy to Elastic Beanstalk
+
+on:
+  push:
+    branches: [production]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create deployment package
+        run: |
+          mkdir -p deploy
+          cp -r src public server.js package.json .ebextensions deploy/
+          cp package-lock.json deploy/ 2>/dev/null || true
+          cd deploy && zip -r ../deployment.zip .
+
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          region: us-east-1
+          application_name: careerpilot
+          environment_name: Careerpilot-env
+          version_label: ${{ github.sha }}-${{ github.run_id }}
+          deployment_package: deployment.zip
+          use_existing_version_if_available: true
+          wait_for_deployment: true
