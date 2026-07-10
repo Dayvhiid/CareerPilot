@@ -4,6 +4,18 @@ const REDIS_URL = process.env.REDIS_URL;
 
 let client = null;
 
+async function connect() {
+  const r = getClient();
+  if (r && r.status !== 'ready') {
+    try {
+      await r.connect();
+      console.log('Redis connected');
+    } catch (err) {
+      console.error(`redis connect: ${err.message}`);
+    }
+  }
+}
+
 function getClient() {
   if (!client && REDIS_URL) {
     client = new Redis(REDIS_URL, {
@@ -74,4 +86,4 @@ async function quit() {
   }
 }
 
-module.exports = { getClient, get, set, del, quit };
+module.exports = { connect, getClient, get, set, del, quit };

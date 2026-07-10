@@ -1,40 +1,9 @@
 const Resume = require('../models/Resume');
 const Conversation = require('../models/Conversation');
-const mongoose = require('mongoose');
-const puppeteer = require('puppeteer');
-const path = require('path');
-const ejs = require('ejs');
-const fs = require('fs-extra');
-
-const CONVERSATION_STATES = {
-  WELCOME: 'welcome',
-  PERSONAL_INFO: 'personal_info',
-  PROFESSIONAL_SUMMARY: 'professional_summary',
-  PROFESSIONAL_LINKS: 'professional_links',
-  EDUCATION: 'education',
-  WORK_EXPERIENCE: 'work_experience',
-  SKILLS: 'skills',
-  PROJECTS: 'projects',
-  CERTIFICATES: 'certificates',
-  ACHIEVEMENTS: 'achievements',
-  REVIEW: 'review',
-  COMPLETED: 'completed'
-};
-
-const STATE_PROGRESS = {
-  [CONVERSATION_STATES.WELCOME]: 0,
-  [CONVERSATION_STATES.PERSONAL_INFO]: 15,
-  [CONVERSATION_STATES.PROFESSIONAL_SUMMARY]: 25,
-  [CONVERSATION_STATES.PROFESSIONAL_LINKS]: 35,
-  [CONVERSATION_STATES.EDUCATION]: 50,
-  [CONVERSATION_STATES.WORK_EXPERIENCE]: 65,
-  [CONVERSATION_STATES.SKILLS]: 75,
-  [CONVERSATION_STATES.PROJECTS]: 80,
-  [CONVERSATION_STATES.CERTIFICATES]: 85,
-  [CONVERSATION_STATES.ACHIEVEMENTS]: 90,
-  [CONVERSATION_STATES.REVIEW]: 95,
-  [CONVERSATION_STATES.COMPLETED]: 100
-};
+const { CONVERSATION_STATES, STATE_PROGRESS, generateSessionId, isResumeRelated, isValidEmail } = require('../services/chatbot/stateMachine');
+const { generateProfessionalPDF } = require('../services/chatbot/pdfGenerator');
+const { convertChatDataToResume } = require('../services/chatbot/resumeConverter');
+const { transcribeAudio, synthesizeSpeech } = require('../services/chatbot/audioService');
 
 const startConversation = async (req, res) => {
   try {
@@ -362,54 +331,8 @@ const downloadResume = async (req, res) => {
   }
 };
 
-async function generateProfessionalPDF(data) {
+const handleTranscribeAudio = async (req, res) => {
   try {
-    console.log('🚀 Launching Puppeteer for STUNNING PDF generation...');
-
-    const browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-
-    const page = await browser.newPage();
-
-    const htmlContent = await generateStunningHTML(data);
-
-    await page.setContent(htmlContent);
-
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '0mm',
-        right: '0mm',
-        bottom: '0mm',
-        left: '0mm'
-      },
-      displayHeaderFooter: false
-    });
-
-    await browser.close();
-
-    console.log('✅ STUNNING PDF generated successfully!');
-    return pdfBuffer;
-  } catch (error) {
-    console.error('❌ Error generating PDF:', error);
-    throw error;
-  }
-}
-
-async function generateStunningHTML(data) {
-  return ejs.renderFile(
-    path.join(__dirname, '../templates/resume-template.ejs'),
-    { data }
-  );
-}
-
-const transcribeAudio = async (req, res) => {
-  try {
-    const huggingFaceService = require('../services/huggingFaceService');
-
     if (!req.file || !req.file.buffer) {
       return res.status(400).json({
         success: false,
@@ -419,7 +342,7 @@ const transcribeAudio = async (req, res) => {
 
     console.log('🎙️ Received audio for transcription:', req.file.originalname, 'Size:', req.file.size);
 
-    const result = await huggingFaceService.transcribeAudio(req.file.buffer);
+    const result = await transcribeAudio(req.file.buffer);
 
     if (result.success) {
       return res.json({
@@ -443,9 +366,8 @@ const transcribeAudio = async (req, res) => {
   }
 };
 
-const synthesizeSpeech = async (req, res) => {
+const handleSynthesizeSpeech = async (req, res) => {
   try {
-    const huggingFaceService = require('../services/huggingFaceService');
     const { text } = req.body;
 
     if (!text || typeof text !== 'string') {
@@ -457,7 +379,7 @@ const synthesizeSpeech = async (req, res) => {
 
     console.log('🔊 Synthesizing speech for text:', text.substring(0, 50) + '...');
 
-    const result = await huggingFaceService.synthesizeSpeech(text);
+    const result = await synthesizeSpeech(text);
 
     if (result.success) {
       return res.json({
@@ -481,41 +403,6 @@ const synthesizeSpeech = async (req, res) => {
     });
   }
 };
-
-function generateSessionId() {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
-
-function isResumeRelated(message, currentState) {
-  if (currentState !== CONVERSATION_STATES.WELCOME) {
-    return true;
-  }
-
-  const lowerMessage = message.toLowerCase();
-  const resumeKeywords = [
-    'resume', 'cv', 'job', 'work', 'career', 'yes', 'start', 'ready', 'help',
-    'experience', 'education', 'skill', 'build', 'create', 'need', 'want'
-  ];
-
-  const offTopicKeywords = [
-    'car', 'house', 'money', 'food', 'movie', 'game', 'weather', 'sports',
-    'politics', 'religion', 'dating', 'relationship'
-  ];
-
-  for (const keyword of offTopicKeywords) {
-    if (lowerMessage.includes(keyword)) {
-      return false;
-    }
-  }
-
-  for (const keyword of resumeKeywords) {
-    if (lowerMessage.includes(keyword)) {
-      return true;
-    }
-  }
-
-  return message.length > 2;
-}
 
 async function processStateMessage(session, message) {
   switch (session.state) {
@@ -1179,127 +1066,6 @@ function generateReviewMessage(data) {
   return review;
 }
 
-function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-function convertChatDataToResume(chatData) {
-  const parseYearsOfExperience = (exp) => {
-    if (!exp) return 0;
-    if (typeof exp === 'number') return exp;
-    const match = exp.toString().match(/\d+/);
-    return match ? parseInt(match[0]) : 0;
-  };
-
-  const normalizeEmbeddedEntry = (entry, mapper) => {
-    if (!entry) {
-      return null;
-    }
-
-    if (typeof entry === 'string') {
-      const value = entry.trim();
-      return value ? mapper(value, {}) : null;
-    }
-
-    if (typeof entry === 'object') {
-      return mapper('', entry);
-    }
-
-    return null;
-  };
-
-  const normalizeEducation = (education) => {
-    if (!Array.isArray(education)) return [];
-
-    return education
-      .map(entry => normalizeEmbeddedEntry(entry, (value, item) => {
-        const degree = String(item.degree || item.title || item.name || value).trim();
-        const institution = String(item.institution || item.school || item.university || '').trim();
-        const year = String(item.year || item.date || '').trim();
-        const location = String(item.location || '').trim();
-
-        if (!degree && !institution && !year && !location) {
-          return null;
-        }
-
-        return { degree, institution, year, location };
-      }))
-      .filter(Boolean);
-  };
-
-  const normalizeProjects = (projects) => {
-    if (!Array.isArray(projects)) return [];
-
-    return projects
-      .map(entry => normalizeEmbeddedEntry(entry, (value, item) => ({
-        name: String(item.name || item.title || value).trim(),
-        description: String(item.description || '').trim(),
-        dates: String(item.dates || item.date || '').trim(),
-      })))
-      .filter(project => project && (project.name || project.description || project.dates));
-  };
-
-  const normalizeCertificates = (certificates) => {
-    if (!Array.isArray(certificates)) return [];
-
-    return certificates
-      .map(entry => normalizeEmbeddedEntry(entry, (value, item) => ({
-        name: String(item.name || item.title || value).trim(),
-        issuer: String(item.issuer || item.organization || '').trim(),
-        date: String(item.date || item.year || '').trim(),
-      })))
-      .filter(cert => cert && (cert.name || cert.issuer || cert.date));
-  };
-
-  const cleanLinks = (links) => {
-    if (!Array.isArray(links)) return [];
-    return links.map(link => {
-      if (typeof link === 'string') {
-        return { type: 'other', url: link };
-      }
-      return {
-        type: link.type || 'other',
-        url: link.url || ''
-      };
-    }).filter(link => link.url.trim().length > 0);
-  };
-
-  const cleanWorkExperience = (workExp) => {
-    if (!Array.isArray(workExp)) return [];
-    return workExp.filter(job => job.position && job.position.trim().length > 0);
-  };
-
-  return {
-    name: chatData.personalInfo?.name || '',
-    email: chatData.personalInfo?.email || '',
-    phone: chatData.personalInfo?.phone || '',
-    location: chatData.personalInfo?.location || '',
-    currentJobTitle: chatData.professionalSummary?.currentRole || '',
-    summary: chatData.professionalSummary?.summary || '',
-    yearsOfExperience: parseYearsOfExperience(chatData.professionalSummary?.experience),
-
-    education: normalizeEducation(chatData.education),
-
-    workExperience: cleanWorkExperience(chatData.workExperience),
-
-    skills: Array.isArray(chatData.skills) ? chatData.skills : [],
-
-    projects: normalizeProjects(chatData.projects),
-
-    certificates: normalizeCertificates(chatData.certificates),
-
-    achievements: Array.isArray(chatData.achievements) ? chatData.achievements : [],
-
-    linkedinUrl: chatData.links?.find(link => link.type === 'linkedin')?.url || '',
-    githubUrl: chatData.links?.find(link => link.type === 'github')?.url || '',
-    portfolioUrl: chatData.links?.find(link => link.type === 'medium')?.url || '',
-
-    languages: [],
-    summary: chatData.professionalSummary?.summary || ''
-  };
-}
-
 module.exports = {
   processMessage,
   startConversation,
@@ -1308,6 +1074,6 @@ module.exports = {
   listConversations,
   getConversation,
   downloadResume,
-  transcribeAudio,
-  synthesizeSpeech
+  transcribeAudio: handleTranscribeAudio,
+  synthesizeSpeech: handleSynthesizeSpeech
 };

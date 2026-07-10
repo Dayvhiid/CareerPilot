@@ -1,97 +1,115 @@
-name: CI/CD
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [main, production]
   pull_request:
-    branches: [main, master]
+    branches: [main, production]
 
 env:
   NODE_VERSION: '20'
 
 jobs:
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm test
-        env:
-          NODE_ENV: test
-          JWT_SECRET: test-jwt-secret-min-16-characters-long
-          SESSION_SECRET: test-session-secret-min-16-chars-long
-          JWT_EXPIRATION: 15m
-          CORS_ORIGINS: http://localhost:3000
-
   lint:
-    name: Lint Check
+    name: Lint & Format
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+      - run: npm ci
+      - run: npx eslint src/ --max-warnings=0
+      - run: npx prettier --check src/
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run lint
-        run: npx eslint src/ --max-warnings=0
-        continue-on-error: true
-
-  deploy:
-    name: Deploy to AWS Elastic Beanstalk
-    needs: [test]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+  test:
+    name: Tests
+    needs: lint
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+      - run: npm ci
+      - run: npm test -- --coverage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
 
-      - name: Install dependencies
-        run: npm ci --production
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - name: SAST Scan
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+      - uses: github/codeql-action/analyze@v3
+      - name: Secret scan
+        uses: trufflesecurity/trufflehog@v3
+        with:
+          path: ./
 
-      - name: Generate deployment package
-        run: |
+  build:
+    name: Build & Package
+    needs: [lint, test, security]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci --production
+      - run: |
           mkdir -p deploy
-          cp -r node_modules src public server.js package.json deploy/
+          cp -r node_modules src package.json server.js deploy/
           cp -r .ebextensions deploy/ 2>/dev/null || true
           cd deploy && zip -r ../deployment.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deployment-package
+          path: deployment.zip
 
+  deploy:
+    name: Deploy to Production
+    needs: build
+    if: github.ref == 'refs/heads/production'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency: production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: deployment-package
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsDeployRole
+          aws-region: us-east-1
       - name: Deploy to Elastic Beanstalk
         uses: einaregilsson/beanstalk-deploy@v21
         with:
-          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           application_name: careerpilot
           environment_name: Careerpilot-env
           version_label: ${{ github.sha }}-${{ github.run_id }}
           region: us-east-1
           deployment_package: deployment.zip
-          use_existing_version_if_available: true
+          use_existing_version_if_available: false
           wait_for_deployment: true
+          wait_for_environment_recovery: 180

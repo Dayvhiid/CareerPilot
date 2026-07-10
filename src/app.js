@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 
 // Initialize logger (replaces console.log/error/warn globally)
 require('./config/logger');
+const requestId = require('./middleware/requestId');
 const passport = require('./config/passport');
 const session = require('express-session');
 const { RedisStore } = require('connect-redis');
@@ -43,6 +44,7 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), pay
 // Body parsing
 app.use(express.json());
 app.use(cookieParser());
+app.use(requestId);
 
 // Sessions (needed for OAuth) — Redis-backed if available
 const redisClient = require('./config/redis').getClient();

@@ -146,10 +146,11 @@ describe('Auth Controller', () => {
 
       await authController.refreshToken(req, res);
 
-      expect(jwt.verify).toHaveBeenCalledWith('validRefreshToken', process.env.JWT_SECRET);
+      expect(jwt.verify).toHaveBeenCalledWith('validRefreshToken', process.env.JWT_REFRESH_SECRET);
       expect(res.json).toHaveBeenCalledWith({
         success: true,
         accessToken: 'newAccessToken',
+        tokenId: expect.any(String),
       });
     });
   });

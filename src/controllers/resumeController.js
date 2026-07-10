@@ -5,7 +5,8 @@ const fs = require("fs").promises;
 const path = require("path");
 const mongoose = require("mongoose");
 const extractor = require("../services/resumeExtractor");
-const geminiExtractor = require("../services/geminiExtractor");
+const aiService = require("../services/ai/AIService");
+const { withRetry } = require("../utils/retry");
 const { calculateScore } = require("../services/resumeScoringService");
 
 async function updateProcessingState(resumeId, { stage, progress, message }) {
@@ -75,11 +76,27 @@ exports.uploadResume = async (req, res) => {
 
     await resume.save();
 
-    // Start text extraction in background
-    console.log(`🚀 Starting background resume extraction for ${resume._id}`);
-    extractTextFromFile(resume._id, filePath, mimetype).catch(error => {
-      console.error(`❌ Background resume extraction failed for ${resume._id}:`, error);
-    });
+    // Start text extraction in background via Bull queue
+    console.log(`🚀 Scheduling resume extraction for ${resume._id}`);
+    try {
+      const { resumeProcessingQueue } = require('../workers/queue');
+      await resumeProcessingQueue.add({
+        resumeId: resume._id,
+        filePath,
+        mimeType: mimetype
+      }, {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000
+        }
+      });
+    } catch (queueErr) {
+      console.log(`Queue unavailable, falling back to inline processing: ${queueErr.message}`);
+      extractTextFromFile(resume._id, filePath, mimetype).catch(error => {
+        console.error(`❌ Background resume extraction failed for ${resume._id}:`, error);
+      });
+    }
 
     res.json({
       success: true,
@@ -200,29 +217,28 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
     let extractedData = null;
     let processingMethod = "unknown";
 
-    // Extract structured data using Gemini
+    // Extract structured data using AI Service (with fallback chain)
     try {
       await updateProcessingState(resumeId, {
-        stage: 'gemini-extraction',
+        stage: 'ai-extraction',
         progress: 45,
-        message: 'Running AI extraction via Gemini',
+        message: 'Running AI extraction',
       });
-      extractedData = await withTimeout(
-        geminiExtractor.extractResumeData(extractedText),
-        30000,
-        'Gemini resume parsing'
-      );
+      extractedData = await withRetry(() => aiService.extractResumeData(extractedText), {
+        maxRetries: 2,
+        baseDelay: 2000
+      });
       if (extractedData && typeof extractedData === 'object') {
-        processingMethod = "Gemini (gemini-2.0-flash)";
-        console.log("✅ Successfully processed with Gemini");
+        processingMethod = "AI Service";
+        console.log("✅ Successfully processed with AI Service");
         console.log("🔧 Skills found:", extractedData.skills?.length || 0);
         console.log("💼 Job titles found:", extractedData.jobTitles?.length || 0);
         console.log("🏢 Companies found:", extractedData.companies?.length || 0);
         console.log("👤 Name extracted:", extractedData.name || 'Not found');
         console.log("📧 Email extracted:", extractedData.email || 'Not found');
       }
-    } catch (geminiError) {
-      console.log("⚠️ Gemini extraction failed:", geminiError.message);
+    } catch (aiError) {
+      console.log("⚠️ AI extraction failed:", aiError.message);
       extractedData = null;
     }
 
@@ -343,5 +359,5 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
   }
 }
 
-
+exports.extractTextFromFile = extractTextFromFile;
 
