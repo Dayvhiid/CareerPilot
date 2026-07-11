@@ -56,8 +56,8 @@ const connectDB = async () => {
     const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
 
     if (!mongoUri) {
-      console.warn("⚠️ MongoDB connection skipped because MONGO_URI/MONGODB_URI is missing.");
-      console.warn("⚠️ The server will start, but database-backed features will be unavailable until MongoDB is configured.");
+      logger.warn("MongoDB connection skipped because MONGO_URI/MONGODB_URI is missing.");
+      logger.warn("The server will start, but database-backed features will be unavailable until MongoDB is configured.");
       return false;
     }
 
@@ -72,33 +72,31 @@ const connectDB = async () => {
       serverSelectionTimeoutMS: 5000,
       connectTimeoutMS: 10000,
       socketTimeoutMS: 45000,
-      keepAlive: true,
-      keepAliveInitialDelay: 300000,
       compressors: ['snappy', 'zlib'],
       heartbeatFrequencyMS: 10000,
     };
 
     await mongoose.connect(mongoUri, options);
-    console.log("✅ MongoDB connected");
+    logger.info("MongoDB connected");
 
     mongoose.connection.on('error', (err) => {
-      console.error('MongoDB runtime error:', err);
+      logger.error('MongoDB runtime error:', err);
     });
 
     mongoose.connection.on('disconnected', () => {
-      console.warn('MongoDB disconnected');
+      logger.warn('MongoDB disconnected');
     });
 
     mongoose.connection.on('reconnected', () => {
-      console.log('MongoDB reconnected');
+      logger.info('MongoDB reconnected');
     });
 
     setInterval(logPoolStats, 300000);
 
     return true;
   } catch (error) {
-    console.error("❌ MongoDB connection error details:");
-    console.error(`   - ${formatConnectionError(error)}`);
+    logger.error("MongoDB connection error details:");
+    logger.error(`   - ${formatConnectionError(error)}`);
     throw error;
   }
 };

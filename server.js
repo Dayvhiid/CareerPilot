@@ -1,5 +1,6 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
+const { logger } = require('./src/config/logger');
 const connectDB = require('./src/config/db');
 const secrets = require('./src/config/secrets');
 const { validateEnv } = require('./src/config/validateEnv');
@@ -16,22 +17,22 @@ async function startServer() {
     await redis.connect?.();
 
     const server = app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT} (${process.env.NODE_ENV || 'development'})`);
+      logger.info(`Server running on port ${PORT} (${process.env.NODE_ENV || 'development'})`);
     });
 
     const shutdown = async (signal) => {
-      console.log(`\n${signal} received. Starting graceful shutdown...`);
+      logger.info(`${signal} received. Starting graceful shutdown...`);
       server.close(async () => {
-        console.log('HTTP server closed');
+        logger.info('HTTP server closed');
         await mongoose.connection.close();
-        console.log('MongoDB disconnected');
+        logger.info('MongoDB disconnected');
         await redis.quit?.();
-        console.log('Redis disconnected');
+        logger.info('Redis disconnected');
         process.exit(0);
       });
 
       setTimeout(() => {
-        console.error('Forced shutdown after timeout');
+        logger.error('Forced shutdown after timeout');
         process.exit(1);
       }, 30000);
     };
@@ -41,7 +42,7 @@ async function startServer() {
 
     return server;
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server:', error);
     process.exit(1);
   }
 }

@@ -1,3 +1,4 @@
+const { logger } = require('../config/logger');
 const { HfInference } = require('@huggingface/inference');
 
 class HuggingFaceService {
@@ -15,13 +16,13 @@ class HuggingFaceService {
    */
   async generateCoverLetter(jobData, resumeData, userPreferences = {}) {
     try {
-      console.log('🤖 Generating cover letter with Hugging Face...');
-      console.log('📄 Job title:', jobData.title);
-      console.log('🏢 Company:', jobData.company);
+      logger.info('Generating cover letter with Hugging Face...');
+      logger.info('Job title:', jobData.title);
+      logger.info('Company:', jobData.company);
       
       // Build a comprehensive prompt for cover letter generation
       const prompt = this.buildCoverLetterPrompt(jobData, resumeData, userPreferences);
-      console.log('📝 Generated prompt length:', prompt.length);
+      logger.info('Generated prompt length:', prompt.length);
       
       // Use text generation model
       const response = await this.hf.textGeneration({
@@ -37,7 +38,7 @@ class HuggingFaceService {
         }
       });
 
-      console.log('✅ Cover letter generated successfully');
+      logger.info('Cover letter generated successfully');
       
       // Extract and clean the generated text
       let generatedText = response.generated_text || response[0]?.generated_text || '';
@@ -53,8 +54,8 @@ class HuggingFaceService {
       };
 
     } catch (error) {
-      console.error('❌ Error generating cover letter:', error.message);
-      console.error('❌ Error details:', error);
+      logger.error('Error generating cover letter:', error.message);
+      logger.error('Error details:', error);
       
       // Fallback to template-based cover letter
       return this.generateTemplateCoverLetter(jobData, resumeData);
@@ -293,7 +294,7 @@ ${applicantName}`;
    */
   async testConnection() {
     try {
-      console.log('🧪 Testing Hugging Face connection...');
+      logger.info('Testing Hugging Face connection...');
       
       const response = await this.hf.textGeneration({
         model: 'gpt2',
@@ -304,10 +305,10 @@ ${applicantName}`;
         }
       });
       
-      console.log('✅ Hugging Face connection successful');
+      logger.info('Hugging Face connection successful');
       return { success: true, response };
     } catch (error) {
-      console.error('❌ Hugging Face connection failed:', error.message);
+      logger.error('Hugging Face connection failed:', error.message);
       return { success: false, error: error.message };
     }
   }
@@ -318,7 +319,7 @@ ${applicantName}`;
    */
   async transcribeAudio(audioBuffer) {
     try {
-      console.log('🎙️ Transcribing audio with Whisper...');
+      logger.info('Transcribing audio with Whisper...');
       
       // Use Whisper model for speech-to-text
       // Note: Model may require authorization, fallback to a simpler approach if needed
@@ -328,20 +329,20 @@ ${applicantName}`;
           data: audioBuffer
         });
 
-        console.log('✅ Transcription successful:', response.text);
+        logger.info('Transcription successful:', response.text);
         return {
           success: true,
           text: response.text,
           model: 'openai/whisper-small'
         };
       } catch (whisperError) {
-        console.log('⚠️  Whisper model failed, trying alternative model...');
+        logger.warn('Whisper model failed, trying alternative model...');
         // Fallback to a more accessible model
         const altResponse = await this.hf.automaticSpeechRecognition({
           model: 'facebook/wav2vec2-base-960h',
           data: audioBuffer
         });
-        console.log('✅ Transcription successful (fallback):', altResponse.text);
+        logger.info('Transcription successful (fallback):', altResponse.text);
         return {
           success: true,
           text: altResponse.text,
@@ -349,7 +350,7 @@ ${applicantName}`;
         };
       }
     } catch (error) {
-      console.error('❌ Transcription error:', error.message);
+      logger.error('Transcription error:', error.message);
       return {
         success: false,
         error: error.message,
@@ -364,7 +365,7 @@ ${applicantName}`;
    */
   async synthesizeSpeech(text) {
     try {
-      console.log('🔊 Synthesizing speech:', text.substring(0, 50) + '...');
+      logger.info('Synthesizing speech:', text.substring(0, 50) + '...');
       
       // Try multiple TTS models, fallback to free options if needed
       try {
@@ -374,7 +375,7 @@ ${applicantName}`;
           inputs: text
         });
 
-        console.log('✅ TTS synthesis successful');
+        logger.info('TTS synthesis successful');
         const buffer = await response.arrayBuffer();
         const base64 = Buffer.from(buffer).toString('base64');
         
@@ -385,14 +386,14 @@ ${applicantName}`;
           mimeType: 'audio/wav'
         };
       } catch (vitsError) {
-        console.log('⚠️  VITS model failed, trying alternative TTS...');
+        logger.warn('VITS model failed, trying alternative TTS...');
         // Fallback to a more accessible TTS model
         const response = await this.hf.textToSpeech({
           model: 'Facebook/MMS-TTS-ENG',
           inputs: text
         });
 
-        console.log('✅ TTS synthesis successful (fallback)');
+        logger.info('TTS synthesis successful (fallback)');
         const buffer = await response.arrayBuffer();
         const base64 = Buffer.from(buffer).toString('base64');
         
@@ -404,7 +405,7 @@ ${applicantName}`;
         };
       }
     } catch (error) {
-      console.error('❌ TTS synthesis error:', error.message);
+      logger.error('TTS synthesis error:', error.message);
       return {
         success: false,
         error: error.message,

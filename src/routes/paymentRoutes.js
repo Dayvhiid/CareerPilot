@@ -1,4 +1,5 @@
 const express = require('express');
+const { logger } = require('../config/logger');
 const User = require('../models/User');
 const { initializeTransaction, verifyTransaction, verifyWebhookSignature } = require('../services/paystack');
 const auth = require('../middleware/auth');
@@ -38,7 +39,7 @@ router.post('/initialize', auth, paymentValidators.initialize, async (req, res) 
 
     res.json({ success: true, url: result.data.authorization_url });
   } catch (err) {
-    console.error('paystack initialize error:', err);
+    logger.error('paystack initialize error:', err);
     res.status(500).json({ success: false, message: 'Payment initialization failed' });
   }
 });
@@ -101,7 +102,7 @@ async function webhookHandler(req, res) {
     await user.save();
     res.sendStatus(200);
   } catch (err) {
-    console.error('paystack webhook error:', err);
+    logger.error('paystack webhook error:', err);
     res.sendStatus(500);
   }
 }
@@ -171,7 +172,7 @@ router.get('/verify', async (req, res) => {
       true
     ));
   } catch (err) {
-    console.error('paystack verify error:', err);
+    logger.error('paystack verify error:', err);
     return res.status(200).send(renderPage(
       'Verification Error',
       'We could not verify your payment right now. If your card was charged, please contact support.'

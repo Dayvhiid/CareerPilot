@@ -1,3 +1,4 @@
+const { logger } = require('./logger');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const GitHubStrategy = require('passport-github2').Strategy;
@@ -74,7 +75,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         
         done(null, user);
       } catch (err) {
-        console.error('OAuth error:', err);
+        logger.error('OAuth error:', err);
         done(err, null);
       }
     }
@@ -82,7 +83,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.oauthProviders.google = true;
 } else {
   passport.oauthProviders.google = false;
-  console.warn('Google OAuth is disabled because GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing.');
+  logger.warn('Google OAuth is disabled because GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing.');
 }
 
 // GitHub OAuth Strategy
@@ -129,7 +130,7 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
         
         done(null, user);
       } catch (err) {
-        console.error('GitHub OAuth error:', err);
+        logger.error('GitHub OAuth error:', err);
         done(err, null);
       }
     }
@@ -137,7 +138,7 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
   passport.oauthProviders.github = true;
 } else {
   passport.oauthProviders.github = false;
-  console.warn('GitHub OAuth is disabled because GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET is missing.');
+  logger.warn('GitHub OAuth is disabled because GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET is missing.');
 }
 
 module.exports = passport;

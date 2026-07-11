@@ -1,21 +1,22 @@
+const { logger } = require('../config/logger');
 const cache = require('../config/redis');
 
 class CacheService {
   async getOrSet(key, ttl, fetchFn) {
     const cached = await cache.get(key);
     if (cached) {
-      console.log(`[cache] HIT ${key}`);
+      logger.debug(`[cache] HIT ${key}`);
       return cached;
     }
 
-    console.log(`[cache] MISS ${key} — fetching`);
+    logger.debug(`[cache] MISS ${key} — fetching`);
     const data = await fetchFn();
     await cache.set(key, data, ttl);
     return data;
   }
 
   async invalidate(pattern) {
-    console.log(`[cache] Invalidating ${pattern}`);
+    logger.debug(`[cache] Invalidating ${pattern}`);
     await cache.del(pattern);
   }
 
@@ -25,7 +26,7 @@ class CacheService {
       await cache.set(key, data, ttl);
       return data;
     } catch (err) {
-      console.warn(`[cache] Refresh failed for ${key}: ${err.message}`);
+      logger.warn(`[cache] Refresh failed for ${key}: ${err.message}`);
       return null;
     }
   }

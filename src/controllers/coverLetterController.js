@@ -1,3 +1,4 @@
+const { logger } = require('../config/logger');
 const Resume = require('../models/Resume');
 const JobListing = require('../models/JobListing');
 const huggingFaceService = require('../services/huggingFaceService');
@@ -15,7 +16,7 @@ exports.generateCoverLetter = async (req, res) => {
     const { jobId } = req.params;
     const { customInstructions, tone = 'professional', length = 'medium' } = req.body;
 
-    console.log(`📝 Generating cover letter for job ${jobId} and user ${userId}`);
+    logger.info(`Generating cover letter for job ${jobId} and user ${userId}`);
 
     // Get job details
     const job = await JobListing.findById(jobId).lean();
@@ -35,9 +36,9 @@ exports.generateCoverLetter = async (req, res) => {
       });
     }
 
-    console.log('📄 Found resume and job data');
-    console.log('🏢 Job:', job.title, 'at', job.company);
-    console.log('👤 Applicant:', resume.extractedData.name || 'Unknown');
+    logger.info('Found resume and job data');
+    logger.info('Job:', job.title, 'at', job.company);
+    logger.info('Applicant:', resume.extractedData.name || 'Unknown');
 
     // Prepare job data for cover letter generation
     const jobData = {
@@ -85,7 +86,7 @@ exports.generateCoverLetter = async (req, res) => {
       });
     }
 
-    console.log('✅ Cover letter generated successfully');
+    logger.info('Cover letter generated successfully');
 
     res.json({
       success: true,
@@ -105,7 +106,7 @@ exports.generateCoverLetter = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error generating cover letter:', error);
+    logger.error('Error generating cover letter:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -119,7 +120,7 @@ exports.generateCoverLetter = async (req, res) => {
  */
 exports.testHuggingFace = async (req, res) => {
   try {
-    console.log('🧪 Testing Hugging Face service...');
+    logger.info('Testing Hugging Face service...');
     
     const testResult = await huggingFaceService.testConnection();
     
@@ -131,7 +132,7 @@ exports.testHuggingFace = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error testing Hugging Face:', error);
+    logger.error('Error testing Hugging Face:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to test Hugging Face connection',
@@ -154,7 +155,7 @@ exports.downloadCoverLetter = async (req, res) => {
       });
     }
 
-    console.log(`📄 Generating Word document for ${jobTitle} at ${company}`);
+    logger.info(`Generating Word document for ${jobTitle} at ${company}`);
 
     // Split cover letter into paragraphs
     const paragraphs = coverLetterText.split('\n\n').filter(p => p.trim().length > 0);
@@ -235,10 +236,10 @@ exports.downloadCoverLetter = async (req, res) => {
     
     res.send(buffer);
     
-    console.log(`✅ Word document generated successfully: ${fileName}`);
+    logger.info(`Word document generated successfully: ${fileName}`);
 
   } catch (error) {
-    console.error('❌ Error generating Word document:', error);
+    logger.error('Error generating Word document:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to generate Word document',

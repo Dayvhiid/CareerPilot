@@ -1,7 +1,45 @@
 const helmet = require('helmet');
 const compression = require('compression');
-const mongoSanitize = require('express-mongo-sanitize');
-const hpp = require('hpp');
+
+function sanitizeValue(value) {
+  if (typeof value === 'object' && value !== null) {
+    const keys = Object.keys(value);
+    for (const key of keys) {
+      if (key.startsWith('$') || key.includes('.')) {
+        delete value[key];
+      } else {
+        sanitizeValue(value[key]);
+      }
+    }
+  }
+  return value;
+}
+
+function mongoSanitize() {
+  return function (req, res, next) {
+    ['body', 'params', 'headers', 'query'].forEach(function (key) {
+      if (req[key]) {
+        sanitizeValue(req[key]);
+      }
+    });
+    next();
+  };
+}
+
+function hpp() {
+  return function (req, res, next) {
+    if (req.query) {
+      const params = Object.keys(req.query);
+      for (const param of params) {
+        const val = req.query[param];
+        if (Array.isArray(val)) {
+          req.query[param] = val[val.length - 1];
+        }
+      }
+    }
+    next();
+  };
+}
 
 function setupSecurity(app) {
   app.use(helmet({

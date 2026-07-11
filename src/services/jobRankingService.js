@@ -1,16 +1,17 @@
+const { logger } = require('../config/logger');
 const axios = require('axios');
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
 
 async function rerank(resumeData, jobs, domain) {
   if (!jobs || jobs.length === 0) {
-    console.log('jobRankingService: no jobs to rerank');
+    logger.warn('jobRankingService: no jobs to rerank');
     return [];
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    console.warn('jobRankingService: GEMINI_API_KEY not set — returning unscored');
+    logger.warn('jobRankingService: GEMINI_API_KEY not set — returning unscored');
     return jobs.map(j => ({ ...j, matchScore: 50, matchReasons: ['AI scoring unavailable'] }));
   }
 
@@ -38,7 +39,7 @@ ${jobList}
 Respond with ONLY a JSON array of objects, one per job, in order:
 [{ "index": 1, "score": 85, "reasons": ["Strong skill overlap in React/Node", "5+ years full-stack experience matches"], "matchedSkills": ["React", "Node.js"], "missingSkills": ["TypeScript"] }]`;
 
-  console.log(`jobRankingService: reranking ${jobs.length} jobs with ${GEMINI_MODEL}`);
+  logger.info(`jobRankingService: reranking ${jobs.length} jobs with ${GEMINI_MODEL}`);
 
   const url = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
   const start = Date.now();
@@ -51,16 +52,16 @@ Respond with ONLY a JSON array of objects, one per job, in order:
 
     const duration = Date.now() - start;
     const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    console.log(`jobRankingService: Gemini responded in ${duration}ms (${text.length} chars)`);
+    logger.info(`jobRankingService: Gemini responded in ${duration}ms (${text.length} chars)`);
 
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-      console.warn('jobRankingService: no JSON array in response — returning unscored');
+      logger.warn('jobRankingService: no JSON array in response — returning unscored');
       return jobs.map((j, i) => ({ ...j, matchScore: 50, matchReasons: ['Failed to parse AI response'] }));
     }
 
     const scores = JSON.parse(jsonMatch[0]);
-    console.log(`jobRankingService: parsed ${scores.length} score entries`);
+    logger.info(`jobRankingService: parsed ${scores.length} score entries`);
 
     return jobs.map((job, i) => {
       const s = scores.find(sc => sc.index === i + 1) || {};
@@ -75,7 +76,7 @@ Respond with ONLY a JSON array of objects, one per job, in order:
     });
   } catch (err) {
     const duration = Date.now() - start;
-    console.error(`jobRankingService: FAILED after ${duration}ms: ${err.message}`);
+    logger.error(`jobRankingService: FAILED after ${duration}ms: ${err.message}`);
     return jobs.map(j => ({ ...j, matchScore: 50, matchReasons: ['AI scoring unavailable'] }));
   }
 }

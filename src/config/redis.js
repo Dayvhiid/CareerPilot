@@ -1,3 +1,4 @@
+const { logger } = require('./logger');
 const Redis = require('ioredis');
 
 const REDIS_URL = process.env.REDIS_URL;
@@ -9,9 +10,9 @@ async function connect() {
   if (r && r.status !== 'ready') {
     try {
       await r.connect();
-      console.log('Redis connected');
+      logger.info('Redis connected');
     } catch (err) {
-      console.error(`redis connect: ${err.message}`);
+      logger.error(`redis connect: ${err.message}`);
     }
   }
 }
@@ -28,7 +29,7 @@ function getClient() {
     });
 
     client.on('error', (err) => {
-      console.error(`redis: ${err.message}`);
+      logger.error(`redis: ${err.message}`);
     });
   }
   return client;
@@ -41,7 +42,7 @@ async function get(key) {
     const val = await r.get(key);
     return val ? JSON.parse(val) : null;
   } catch (err) {
-    console.error(`redis.get("${key}"): ${err.message}`);
+    logger.error(`redis.get("${key}"): ${err.message}`);
     return null;
   }
 }
@@ -57,7 +58,7 @@ async function set(key, value, ttlSeconds) {
       await r.set(key, str);
     }
   } catch (err) {
-    console.error(`redis.set("${key}"): ${err.message}`);
+    logger.error(`redis.set("${key}"): ${err.message}`);
   }
 }
 
@@ -75,7 +76,7 @@ async function del(pattern) {
       }
     } while (cursor !== '0');
   } catch (err) {
-    console.error(`redis.del("${pattern}"): ${err.message}`);
+    logger.error(`redis.del("${pattern}"): ${err.message}`);
   }
 }
 

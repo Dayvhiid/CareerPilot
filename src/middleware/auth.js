@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { logger } = require('../config/logger');
 const User = require('../models/User');
 
 function extractToken(req) {
@@ -54,7 +55,7 @@ module.exports = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    logger.error('Auth middleware error:', error);
     res.status(500).json({
       success: false,
       message: 'Authentication error',

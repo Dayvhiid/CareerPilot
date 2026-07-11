@@ -1,3 +1,4 @@
+const { logger } = require('../config/logger');
 const ApiResponse = require('../utils/apiResponse');
 
 const handleMongooseError = (err) => {
@@ -48,7 +49,7 @@ const errorHandler = (err, req, res, _next) => {
     return ApiResponse.error(res, `File upload error: ${err.message}`, 400);
   }
 
-  console.error('Unhandled error:', err);
+  logger.error('Unhandled error:', err);
   ApiResponse.error(res, err.message || 'Internal server error', err.status || 500);
 };
 

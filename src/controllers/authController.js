@@ -1,3 +1,4 @@
+const { logger } = require("../config/logger");
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -52,7 +53,7 @@ exports.register = async (req, res) => {
       message: "User registered successfully"
     });
   } catch (error) {
-    console.error('Registration error:', error.message);
+    logger.error('Registration error:', error.message);
     sendError(res, 500, "Server error during registration");
   }
 };
@@ -91,7 +92,7 @@ exports.login = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', error.message);
+    logger.error('Login error:', error.message);
     sendError(res, 500, "Server error during login");
   }
 };
@@ -133,7 +134,7 @@ exports.refreshToken = async (req, res) => {
       tokenId: newTokenId
     });
   } catch (error) {
-    console.error('Token refresh error:', error);
+    logger.error('Token refresh error:', error);
     sendError(res, 500, "Server error during token refresh");
   }
 };

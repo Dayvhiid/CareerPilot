@@ -1,3 +1,4 @@
+const { logger } = require('../config/logger');
 const DOMAINS = [
   'Software Engineering', 'Data / Analytics', 'Design / UX', 'Product Management',
   'Marketing', 'Sales', 'Finance / Accounting', 'Human Resources',
@@ -32,7 +33,7 @@ function determineDomain(resumeData) {
     for (const [domain, keywords] of Object.entries(DOMAIN_KEYWORDS)) {
       for (const keyword of keywords) {
         if (title.includes(keyword)) {
-          console.log(`resumeQueryService: domain from currentTitle="${title}" -> ${domain} (keyword="${keyword}")`);
+          logger.debug(`resumeQueryService: domain from currentTitle="${title}" -> ${domain} (keyword="${keyword}")`);
           return domain;
         }
       }
@@ -43,14 +44,14 @@ function determineDomain(resumeData) {
     for (const [domain, keywords] of Object.entries(DOMAIN_KEYWORDS)) {
       for (const keyword of keywords) {
         if (t.includes(keyword)) {
-          console.log(`resumeQueryService: domain from pastTitle="${t}" -> ${domain} (keyword="${keyword}")`);
+          logger.debug(`resumeQueryService: domain from pastTitle="${t}" -> ${domain} (keyword="${keyword}")`);
           return domain;
         }
       }
     }
   }
 
-  console.log('resumeQueryService: no domain match found for any title or skill');
+  logger.debug('resumeQueryService: no domain match found for any title or skill');
   return null;
 }
 
@@ -59,7 +60,7 @@ function extractQuery(resumeData) {
   const location = resumeData.location || 'Nigeria';
 
   if (!domain) {
-    console.log('resumeQueryService: no domain determined — returning null query');
+    logger.warn('resumeQueryService: no domain determined — returning null query');
     return { domain: null, keywords: [], location };
   }
 
@@ -73,7 +74,7 @@ function extractQuery(resumeData) {
     ...jobTitles.flatMap(t => t.split(/\s+/).filter(w => w.length > 3))
   ])].slice(0, 10);
 
-  console.log(`resumeQueryService: extracted query — domain=${domain} keywords=[${keywords.join(', ')}] location=${location}`);
+  logger.info(`resumeQueryService: extracted query — domain=${domain} keywords=[${keywords.join(', ')}] location=${location}`);
   return { domain, keywords, location };
 }
 

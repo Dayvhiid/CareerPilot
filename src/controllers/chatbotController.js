@@ -1,3 +1,4 @@
+const { logger } = require('../config/logger');
 const Resume = require('../models/Resume');
 const Conversation = require('../models/Conversation');
 const { CONVERSATION_STATES, STATE_PROGRESS, generateSessionId, isResumeRelated, isValidEmail } = require('../services/chatbot/stateMachine');
@@ -33,7 +34,7 @@ const startConversation = async (req, res) => {
       progress: 0
     });
   } catch (error) {
-    console.error('❌ Error starting conversation:', error);
+    logger.error('Error starting conversation:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to start conversation',
@@ -47,7 +48,7 @@ const processMessage = async (req, res) => {
     const userId = req.user.id;
     const { message, sessionId } = req.body;
 
-    console.log(`💬 Processing message from user ${userId}: "${message}"`);
+    logger.info(`Processing message from user ${userId}: "${message}"`);
 
     const conversation = await Conversation.findOne({ userId, sessionId }).lean();
     if (!conversation) {
@@ -97,7 +98,7 @@ const processMessage = async (req, res) => {
       data: response.data || null
     });
   } catch (error) {
-    console.error('❌ Error processing chatbot message:', error);
+    logger.error('Error processing chatbot message:', error);
     res.status(500).json({
       success: false,
       message: 'Sorry, I encountered an error. Please try again.',
@@ -119,11 +120,11 @@ const generateResume = async (req, res) => {
       });
     }
 
-    console.log('🔍 Raw session data:', JSON.stringify(conversation.data, null, 2));
+    logger.debug('Raw session data:', JSON.stringify(conversation.data, null, 2));
 
     const resumeData = convertChatDataToResume(conversation.data);
 
-    console.log('🔍 Converted resume data:', JSON.stringify(resumeData, null, 2));
+    logger.debug('Converted resume data:', JSON.stringify(resumeData, null, 2));
 
     const existingResume = await Resume.findOne({ userId }).lean();
 
@@ -163,7 +164,7 @@ const generateResume = async (req, res) => {
       resumeData: resumeData
     });
   } catch (error) {
-    console.error('❌ Error generating resume:', error);
+    logger.error('Error generating resume:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to generate resume',
@@ -194,7 +195,7 @@ const getProgress = async (req, res) => {
       data: conversation.data
     });
   } catch (error) {
-    console.error('❌ Error getting progress:', error);
+    logger.error('Error getting progress:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get progress',
@@ -240,7 +241,7 @@ const listConversations = async (req, res) => {
       conversations: result
     });
   } catch (error) {
-    console.error('❌ Error listing conversations:', error);
+    logger.error('Error listing conversations:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to list conversations',
@@ -287,7 +288,7 @@ const getConversation = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Error getting conversation:', error);
+    logger.error('Error getting conversation:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get conversation',
@@ -308,12 +309,12 @@ const downloadResume = async (req, res) => {
       });
     }
 
-    console.log('🔄 Generating PDF for user:', userId);
+    logger.info('Generating PDF for user:', userId);
     const pdfBuffer = await generateProfessionalPDF(resume.extractedData);
-    console.log('✅ PDF generated, size:', pdfBuffer.length, 'bytes');
+    logger.info('PDF generated, size:', pdfBuffer.length, 'bytes');
 
     const fileName = `${resume.extractedData.name?.replace(/\s+/g, '_') || 'Professional'}_Resume.pdf`;
-    console.log('📁 Sending PDF file:', fileName);
+    logger.info('Sending PDF file:', fileName);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
@@ -322,7 +323,7 @@ const downloadResume = async (req, res) => {
 
     res.send(pdfBuffer);
   } catch (error) {
-    console.error('❌ Error downloading resume:', error);
+    logger.error('Error downloading resume:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to download resume',
@@ -340,7 +341,7 @@ const handleTranscribeAudio = async (req, res) => {
       });
     }
 
-    console.log('🎙️ Received audio for transcription:', req.file.originalname, 'Size:', req.file.size);
+    logger.info('Received audio for transcription:', req.file.originalname, 'Size:', req.file.size);
 
     const result = await transcribeAudio(req.file.buffer);
 
@@ -357,7 +358,7 @@ const handleTranscribeAudio = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('❌ Transcription error:', error);
+    logger.error('Transcription error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to transcribe audio',
@@ -377,7 +378,7 @@ const handleSynthesizeSpeech = async (req, res) => {
       });
     }
 
-    console.log('🔊 Synthesizing speech for text:', text.substring(0, 50) + '...');
+    logger.info('Synthesizing speech for text:', text.substring(0, 50) + '...');
 
     const result = await synthesizeSpeech(text);
 
@@ -395,7 +396,7 @@ const handleSynthesizeSpeech = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('❌ TTS synthesis error:', error);
+    logger.error('TTS synthesis error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to synthesize speech',

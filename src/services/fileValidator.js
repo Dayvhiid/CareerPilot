@@ -2,6 +2,7 @@
  * File Validation Utility
  * Validates file uploads for security and integrity
  */
+const { logger } = require('../config/logger');
 
 const fs = require('fs');
 const fsp = require('fs').promises;
@@ -104,7 +105,7 @@ async function verifyFileMagic(filePath, mimeType) {
       return buffer.slice(0, magic.length).equals(magic);
     });
   } catch (error) {
-    console.error('Error verifying file magic bytes:', error.message);
+    logger.error('Error verifying file magic bytes:', error.message);
     return false;
   }
 }

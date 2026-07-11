@@ -1,3 +1,4 @@
+const { logger } = require('../config/logger');
 const axios = require('axios');
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models';
@@ -6,13 +7,13 @@ const MODEL = 'gemini-2.5-flash';
 async function extractResumeData(text) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    console.error('❌ GEMINI_API_KEY is not set in environment variables');
+    logger.error('GEMINI_API_KEY is not set in environment variables');
     throw new Error('GEMINI_API_KEY is not set');
   }
 
-  console.log('🔑 GEMINI_API_KEY present, prefix:', apiKey.substring(0, 8) + '...');
-  console.log(`📡 Sending request to Gemini API with model ${MODEL}`);
-  console.log(`📄 Resume text length: ${text.length} characters`);
+  logger.info('GEMINI_API_KEY present, prefix:', apiKey.substring(0, 8) + '...');
+  logger.info(`Sending request to Gemini API with model ${MODEL}`);
+  logger.info(`Resume text length: ${text.length} characters`);
 
   const prompt = `You are a resume parsing engine. Extract structured data from the resume text below and return ONLY valid JSON with no additional text, explanation, or markdown formatting.
 
@@ -95,31 +96,31 @@ ${text}`;
         timeout: 30000
       }
     );
-    console.log(`✅ Gemini API responded with status ${response.status}`);
+    logger.info(`Gemini API responded with status ${response.status}`);
   } catch (err) {
     if (err.response) {
-      console.error(`❌ Gemini API error ${err.response.status}:`, JSON.stringify(err.response.data, null, 2));
+      logger.error(`Gemini API error ${err.response.status}:`, JSON.stringify(err.response.data, null, 2));
     } else if (err.code === 'ECONNABORTED') {
-      console.error('❌ Gemini API request timed out after 30s');
+      logger.error('Gemini API request timed out after 30s');
     } else {
-      console.error('❌ Gemini API request failed:', err.message);
+      logger.error('Gemini API request failed:', err.message);
     }
     throw err;
   }
 
   const content = response.data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
   if (!content) {
-    console.error('❌ Gemini returned empty response');
+    logger.error('Gemini returned empty response');
     throw new Error('Gemini returned empty response');
   }
 
-  console.log(`📝 Gemini raw response length: ${content.length} chars`);
-  console.log('📝 Gemini response preview:', content.substring(0, 200));
+  logger.info(`Gemini raw response length: ${content.length} chars`);
+  logger.info('Gemini response preview:', content.substring(0, 200));
 
   const jsonMatch = content.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
   const parsed = JSON.parse(jsonMatch);
 
-  console.log('✅ Successfully parsed Gemini JSON response');
+  logger.info('Successfully parsed Gemini JSON response');
   return parsed;
 }
 

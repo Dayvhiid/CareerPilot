@@ -2,9 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const cookieParser = require('cookie-parser');
+const morgan = require('morgan');
 
 // Initialize logger (replaces console.log/error/warn globally)
-require('./config/logger');
+const { logger } = require('./config/logger');
 const requestId = require('./middleware/requestId');
 const passport = require('./config/passport');
 const session = require('express-session');
@@ -12,6 +13,9 @@ const { RedisStore } = require('connect-redis');
 const { validateEnv } = require('./config/validateEnv');
 const secrets = require('./config/secrets');
 const { setupSecurity } = require('./middleware/security');
+const { initializeSentry } = require('./config/sentry');
+const { metricsMiddleware, metricsRouter: addMetricsRoute } = require('./config/metrics');
+const requestLogger = require('./middleware/requestLogger');
 const authRoutes = require('./routes/authRoutes');
 const oauthRoutes = require('./routes/oauthRoutes');
 const resumeRoutes = require('./routes/resumeRoutes');
@@ -22,6 +26,9 @@ const healthRoutes = require('./routes/healthRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 
 const app = express();
+
+// Sentry error tracking (must be first)
+initializeSentry(app);
 
 // Security middleware (helmet, compression, mongo-sanitize, hpp)
 setupSecurity(app);
@@ -40,6 +47,18 @@ app.use('/public', express.static(path.join(__dirname, '../public')));
 
 // PayStack webhook needs raw body for signature verification (must be before express.json)
 app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), paymentRoutes.webhookHandler);
+
+// HTTP request logging (morgan)
+app.use(morgan(
+  ':method :url :status :res[content-length] - :response-time ms',
+  { stream: { write: (message) => logger.http(message.trim()) } }
+));
+
+// Metrics collection
+app.use(metricsMiddleware);
+
+// Request context logger
+app.use(requestLogger);
 
 // Body parsing
 app.use(express.json());
@@ -98,6 +117,9 @@ app.use((req, res, next) => {
 });
 
 // Routes
+const metricsRoute = require('express').Router();
+app.use('/api', addMetricsRoute(metricsRoute));
+
 app.use('/api/payments', paymentRoutes.router);
 app.use('/api/auth', authRoutes);
 app.use('/api/oauth', oauthRoutes);
@@ -114,6 +136,10 @@ app.get('/', (req, res) => {
 
 // Serve static files from root (for direct access to HTML files)
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Sentry error handler (must be before the app error handler)
+const { errorHandler: sentryErrorHandler } = require('./config/sentry');
+app.use(sentryErrorHandler());
 
 // Error handler must be registered after all routes
 const errorHandler = require('./middleware/errorHandler');

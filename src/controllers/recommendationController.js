@@ -1,3 +1,4 @@
+const { logger } = require('../config/logger');
 const UserJob = require('../models/UserJob');
 const JobListing = require('../models/JobListing');
 const resumeQueryService = require('../services/resumeQueryService');
@@ -34,7 +35,7 @@ exports.getRecommendations = async (req, res) => {
       ...result
     });
   } catch (error) {
-    console.error(`recommendationController.getRecommendations: ${error.message}`);
+    logger.error(`recommendationController.getRecommendations: ${error.message}`);
     return res.status(500).json({ success: false, message: 'Failed to get recommendations' });
   }
 };
@@ -57,7 +58,7 @@ exports.getJobDetails = async (req, res) => {
 
     return res.json({ success: true, job });
   } catch (err) {
-    console.error(`recommendationController.getJobDetails: ${err.message}`);
+    logger.error(`recommendationController.getJobDetails: ${err.message}`);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -76,7 +77,7 @@ exports.bookmarkJob = async (req, res) => {
 
     return res.json({ success: true, bookmarked: newStatus === 'bookmarked' });
   } catch (err) {
-    console.error(`recommendationController.bookmarkJob: ${err.message}`);
+    logger.error(`recommendationController.bookmarkJob: ${err.message}`);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -91,19 +92,19 @@ exports.markApplied = async (req, res) => {
     );
     return res.json({ success: true, message: 'Marked as applied' });
   } catch (err) {
-    console.error(`recommendationController.markApplied: ${err.message}`);
+    logger.error(`recommendationController.markApplied: ${err.message}`);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
 
 exports.triggerIngestion = async (req, res) => {
   jobIngestionService.runIngestionCycle().then(count => {
-    console.log(`recommendationController: manual ingestion complete — ${count} jobs`);
+    logger.info(`recommendationController: manual ingestion complete — ${count} jobs`);
     cacheService.invalidate('recommendations:*').then(() => {
-      console.log('recommendationController: flushed all recommendation caches after ingestion');
+      logger.info('recommendationController: flushed all recommendation caches after ingestion');
     });
   }).catch(err => {
-    console.error(`recommendationController: manual ingestion failed — ${err.message}`);
+    logger.error(`recommendationController: manual ingestion failed — ${err.message}`);
   });
   return res.json({ success: true, message: 'Ingestion started in background' });
 };

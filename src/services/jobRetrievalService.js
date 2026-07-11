@@ -1,7 +1,8 @@
+const { logger } = require('../config/logger');
 const JobListing = require('../models/JobListing');
 
 async function retrieve({ domain, keywords, location, limit = 50, offset = 0 }) {
-  console.log(`jobRetrievalService: domain=${domain} keywords=[${(keywords || []).join(', ')}] location=${location} limit=${limit}`);
+  logger.info(`jobRetrievalService: domain=${domain} keywords=[${(keywords || []).join(', ')}] location=${location} limit=${limit}`);
 
   const filter = { domain, isActive: true };
   const searchTerms = (keywords || []).filter(k => k.length > 2).join(' ');
@@ -18,7 +19,7 @@ async function retrieve({ domain, keywords, location, limit = 50, offset = 0 }) 
       .limit(limit)
       .lean();
     } catch (err) {
-      console.log('jobRetrievalService: text search unavailable, using regex fallback');
+      logger.warn('jobRetrievalService: text search unavailable, using regex fallback');
       const regexQueries = keywords.filter(k => k.length > 2).map(k => ({
         $or: [
           { title: { $regex: k, $options: 'i' } },
@@ -41,7 +42,7 @@ async function retrieve({ domain, keywords, location, limit = 50, offset = 0 }) 
       .lean();
   }
 
-  console.log(`jobRetrievalService: retrieved ${jobs.length} candidates`);
+  logger.info(`jobRetrievalService: retrieved ${jobs.length} candidates`);
   return jobs;
 }
 

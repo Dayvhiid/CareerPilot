@@ -1,3 +1,4 @@
+const { logger } = require('../config/logger');
 const axios = require('axios');
 const JobListing = require('../models/JobListing');
 const { computeEmbedding } = require('./embeddingService');
@@ -18,7 +19,7 @@ function determineDomainFromTitle(title) {
       }
     }
   }
-  console.log(`jobIngestionService: title="${title}" -> domain=${bestDomain} (matched ${bestLen} chars)`);
+  logger.debug(`jobIngestionService: title="${title}" -> domain=${bestDomain} (matched ${bestLen} chars)`);
   return bestDomain;
 }
 
@@ -68,7 +69,7 @@ async function ingestJob(raw) {
   const jobData = normalizeJob(raw);
 
   if (!jobData.domain) {
-    console.log(`jobIngestionService: skipping "${jobData.title}" — no domain match`);
+    logger.debug(`jobIngestionService: skipping "${jobData.title}" — no domain match`);
     return null;
   }
 
@@ -81,23 +82,23 @@ async function ingestJob(raw) {
       { $set: jobData },
       { upsert: true, new: true }
     );
-    console.log(`jobIngestionService: saved "${jobData.title}" (${jobData.domain}) [${jobData.externalId}]`);
+    logger.info(`jobIngestionService: saved "${jobData.title}" (${jobData.domain}) [${jobData.externalId}]`);
     return job;
   } catch (err) {
-    console.error(`jobIngestionService: failed to save "${jobData.title}": ${err.message}`);
+    logger.error(`jobIngestionService: failed to save "${jobData.title}": ${err.message}`);
     return null;
   }
 }
 
 async function searchAndIngest(query, location = 'Nigeria', numPages = 1) {
   if (!JSEARCH_API_KEY) {
-    console.warn('jobIngestionService: JSEARCH_API_KEY not set, skipping');
+    logger.warn('jobIngestionService: JSEARCH_API_KEY not set, skipping');
     return [];
   }
 
   const results = [];
   for (let page = 1; page <= numPages; page++) {
-    console.log(`jobIngestionService: searching query="${query}" location="${location}" page=${page}`);
+    logger.info(`jobIngestionService: searching query="${query}" location="${location}" page=${page}`);
     try {
       const response = await axios.get(`${JSEARCH_BASE_URL}/search`, {
         params: { query, location, page, num_pages: 1 },
@@ -108,21 +109,21 @@ async function searchAndIngest(query, location = 'Nigeria', numPages = 1) {
       });
 
       const jobs = response.data?.data || [];
-      console.log(`jobIngestionService: found ${jobs.length} results for "${query}"`);
+      logger.info(`jobIngestionService: found ${jobs.length} results for "${query}"`);
 
       for (const raw of jobs) {
         const job = await ingestJob(raw);
         if (job) results.push(job);
       }
     } catch (err) {
-      console.error(`jobIngestionService: query "${query}" failed: ${err.message}`);
+      logger.error(`jobIngestionService: query "${query}" failed: ${err.message}`);
     }
   }
   return results;
 }
 
 async function runIngestionCycle() {
-  console.log('jobIngestionService: === STARTING INGESTION CYCLE ===');
+  logger.info('jobIngestionService: === STARTING INGESTION CYCLE ===');
 
   const QUERIES_BY_DOMAIN = {
     'Software Engineering': ['software engineer', 'developer', 'backend developer', 'frontend developer', 'full stack developer', 'devops engineer'],
@@ -144,14 +145,14 @@ async function runIngestionCycle() {
 
   let total = 0;
   for (const [domain, queries] of Object.entries(QUERIES_BY_DOMAIN)) {
-    console.log(`\n--- Domain: ${domain} ---`);
+    logger.info(`Domain: ${domain}`);
     for (const query of queries) {
       const jobs = await searchAndIngest(query, 'Nigeria', 1);
       total += jobs.length;
     }
   }
 
-  console.log(`\njobIngestionService: === CYCLE COMPLETE: ${total} jobs ingested ===`);
+  logger.info(`jobIngestionService: === CYCLE COMPLETE: ${total} jobs ingested ===`);
   return total;
 }
 

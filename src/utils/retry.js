@@ -1,3 +1,5 @@
+const { logger } = require('../config/logger');
+
 async function withRetry(fn, options = {}) {
   const {
     maxRetries = 3,
@@ -21,7 +23,7 @@ async function withRetry(fn, options = {}) {
       }
       const delay = Math.min(baseDelay * Math.pow(2, attempt - 1), maxDelay);
       const jitter = Math.random() * 1000;
-      console.warn(`[retry] Attempt ${attempt}/${maxRetries} failed. Retrying in ${delay + jitter}ms...`);
+      logger.warn(`[retry] Attempt ${attempt}/${maxRetries} failed. Retrying in ${delay + jitter}ms...`);
       await new Promise(resolve => setTimeout(resolve, delay + jitter));
     }
   }

@@ -3,6 +3,7 @@
  * Validates required environment variables on application startup
  * Fails fast in production if critical variables are missing
  */
+const { logger } = require('./logger');
 
 const requiredVars = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'];
 
@@ -39,12 +40,12 @@ function validateEnv() {
 
   // In development, warn about missing required vars
   if (nodeEnv !== 'production' && missing.length > 0) {
-    console.warn(`⚠️  Development: Missing recommended environment variables:\n${missing.map(v => `  - ${v}`).join('\n')}`);
+    logger.warn(`Development: Missing recommended environment variables:\n${missing.map(v => `  - ${v}`).join('\n')}`);
   }
 
   const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
   if (mongoUri && !mongoUri.startsWith('mongodb')) {
-    console.warn('⚠️  MONGO_URI should be a valid MongoDB connection string');
+    logger.warn('MONGO_URI should be a valid MongoDB connection string');
   }
 
   // Emergency check: refuse to boot with placeholder/default secrets
@@ -73,7 +74,7 @@ function validateEnv() {
     throw new Error(`❌ Invalid JWT_EXPIRATION format. Use formats like "15m", "7d", "24h"`);
   }
 
-  console.log('✅ Environment variables validated successfully');
+  logger.info('Environment variables validated successfully');
 }
 
 /**

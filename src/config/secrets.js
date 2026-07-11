@@ -1,3 +1,4 @@
+const { logger } = require('./logger');
 const AWS = require('@aws-sdk/client-ssm');
 
 class SecretsManager {
@@ -8,11 +9,11 @@ class SecretsManager {
 
   async initialize() {
     if (process.env.NODE_ENV !== 'production') {
-      console.log('[secrets] Using .env for development');
+      logger.info('[secrets] Using .env for development');
       return;
     }
 
-    console.log('[secrets] Loading from AWS Parameter Store');
+    logger.info('[secrets] Loading from AWS Parameter Store');
     this.ssm = new AWS.SSM({
       region: process.env.AWS_REGION || 'us-east-1'
     });
@@ -30,9 +31,9 @@ class SecretsManager {
         this.cache.set(name, param.Value);
         process.env[name] = param.Value;
       }
-      console.log(`[secrets] Loaded ${this.cache.size} secrets`);
+      logger.info(`[secrets] Loaded ${this.cache.size} secrets`);
     } catch (err) {
-      console.error('[secrets] Failed to load production secrets:', err);
+      logger.error('[secrets] Failed to load production secrets:', err);
       throw err;
     }
   }

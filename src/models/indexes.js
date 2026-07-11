@@ -1,3 +1,4 @@
+const { logger } = require('../config/logger');
 const mongoose = require('mongoose');
 
 async function ensureIndexes() {
@@ -5,7 +6,7 @@ async function ensureIndexes() {
   const JobListing = require('./JobListing');
   const UserJob = require('./UserJob');
 
-  console.log('Ensuring database indexes...');
+  logger.info('Ensuring database indexes...');
 
   // Resume indexes
   await Resume.collection.createIndex({ userId: 1 });
@@ -20,7 +21,7 @@ async function ensureIndexes() {
   await UserJob.collection.createIndex({ jobId: 1 });
   await UserJob.collection.createIndex({ userId: 1, createdAt: -1 });
 
-  console.log('All indexes ensured');
+  logger.info('All indexes ensured');
 }
 
 module.exports = { ensureIndexes };
@@ -30,5 +31,5 @@ if (require.main === module) {
   mongoose.connect(process.env.MONGO_URI)
     .then(() => ensureIndexes())
     .then(() => process.exit(0))
-    .catch(err => { console.error(err); process.exit(1); });
+    .catch(err => { logger.error(err); process.exit(1); });
 }

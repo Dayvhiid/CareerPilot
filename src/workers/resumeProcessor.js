@@ -1,3 +1,4 @@
+const { logger } = require('../config/logger');
 const { resumeProcessingQueue } = require('./queue');
 
 resumeProcessingQueue.process(async (job) => {
@@ -6,4 +7,4 @@ resumeProcessingQueue.process(async (job) => {
   await controller.extractTextFromFile(resumeId, filePath, mimeType);
 });
 
-console.log('Resume processor worker started');
+logger.info('Resume processor worker started');

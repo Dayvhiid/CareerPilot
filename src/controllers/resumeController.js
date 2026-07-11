@@ -1,3 +1,4 @@
+const { logger } = require("../config/logger");
 const Resume = require("../models/Resume");
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
@@ -18,7 +19,7 @@ async function updateProcessingState(resumeId, { stage, progress, message }) {
   if (typeof progress === 'number') update.processingProgress = Math.max(0, Math.min(100, progress));
   if (message) update.processingMessage = message;
 
-  console.log(`📌 Resume ${resumeId} -> ${stage || 'status'} (${typeof progress === 'number' ? progress + '%' : 'n/a'}): ${message || ''}`);
+  logger.info(`Resume ${resumeId} -> ${stage || 'status'} (${typeof progress === 'number' ? progress + '%' : 'n/a'}): ${message || ''}`);
   await Resume.findByIdAndUpdate(resumeId, update);
 }
 
@@ -54,7 +55,7 @@ exports.uploadResume = async (req, res) => {
       try {
         await fs.unlink(existingResume.filePath);
       } catch (err) {
-        console.log("Error deleting old file:", err);
+        logger.error("Error deleting old file:", err);
       }
       await Resume.findByIdAndDelete(existingResume._id);
     }
@@ -77,7 +78,7 @@ exports.uploadResume = async (req, res) => {
     await resume.save();
 
     // Start text extraction in background via Bull queue
-    console.log(`🚀 Scheduling resume extraction for ${resume._id}`);
+    logger.info(`Scheduling resume extraction for ${resume._id}`);
     try {
       const { resumeProcessingQueue } = require('../workers/queue');
       await resumeProcessingQueue.add({
@@ -92,9 +93,9 @@ exports.uploadResume = async (req, res) => {
         }
       });
     } catch (queueErr) {
-      console.log(`Queue unavailable, falling back to inline processing: ${queueErr.message}`);
+      logger.warn(`Queue unavailable, falling back to inline processing: ${queueErr.message}`);
       extractTextFromFile(resume._id, filePath, mimetype).catch(error => {
-        console.error(`❌ Background resume extraction failed for ${resume._id}:`, error);
+        logger.error(`Background resume extraction failed for ${resume._id}:`, error);
       });
     }
 
@@ -113,7 +114,7 @@ exports.uploadResume = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Upload error:", error);
+    logger.error("Upload error:", error);
     res.status(500).json({ success: false, message: "Server error", errors: [{ message: error.message }] });
   }
 };
@@ -162,7 +163,7 @@ exports.deleteResume = async (req, res) => {
       try {
         await fs.unlink(resume.filePath);
     } catch (err) {
-      console.log("Error deleting file:", err);
+      logger.error("Error deleting file:", err);
     }
 
     await Resume.findByIdAndDelete(resume._id);
@@ -176,7 +177,7 @@ exports.deleteResume = async (req, res) => {
 // Advanced NLP-based text extraction
 async function extractTextFromFile(resumeId, filePath, mimeType) {
   try {
-    console.log(`🧪 extractTextFromFile invoked for ${resumeId} (${mimeType})`);
+    logger.info(`extractTextFromFile invoked for ${resumeId} (${mimeType})`);
     await updateProcessingState(resumeId, {
       stage: 'reading-file',
       progress: 10,
@@ -198,7 +199,7 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
         const result = await mammoth.extractRawText({ path: filePath });
         extractedText = result.value;
       } catch (err) {
-        console.log("Error with DOC file, using fallback:", err);
+        logger.warn("Error with DOC file, using fallback:", err);
         extractedText = "Unable to extract text from this DOC file format";
       }
     } else if (mimeType === "text/plain") {
@@ -211,8 +212,8 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
       message: 'Text extracted successfully, analyzing content',
     });
 
-    console.log("Extracted text length:", extractedText.length);
-    console.log("🤖 Processing with Gemini LLM extraction...");
+    logger.info("Extracted text length:", extractedText.length);
+    logger.info("Processing with AI extraction...");
 
     let extractedData = null;
     let processingMethod = "unknown";
@@ -230,15 +231,15 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
       });
       if (extractedData && typeof extractedData === 'object') {
         processingMethod = "AI Service";
-        console.log("✅ Successfully processed with AI Service");
-        console.log("🔧 Skills found:", extractedData.skills?.length || 0);
-        console.log("💼 Job titles found:", extractedData.jobTitles?.length || 0);
-        console.log("🏢 Companies found:", extractedData.companies?.length || 0);
-        console.log("👤 Name extracted:", extractedData.name || 'Not found');
-        console.log("📧 Email extracted:", extractedData.email || 'Not found');
+        logger.info("Successfully processed with AI Service");
+        logger.info("Skills found:", extractedData.skills?.length || 0);
+        logger.info("Job titles found:", extractedData.jobTitles?.length || 0);
+        logger.info("Companies found:", extractedData.companies?.length || 0);
+        logger.info("Name extracted:", extractedData.name || 'Not found');
+        logger.info("Email extracted:", extractedData.email || 'Not found');
       }
     } catch (aiError) {
-      console.log("⚠️ AI extraction failed:", aiError.message);
+      logger.warn("AI extraction failed:", aiError.message);
       extractedData = null;
     }
 
@@ -246,14 +247,14 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
     if (extractedData && typeof extractedData === 'object') {
       const hasContent = extractedData.name || extractedData.skills?.length > 0 || extractedData.jobTitles?.length > 0 || extractedData.summary;
       if (!hasContent) {
-        console.log('⚠️ Gemini returned valid JSON but all fields are empty — treating as extraction failure');
+        logger.warn('AI returned valid JSON but all fields are empty — treating as extraction failure');
         extractedData = null;
       }
     }
 
     // Fallback: text-based extraction from raw text
     if (!extractedData && extractedText) {
-      console.log('📝 Attempting text-based fallback extraction');
+      logger.info('Attempting text-based fallback extraction');
       const basic = extractor.getEmptyResumeData();
       basic.name = extractor.extractNameEnhanced(extractedText.split('\n').filter(Boolean), extractedText);
       basic.email = (extractedText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/) || [])[0] || '';
@@ -272,12 +273,12 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
       basic.companies = experience.companies || [];
       extractedData = basic;
       processingMethod = "Text fallback";
-      console.log(`✅ Text fallback: name=${basic.name}, skills=${basic.skills.length}, titles=${basic.jobTitles.length}`);
+      logger.info(`Text fallback: name=${basic.name}, skills=${basic.skills.length}, titles=${basic.jobTitles.length}`);
     }
 
     // Ultimate fallback: empty structure
     if (!extractedData) {
-      console.log("❌ No extraction method available, using empty structure");
+      logger.warn("No extraction method available, using empty structure");
       extractedData = extractor.getEmptyResumeData();
       processingMethod = "Empty fallback";
     }
@@ -290,7 +291,7 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
 
     // Ensure extractedData has the required structure
     if (!extractedData || typeof extractedData !== 'object') {
-      console.log("❌ Invalid extracted data, using empty structure");
+      logger.warn("Invalid extracted data, using empty structure");
       extractedData = extractor.getEmptyResumeData();
       processingMethod = "Empty fallback";
     }
@@ -319,7 +320,7 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
         processingUpdatedAt: new Date(),
       });
     } catch (saveError) {
-      console.error('❌ Failed to save normalized extracted data:', saveError);
+      logger.error('Failed to save normalized extracted data:', saveError);
 
       const safeFallbackData = extractor.normalizeExtractedData(extractor.getEmptyResumeData());
       safeFallbackData.score = calculateScore(safeFallbackData);
@@ -335,8 +336,8 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
       });
     }
 
-    console.log(`✅ Resume ${resumeId} processed successfully with ${processingMethod}`);
-    console.log("📊 Extracted data preview:", {
+    logger.info(`Resume ${resumeId} processed successfully with ${processingMethod}`);
+    logger.info("Extracted data preview:", {
       name: extractedData.name,
       email: extractedData.email,
       location: extractedData.location,
@@ -346,7 +347,7 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
     });
 
   } catch (error) {
-    console.error("Text extraction error:", error);
+    logger.error("Text extraction error:", error);
     await Resume.findByIdAndUpdate(resumeId, {
       isProcessed: false,
       extractedText: "Error extracting text: " + error.message,

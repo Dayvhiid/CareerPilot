@@ -1,3 +1,4 @@
+const { logger } = require('../../config/logger');
 const { withRetry } = require('../../utils/retry');
 
 class AIService {
@@ -52,7 +53,7 @@ class AIService {
         return this.parseJSONResponse(response);
       } catch (err) {
         lastError = err;
-        console.warn(`[ai] Extractor failed: ${err.message}`);
+        logger.warn(`[ai] Extractor failed: ${err.message}`);
       }
     }
 
@@ -61,7 +62,7 @@ class AIService {
 
   async computeEmbedding(text) {
     if (!this.embeddingService) {
-      console.warn('[ai] No embedding service available, returning zero vector');
+      logger.warn('[ai] No embedding service available, returning zero vector');
       return null;
     }
 

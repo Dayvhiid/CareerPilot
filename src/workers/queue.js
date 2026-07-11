@@ -1,3 +1,4 @@
+const { logger } = require('../config/logger');
 const Queue = require('bull');
 const redisConfig = process.env.REDIS_URL
   ? { redis: process.env.REDIS_URL }
@@ -7,7 +8,7 @@ const resumeProcessingQueue = new Queue('resume-processing', redisConfig);
 const jobIngestionQueue = new Queue('job-ingestion', redisConfig);
 
 resumeProcessingQueue.on('failed', (job, err) => {
-  console.error(`[queue] Resume ${job.id} failed: ${err.message}`);
+  logger.error(`[queue] Resume ${job.id} failed: ${err.message}`);
 });
 
 module.exports = { resumeProcessingQueue, jobIngestionQueue };
