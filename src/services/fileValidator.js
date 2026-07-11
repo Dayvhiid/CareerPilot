@@ -51,7 +51,7 @@ function sanitizeFilename(filename) {
 
   // Remove path separators and null bytes
   let clean = filename
-    .replace(/[\/\\]/g, '_')
+    .replace(/[/\\]/g, '_')
     .replace(/\0/g, '')
     .replace(/^\.+/, ''); // Remove leading dots
 

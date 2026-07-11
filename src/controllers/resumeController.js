@@ -48,19 +48,7 @@ exports.uploadResume = async (req, res) => {
     const userId = req.user.id;
     const { filename, originalname, size, mimetype, path: filePath } = req.file;
 
-    // Check if user already has a resume and delete old one
-    const existingResume = await Resume.findOne({ userId });
-    if (existingResume) {
-      // Delete old file
-      try {
-        await fs.unlink(existingResume.filePath);
-      } catch (err) {
-        logger.error("Error deleting old file:", err);
-      }
-      await Resume.findByIdAndDelete(existingResume._id);
-    }
-
-    // Create new resume record
+    // Create new resume record first
     const resume = new Resume({
       userId,
       filename,
@@ -76,6 +64,25 @@ exports.uploadResume = async (req, res) => {
     });
 
     await resume.save();
+
+    // Verify new file exists on disk before cleaning up old one
+    try {
+      await fs.access(filePath);
+    } catch (err) {
+      await Resume.findByIdAndDelete(resume._id);
+      return res.status(400).json({ success: false, message: "Uploaded file is not accessible" });
+    }
+
+    // Delete old resume after new one is safely saved
+    const existingResume = await Resume.findOne({ userId, _id: { $ne: resume._id } });
+    if (existingResume) {
+      try {
+        await fs.unlink(existingResume.filePath);
+      } catch (err) {
+        logger.error("Error deleting old file:", err);
+      }
+      await Resume.findByIdAndDelete(existingResume._id);
+    }
 
     // Start text extraction in background via Bull queue
     logger.info(`Scheduling resume extraction for ${resume._id}`);

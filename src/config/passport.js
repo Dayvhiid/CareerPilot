@@ -52,8 +52,14 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         
         // Check if user exists with this email
         user = await User.findOne({ email: email });
-        
+
         if (user) {
+          // Verify OAuth email is verified by the provider before linking
+          const emailVerified = profile.emails?.[0]?.verified;
+          if (!emailVerified) {
+            logger.warn(`OAuth linking blocked: unverified email ${email} for Google user ${profile.id}`);
+            return done(null, false, { message: 'Email not verified with Google. Please verify your email and try again.' });
+          }
           // User exists with email but not Google ID - link the accounts
           user.googleId = profile.id;
 
@@ -107,8 +113,14 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
         
         // Check if user exists with this email
         user = await User.findOne({ email: email });
-        
+
         if (user) {
+          // Verify OAuth email is verified by the provider before linking
+          const emailVerified = profile.emails?.[0]?.verified;
+          if (!emailVerified) {
+            logger.warn(`OAuth linking blocked: unverified email ${email} for GitHub user ${profile.id}`);
+            return done(null, false, { message: 'Email not verified with GitHub. Please verify your email and try again.' });
+          }
           // User exists with email but not GitHub ID - link the accounts
           user.githubId = profile.id;
 

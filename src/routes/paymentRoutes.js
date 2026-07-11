@@ -73,15 +73,6 @@ async function webhookHandler(req, res) {
       return res.status(400).send('Missing reference or customer email');
     }
 
-    const user = await User.findOne({ email: customerEmail });
-    if (!user) {
-      return res.status(200).send('User not found — payment orphaned');
-    }
-
-    if (user.premium?.active && user.premium?.paystackReference === reference) {
-      return res.sendStatus(200);
-    }
-
     const metadata = data.metadata || {};
     const billing = metadata.billing || 'monthly';
     const expiresAt = new Date();
@@ -91,15 +82,31 @@ async function webhookHandler(req, res) {
       expiresAt.setDate(expiresAt.getDate() + 30);
     }
 
-    user.premium = {
-      active: true,
-      billing,
-      paystackReference: reference,
-      activatedAt: new Date(),
-      expiresAt
-    };
+    // Atomic update to prevent race condition between webhook and verify callback
+    const result = await User.findOneAndUpdate(
+      { email: customerEmail, 'premium.active': { $ne: true } },
+      {
+        $set: {
+          premium: {
+            active: true,
+            billing,
+            paystackReference: reference,
+            activatedAt: new Date(),
+            expiresAt
+          }
+        }
+      },
+      { new: true }
+    );
 
-    await user.save();
+    if (!result) {
+      const existingUser = await User.findOne({ email: customerEmail });
+      if (!existingUser) {
+        return res.status(200).send('User not found — payment orphaned');
+      }
+      return res.sendStatus(200);
+    }
+
     res.sendStatus(200);
   } catch (err) {
     logger.error('paystack webhook error:', err);
@@ -145,26 +152,30 @@ router.get('/verify', async (req, res) => {
       ));
     }
 
-    if (!user.premium?.active) {
-      const metadata = result.data.metadata || {};
-      const billing = metadata.billing || 'monthly';
-      const expiresAt = new Date();
-      if (billing === 'annual') {
-        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-      } else {
-        expiresAt.setDate(expiresAt.getDate() + 30);
-      }
-
-      user.premium = {
-        active: true,
-        billing,
-        paystackReference: ref,
-        activatedAt: new Date(),
-        expiresAt
-      };
-
-      await user.save();
+    // Atomic update to prevent race condition between webhook and verify callback
+    const metadata = result.data.metadata || {};
+    const billing = metadata.billing || 'monthly';
+    const expiresAt = new Date();
+    if (billing === 'annual') {
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    } else {
+      expiresAt.setDate(expiresAt.getDate() + 30);
     }
+
+    await User.findOneAndUpdate(
+      { _id: user._id, 'premium.active': { $ne: true } },
+      {
+        $set: {
+          premium: {
+            active: true,
+            billing,
+            paystackReference: ref,
+            activatedAt: new Date(),
+            expiresAt
+          }
+        }
+      }
+    );
 
     return res.status(200).send(renderPage(
       'Payment Successful!',

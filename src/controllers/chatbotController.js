@@ -65,6 +65,16 @@ const processMessage = async (req, res) => {
       });
     }
 
+    if (conversation.messages.length >= 500) {
+      conversation.status = 'ended';
+      conversation.lastActivity = new Date();
+      await conversation.save();
+      return res.status(400).json({
+        success: false,
+        message: 'This conversation has reached the maximum message limit. Please start a new conversation to continue building your resume.',
+      });
+    }
+
     conversation.messages.push({ role: 'user', content: message.trim(), timestamp: new Date() });
 
     if (!isResumeRelated(message, conversation.state)) {

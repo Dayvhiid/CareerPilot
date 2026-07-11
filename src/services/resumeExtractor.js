@@ -100,7 +100,7 @@ function cleanTextForNLP(text) {
     .replace(/\t/g, ' ')
     .replace(/\s{3,}/g, '\n\n')
     .replace(/\s{2}/g, ' ')
-    .replace(/[^\w\s@.,\-()\/\+\#\n]/g, ' ')
+    .replace(/[^\w\s@.,\-()/+#\n]/g, ' ')
     .trim();
 }
 
@@ -236,10 +236,10 @@ function extractSkills(text) {
     const regex = new RegExp(`\\b${skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
     if (regex.test(searchText)) skills.add(skill);
   });
-  const skillLines = searchText.match(/[•\-\*]\s*([A-Za-z\s\.\+\#\/]+)|,\s*([A-Za-z\s\.\+\#\/]+)/g);
+  const skillLines = searchText.match(/[•\-*]\s*([A-Za-z\s.+#/]+)|,\s*([A-Za-z\s.+#/]+)/g);
   if (skillLines) {
     skillLines.forEach(line => {
-      const cleanSkill = line.replace(/[•\-\*,]\s*/, '').trim();
+      const cleanSkill = line.replace(/[•\-*,]\s*/, '').trim();
       if (cleanSkill.length > 2 && cleanSkill.length < 30 && !cleanSkill.includes('@') && !cleanSkill.includes('http')) {
         if (techSkills.some(tech => tech.toLowerCase().includes(cleanSkill.toLowerCase()) || cleanSkill.toLowerCase().includes(tech.toLowerCase()))) {
           skills.add(cleanSkill);
