@@ -27,18 +27,20 @@ function convertChatDataToResume(chatData) {
     if (!Array.isArray(education)) return [];
 
     return education
-      .map(entry => normalizeEmbeddedEntry(entry, (value, item) => {
-        const degree = String(item.degree || item.title || item.name || value).trim();
-        const institution = String(item.institution || item.school || item.university || '').trim();
-        const year = String(item.year || item.date || '').trim();
-        const location = String(item.location || '').trim();
+      .map((entry) =>
+        normalizeEmbeddedEntry(entry, (value, item) => {
+          const degree = String(item.degree || item.title || item.name || value).trim();
+          const institution = String(item.institution || item.school || item.university || '').trim();
+          const year = String(item.year || item.date || '').trim();
+          const location = String(item.location || '').trim();
 
-        if (!degree && !institution && !year && !location) {
-          return null;
-        }
+          if (!degree && !institution && !year && !location) {
+            return null;
+          }
 
-        return { degree, institution, year, location };
-      }))
+          return { degree, institution, year, location };
+        })
+      )
       .filter(Boolean);
   };
 
@@ -46,29 +48,33 @@ function convertChatDataToResume(chatData) {
     if (!Array.isArray(projects)) return [];
 
     return projects
-      .map(entry => normalizeEmbeddedEntry(entry, (value, item) => ({
-        name: String(item.name || item.title || value).trim(),
-        description: String(item.description || '').trim(),
-        dates: String(item.dates || item.date || '').trim(),
-      })))
-      .filter(project => project && (project.name || project.description || project.dates));
+      .map((entry) =>
+        normalizeEmbeddedEntry(entry, (value, item) => ({
+          name: String(item.name || item.title || value).trim(),
+          description: String(item.description || '').trim(),
+          dates: String(item.dates || item.date || '').trim(),
+        }))
+      )
+      .filter((project) => project && (project.name || project.description || project.dates));
   };
 
   const normalizeCertificates = (certificates) => {
     if (!Array.isArray(certificates)) return [];
 
     return certificates
-      .map(entry => normalizeEmbeddedEntry(entry, (value, item) => ({
-        name: String(item.name || item.title || value).trim(),
-        issuer: String(item.issuer || item.organization || '').trim(),
-        date: String(item.date || item.year || '').trim(),
-      })))
-      .filter(cert => cert && (cert.name || cert.issuer || cert.date));
+      .map((entry) =>
+        normalizeEmbeddedEntry(entry, (value, item) => ({
+          name: String(item.name || item.title || value).trim(),
+          issuer: String(item.issuer || item.organization || '').trim(),
+          date: String(item.date || item.year || '').trim(),
+        }))
+      )
+      .filter((cert) => cert && (cert.name || cert.issuer || cert.date));
   };
 
   const cleanWorkExperience = (workExp) => {
     if (!Array.isArray(workExp)) return [];
-    return workExp.filter(job => job.position && job.position.trim().length > 0);
+    return workExp.filter((job) => job.position && job.position.trim().length > 0);
   };
 
   return {
@@ -92,9 +98,9 @@ function convertChatDataToResume(chatData) {
 
     achievements: Array.isArray(chatData.achievements) ? chatData.achievements : [],
 
-    linkedinUrl: chatData.links?.find(link => link.type === 'linkedin')?.url || '',
-    githubUrl: chatData.links?.find(link => link.type === 'github')?.url || '',
-    portfolioUrl: chatData.links?.find(link => link.type === 'medium')?.url || '',
+    linkedinUrl: chatData.links?.find((link) => link.type === 'linkedin')?.url || '',
+    githubUrl: chatData.links?.find((link) => link.type === 'github')?.url || '',
+    portfolioUrl: chatData.links?.find((link) => link.type === 'medium')?.url || '',
 
     languages: [],
   };

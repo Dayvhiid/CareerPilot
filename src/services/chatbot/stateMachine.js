@@ -10,7 +10,7 @@ const CONVERSATION_STATES = {
   CERTIFICATES: 'certificates',
   ACHIEVEMENTS: 'achievements',
   REVIEW: 'review',
-  COMPLETED: 'completed'
+  COMPLETED: 'completed',
 };
 
 const STATE_PROGRESS = {
@@ -25,7 +25,7 @@ const STATE_PROGRESS = {
   [CONVERSATION_STATES.CERTIFICATES]: 85,
   [CONVERSATION_STATES.ACHIEVEMENTS]: 90,
   [CONVERSATION_STATES.REVIEW]: 95,
-  [CONVERSATION_STATES.COMPLETED]: 100
+  [CONVERSATION_STATES.COMPLETED]: 100,
 };
 
 function generateSessionId() {
@@ -39,13 +39,37 @@ function isResumeRelated(message, currentState) {
 
   const lowerMessage = message.toLowerCase();
   const resumeKeywords = [
-    'resume', 'cv', 'job', 'work', 'career', 'yes', 'start', 'ready', 'help',
-    'experience', 'education', 'skill', 'build', 'create', 'need', 'want'
+    'resume',
+    'cv',
+    'job',
+    'work',
+    'career',
+    'yes',
+    'start',
+    'ready',
+    'help',
+    'experience',
+    'education',
+    'skill',
+    'build',
+    'create',
+    'need',
+    'want',
   ];
 
   const offTopicKeywords = [
-    'car', 'house', 'money', 'food', 'movie', 'game', 'weather', 'sports',
-    'politics', 'religion', 'dating', 'relationship'
+    'car',
+    'house',
+    'money',
+    'food',
+    'movie',
+    'game',
+    'weather',
+    'sports',
+    'politics',
+    'religion',
+    'dating',
+    'relationship',
   ];
 
   for (const keyword of offTopicKeywords) {
@@ -73,5 +97,5 @@ module.exports = {
   STATE_PROGRESS,
   generateSessionId,
   isResumeRelated,
-  isValidEmail
+  isValidEmail,
 };

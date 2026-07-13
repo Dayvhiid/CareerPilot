@@ -17,8 +17,9 @@ async function getRecommendations(userId) {
       jobs: [],
       totalResults: 0,
       domain: null,
-      message: 'Could not determine job domain from resume. Update your resume with a current job title or relevant skills.',
-      generatedAt: new Date().toISOString()
+      message:
+        'Could not determine job domain from resume. Update your resume with a current job title or relevant skills.',
+      generatedAt: new Date().toISOString(),
     };
   }
 
@@ -30,7 +31,7 @@ async function getRecommendations(userId) {
     jobs: sorted,
     totalResults: sorted.length,
     domain: query.domain,
-    generatedAt: new Date().toISOString()
+    generatedAt: new Date().toISOString(),
   };
 }
 

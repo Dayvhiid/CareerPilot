@@ -28,8 +28,12 @@ module.exports = { ensureIndexes };
 
 if (require.main === module) {
   require('dotenv').config();
-  mongoose.connect(process.env.MONGO_URI)
+  mongoose
+    .connect(process.env.MONGO_URI)
     .then(() => ensureIndexes())
     .then(() => process.exit(0))
-    .catch(err => { logger.error(err); process.exit(1); });
+    .catch((err) => {
+      logger.error(err);
+      process.exit(1);
+    });
 }

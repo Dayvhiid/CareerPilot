@@ -1,12 +1,12 @@
-const { logger } = require("../config/logger");
-const Resume = require("../models/Resume");
-const pdfParse = require("pdf-parse");
-const mammoth = require("mammoth");
-const fs = require("fs").promises;
-const extractor = require("../services/resumeExtractor");
-const aiService = require("../services/ai/AIService");
-const { withRetry } = require("../utils/retry");
-const { calculateScore } = require("../services/resumeScoringService");
+const { logger } = require('../config/logger');
+const Resume = require('../models/Resume');
+const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
+const fs = require('fs').promises;
+const extractor = require('../services/resumeExtractor');
+const aiService = require('../services/ai/AIService');
+const { withRetry } = require('../utils/retry');
+const { calculateScore } = require('../services/resumeScoringService');
 
 async function updateProcessingState(resumeId, { stage, progress, message }) {
   const update = {
@@ -17,7 +17,9 @@ async function updateProcessingState(resumeId, { stage, progress, message }) {
   if (typeof progress === 'number') update.processingProgress = Math.max(0, Math.min(100, progress));
   if (message) update.processingMessage = message;
 
-  logger.info(`Resume ${resumeId} -> ${stage || 'status'} (${typeof progress === 'number' ? progress + '%' : 'n/a'}): ${message || ''}`);
+  logger.info(
+    `Resume ${resumeId} -> ${stage || 'status'} (${typeof progress === 'number' ? progress + '%' : 'n/a'}): ${message || ''}`
+  );
   await Resume.findByIdAndUpdate(resumeId, update);
 }
 
@@ -25,7 +27,7 @@ async function updateProcessingState(resumeId, { stage, progress, message }) {
 exports.uploadResume = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: "No file uploaded" });
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
     const userId = req.user.id;
@@ -53,7 +55,7 @@ exports.uploadResume = async (req, res) => {
       await fs.access(filePath);
     } catch (err) {
       await Resume.findByIdAndDelete(resume._id);
-      return res.status(400).json({ success: false, message: "Uploaded file is not accessible" });
+      return res.status(400).json({ success: false, message: 'Uploaded file is not accessible' });
     }
 
     // Delete old resume after new one is safely saved
@@ -62,7 +64,7 @@ exports.uploadResume = async (req, res) => {
       try {
         await fs.unlink(existingResume.filePath);
       } catch (err) {
-        logger.error("Error deleting old file:", err);
+        logger.error('Error deleting old file:', err);
       }
       await Resume.findByIdAndDelete(existingResume._id);
     }
@@ -71,27 +73,30 @@ exports.uploadResume = async (req, res) => {
     logger.info(`Scheduling resume extraction for ${resume._id}`);
     try {
       const { resumeProcessingQueue } = require('../workers/queue');
-      await resumeProcessingQueue.add({
-        resumeId: resume._id,
-        filePath,
-        mimeType: mimetype
-      }, {
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 5000
+      await resumeProcessingQueue.add(
+        {
+          resumeId: resume._id,
+          filePath,
+          mimeType: mimetype,
+        },
+        {
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 5000,
+          },
         }
-      });
+      );
     } catch (queueErr) {
       logger.warn(`Queue unavailable, falling back to inline processing: ${queueErr.message}`);
-      extractTextFromFile(resume._id, filePath, mimetype).catch(error => {
+      extractTextFromFile(resume._id, filePath, mimetype).catch((error) => {
         logger.error(`Background resume extraction failed for ${resume._id}:`, error);
       });
     }
 
     res.json({
       success: true,
-      message: "Resume uploaded successfully",
+      message: 'Resume uploaded successfully',
       resume: {
         id: resume._id,
         filename: resume.originalName,
@@ -104,8 +109,8 @@ exports.uploadResume = async (req, res) => {
       },
     });
   } catch (error) {
-    logger.error("Upload error:", error);
-    res.status(500).json({ success: false, message: "Server error", errors: [{ message: error.message }] });
+    logger.error('Upload error:', error);
+    res.status(500).json({ success: false, message: 'Server error', errors: [{ message: error.message }] });
   }
 };
 
@@ -116,7 +121,7 @@ exports.getResume = async (req, res) => {
     const resume = await Resume.findOne({ userId }).lean();
 
     if (!resume) {
-      return res.status(404).json({ success: false, message: "Resume not found" });
+      return res.status(404).json({ success: false, message: 'Resume not found' });
     }
 
     res.json({
@@ -135,7 +140,7 @@ exports.getResume = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error", errors: [{ message: error.message }] });
+    res.status(500).json({ success: false, message: 'Server error', errors: [{ message: error.message }] });
   }
 };
 
@@ -146,21 +151,21 @@ exports.deleteResume = async (req, res) => {
     const resume = await Resume.findOne({ userId });
 
     if (!resume) {
-      return res.status(404).json({ success: false, message: "Resume not found" });
+      return res.status(404).json({ success: false, message: 'Resume not found' });
     }
 
     // Delete file
-      try {
-        await fs.unlink(resume.filePath);
+    try {
+      await fs.unlink(resume.filePath);
     } catch (err) {
-      logger.error("Error deleting file:", err);
+      logger.error('Error deleting file:', err);
     }
 
     await Resume.findByIdAndDelete(resume._id);
 
-    res.json({ success: true, message: "Resume deleted successfully" });
+    res.json({ success: true, message: 'Resume deleted successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error", errors: [{ message: error.message }] });
+    res.status(500).json({ success: false, message: 'Server error', errors: [{ message: error.message }] });
   }
 };
 
@@ -174,25 +179,25 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
       message: 'Reading uploaded file',
     });
 
-    let extractedText = "";
+    let extractedText = '';
 
     // Extract text based on file type
-    if (mimeType === "application/pdf") {
+    if (mimeType === 'application/pdf') {
       const dataBuffer = await fs.readFile(filePath);
       const data = await pdfParse(dataBuffer);
       extractedText = data.text;
-    } else if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+    } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       const result = await mammoth.extractRawText({ path: filePath });
       extractedText = result.value;
-    } else if (mimeType === "application/msword") {
+    } else if (mimeType === 'application/msword') {
       try {
         const result = await mammoth.extractRawText({ path: filePath });
         extractedText = result.value;
       } catch (err) {
-        logger.warn("Error with DOC file, using fallback:", err);
-        extractedText = "Unable to extract text from this DOC file format";
+        logger.warn('Error with DOC file, using fallback:', err);
+        extractedText = 'Unable to extract text from this DOC file format';
       }
-    } else if (mimeType === "text/plain") {
+    } else if (mimeType === 'text/plain') {
       extractedText = await fs.readFile(filePath, 'utf8');
     }
 
@@ -202,11 +207,11 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
       message: 'Text extracted successfully, analyzing content',
     });
 
-    logger.info("Extracted text length:", extractedText.length);
-    logger.info("Processing with AI extraction...");
+    logger.info('Extracted text length:', extractedText.length);
+    logger.info('Processing with AI extraction...');
 
     let extractedData = null;
-    let processingMethod = "unknown";
+    let processingMethod = 'unknown';
 
     // Extract structured data using AI Service (with fallback chain)
     try {
@@ -217,25 +222,29 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
       });
       extractedData = await withRetry(() => aiService.extractResumeData(extractedText), {
         maxRetries: 2,
-        baseDelay: 2000
+        baseDelay: 2000,
       });
       if (extractedData && typeof extractedData === 'object') {
-        processingMethod = "AI Service";
-        logger.info("Successfully processed with AI Service");
-        logger.info("Skills found:", extractedData.skills?.length || 0);
-        logger.info("Job titles found:", extractedData.jobTitles?.length || 0);
-        logger.info("Companies found:", extractedData.companies?.length || 0);
-        logger.info("Name extracted:", extractedData.name || 'Not found');
-        logger.info("Email extracted:", extractedData.email || 'Not found');
+        processingMethod = 'AI Service';
+        logger.info('Successfully processed with AI Service');
+        logger.info('Skills found:', extractedData.skills?.length || 0);
+        logger.info('Job titles found:', extractedData.jobTitles?.length || 0);
+        logger.info('Companies found:', extractedData.companies?.length || 0);
+        logger.info('Name extracted:', extractedData.name || 'Not found');
+        logger.info('Email extracted:', extractedData.email || 'Not found');
       }
     } catch (aiError) {
-      logger.warn("AI extraction failed:", aiError.message);
+      logger.warn('AI extraction failed:', aiError.message);
       extractedData = null;
     }
 
     // Validate Gemini actually returned data
     if (extractedData && typeof extractedData === 'object') {
-      const hasContent = extractedData.name || extractedData.skills?.length > 0 || extractedData.jobTitles?.length > 0 || extractedData.summary;
+      const hasContent =
+        extractedData.name ||
+        extractedData.skills?.length > 0 ||
+        extractedData.jobTitles?.length > 0 ||
+        extractedData.summary;
       if (!hasContent) {
         logger.warn('AI returned valid JSON but all fields are empty — treating as extraction failure');
         extractedData = null;
@@ -262,15 +271,15 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
       basic.jobTitles = experience.titles || [];
       basic.companies = experience.companies || [];
       extractedData = basic;
-      processingMethod = "Text fallback";
+      processingMethod = 'Text fallback';
       logger.info(`Text fallback: name=${basic.name}, skills=${basic.skills.length}, titles=${basic.jobTitles.length}`);
     }
 
     // Ultimate fallback: empty structure
     if (!extractedData) {
-      logger.warn("No extraction method available, using empty structure");
+      logger.warn('No extraction method available, using empty structure');
       extractedData = extractor.getEmptyResumeData();
-      processingMethod = "Empty fallback";
+      processingMethod = 'Empty fallback';
     }
 
     await updateProcessingState(resumeId, {
@@ -281,9 +290,9 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
 
     // Ensure extractedData has the required structure
     if (!extractedData || typeof extractedData !== 'object') {
-      logger.warn("Invalid extracted data, using empty structure");
+      logger.warn('Invalid extracted data, using empty structure');
       extractedData = extractor.getEmptyResumeData();
-      processingMethod = "Empty fallback";
+      processingMethod = 'Empty fallback';
     }
 
     // Add processing metadata
@@ -327,20 +336,19 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
     }
 
     logger.info(`Resume ${resumeId} processed successfully with ${processingMethod}`);
-    logger.info("Extracted data preview:", {
+    logger.info('Extracted data preview:', {
       name: extractedData.name,
       email: extractedData.email,
       location: extractedData.location,
       skillsCount: extractedData.skills?.length || 0,
       jobTitlesCount: extractedData.jobTitles?.length || 0,
-      score: resumeScore
+      score: resumeScore,
     });
-
   } catch (error) {
-    logger.error("Text extraction error:", error);
+    logger.error('Text extraction error:', error);
     await Resume.findByIdAndUpdate(resumeId, {
       isProcessed: false,
-      extractedText: "Error extracting text: " + error.message,
+      extractedText: 'Error extracting text: ' + error.message,
       processingError: error.message,
       processingStage: 'error',
       processingProgress: 100,
@@ -351,4 +359,3 @@ async function extractTextFromFile(resumeId, filePath, mimeType) {
 }
 
 exports.extractTextFromFile = extractTextFromFile;
-

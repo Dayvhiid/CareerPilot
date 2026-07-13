@@ -1,8 +1,8 @@
-const { logger } = require("../config/logger");
-const User = require("../models/User");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const crypto = require("crypto");
+const { logger } = require('../config/logger');
+const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '7d';
@@ -10,27 +10,23 @@ const REFRESH_TOKEN_EXPIRY = '7d';
 const revokedTokens = new Set();
 
 function generateAccessToken(userId) {
-  return jwt.sign(
-    { id: userId, type: 'access' },
-    process.env.JWT_ACCESS_SECRET,
-    { expiresIn: process.env.JWT_ACCESS_EXPIRY || ACCESS_TOKEN_EXPIRY }
-  );
+  return jwt.sign({ id: userId, type: 'access' }, process.env.JWT_ACCESS_SECRET, {
+    expiresIn: process.env.JWT_ACCESS_EXPIRY || ACCESS_TOKEN_EXPIRY,
+  });
 }
 
 function generateRefreshToken(userId) {
   const tokenId = crypto.randomBytes(32).toString('hex');
-  const token = jwt.sign(
-    { id: userId, type: 'refresh', tokenId },
-    process.env.JWT_REFRESH_SECRET,
-    { expiresIn: REFRESH_TOKEN_EXPIRY }
-  );
+  const token = jwt.sign({ id: userId, type: 'refresh', tokenId }, process.env.JWT_REFRESH_SECRET, {
+    expiresIn: REFRESH_TOKEN_EXPIRY,
+  });
   return { token, tokenId };
 }
 
 function sendError(res, status, message) {
   res.status(status).json({
     success: false,
-    message: message
+    message: message,
   });
 }
 
@@ -40,7 +36,7 @@ exports.register = async (req, res) => {
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return sendError(res, 400, "User already exists");
+      return sendError(res, 400, 'User already exists');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -50,11 +46,11 @@ exports.register = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "User registered successfully"
+      message: 'User registered successfully',
     });
   } catch (error) {
     logger.error('Registration error:', error.message);
-    sendError(res, 500, "Server error during registration");
+    sendError(res, 500, 'Server error during registration');
   }
 };
 
@@ -64,12 +60,12 @@ exports.login = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return sendError(res, 401, "Invalid credentials");
+      return sendError(res, 401, 'Invalid credentials');
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return sendError(res, 401, "Invalid credentials");
+      return sendError(res, 401, 'Invalid credentials');
     }
 
     const accessToken = generateAccessToken(user._id);
@@ -79,7 +75,7 @@ exports.login = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.json({
@@ -88,12 +84,12 @@ exports.login = async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email
-      }
+        email: user.email,
+      },
     });
   } catch (error) {
     logger.error('Login error:', error.message);
-    sendError(res, 500, "Server error during login");
+    sendError(res, 500, 'Server error during login');
   }
 };
 
@@ -101,19 +97,19 @@ exports.refreshToken = async (req, res) => {
   try {
     const oldRefreshToken = req.cookies.refreshToken;
     if (!oldRefreshToken) {
-      return sendError(res, 401, "Refresh token missing");
+      return sendError(res, 401, 'Refresh token missing');
     }
 
     let decoded;
     try {
       decoded = jwt.verify(oldRefreshToken, process.env.JWT_REFRESH_SECRET);
     } catch (err) {
-      return sendError(res, 401, "Invalid or expired refresh token");
+      return sendError(res, 401, 'Invalid or expired refresh token');
     }
 
     if (revokedTokens.has(decoded.tokenId)) {
       await revokeAllUserTokens(decoded.id);
-      return sendError(res, 401, "Token has been revoked. Please login again.");
+      return sendError(res, 401, 'Token has been revoked. Please login again.');
     }
 
     revokedTokens.add(decoded.tokenId);
@@ -125,17 +121,17 @@ exports.refreshToken = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.json({
       success: true,
       accessToken,
-      tokenId: newTokenId
+      tokenId: newTokenId,
     });
   } catch (error) {
     logger.error('Token refresh error:', error);
-    sendError(res, 500, "Server error during token refresh");
+    sendError(res, 500, 'Server error during token refresh');
   }
 };
 
@@ -148,6 +144,6 @@ exports.logout = (req, res) => {
   res.clearCookie('XSRF-TOKEN');
   res.json({
     success: true,
-    message: "Logged out successfully"
+    message: 'Logged out successfully',
   });
 };

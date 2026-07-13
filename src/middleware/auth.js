@@ -17,7 +17,7 @@ module.exports = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'Authentication required',
-        code: 'AUTH_REQUIRED'
+        code: 'AUTH_REQUIRED',
       });
     }
 
@@ -25,13 +25,11 @@ module.exports = async (req, res, next) => {
     try {
       decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
     } catch (err) {
-      const message = err.name === 'TokenExpiredError'
-        ? 'Access token expired'
-        : 'Invalid access token';
+      const message = err.name === 'TokenExpiredError' ? 'Access token expired' : 'Invalid access token';
       return res.status(401).json({
         success: false,
         message,
-        code: err.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID'
+        code: err.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID',
       });
     }
 
@@ -39,7 +37,7 @@ module.exports = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'Invalid token type',
-        code: 'TOKEN_TYPE_INVALID'
+        code: 'TOKEN_TYPE_INVALID',
       });
     }
 
@@ -48,7 +46,7 @@ module.exports = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'User not found',
-        code: 'USER_NOT_FOUND'
+        code: 'USER_NOT_FOUND',
       });
     }
 
@@ -59,7 +57,7 @@ module.exports = async (req, res, next) => {
     res.status(500).json({
       success: false,
       message: 'Authentication error',
-      code: 'AUTH_ERROR'
+      code: 'AUTH_ERROR',
     });
   }
 };

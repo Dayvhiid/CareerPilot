@@ -95,5 +95,5 @@ module.exports = {
   chatbotLimiter,
   uploadLimiter,
   apiLimiter,
-  cacheLimiter
+  cacheLimiter,
 };

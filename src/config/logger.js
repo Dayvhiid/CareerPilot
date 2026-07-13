@@ -27,9 +27,7 @@ const devFormat = winston.format.combine(
   winston.format.timestamp({ format: 'HH:mm:ss' }),
   winston.format.printf(({ timestamp, level, message, requestId, ...rest }) => {
     const rid = requestId ? ` [${requestId}]` : '';
-    const extra = Object.keys(rest).length > 0
-      ? ` ${JSON.stringify(rest, null, 0).substring(0, 500)}`
-      : '';
+    const extra = Object.keys(rest).length > 0 ? ` ${JSON.stringify(rest, null, 0).substring(0, 500)}` : '';
     return `${timestamp}${rid} ${level}: ${message}${extra}`;
   })
 );
@@ -64,11 +62,11 @@ logger.stream = {
 const originalConsole = {
   log: console.log.bind(console),
   error: console.error.bind(console),
-  warn: console.warn.bind(console)
+  warn: console.warn.bind(console),
 };
 
-console.log = (...args) => logger.info(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '));
-console.error = (...args) => logger.error(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '));
-console.warn = (...args) => logger.warn(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '));
+console.log = (...args) => logger.info(args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' '));
+console.error = (...args) => logger.error(args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' '));
+console.warn = (...args) => logger.warn(args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' '));
 
 module.exports = { logger, originalConsole };

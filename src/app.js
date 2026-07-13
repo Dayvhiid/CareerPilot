@@ -32,13 +32,19 @@ initializeSentry(app);
 setupSecurity(app);
 
 // CORS middleware - Allow requests from frontend
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5500,http://127.0.0.1:5500,http://localhost:3000,http://localhost:4000').split(',').map(s => s.trim());
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
-}));
+const allowedOrigins = (
+  process.env.CORS_ORIGINS || 'http://localhost:5500,http://127.0.0.1:5500,http://localhost:3000,http://localhost:4000'
+)
+  .split(',')
+  .map((s) => s.trim());
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+  })
+);
 
 // Serve static files
 app.use('/public', express.static(path.join(__dirname, '../public')));
@@ -47,10 +53,11 @@ app.use('/public', express.static(path.join(__dirname, '../public')));
 app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), paymentRoutes.webhookHandler);
 
 // HTTP request logging (morgan)
-app.use(morgan(
-  ':method :url :status :res[content-length] - :response-time ms',
-  { stream: { write: (message) => logger.http(message.trim()) } }
-));
+app.use(
+  morgan(':method :url :status :res[content-length] - :response-time ms', {
+    stream: { write: (message) => logger.http(message.trim()) },
+  })
+);
 
 // Metrics collection
 app.use(metricsMiddleware);
@@ -73,9 +80,9 @@ const sessionConfig = {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'strict',
-    maxAge: 24 * 60 * 60 * 1000
+    maxAge: 24 * 60 * 60 * 1000,
   },
-  name: 'careerpilot.sid'
+  name: 'careerpilot.sid',
 };
 if (redisClient) {
   sessionConfig.store = new RedisStore({ client: redisClient });
@@ -94,7 +101,7 @@ app.use((req, res, next) => {
       res.cookie('XSRF-TOKEN', crypto.randomBytes(32).toString('hex'), {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
+        sameSite: 'strict',
       });
     }
     return next();

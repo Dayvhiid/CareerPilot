@@ -11,19 +11,28 @@ async function generateProfessionalPDF(data) {
   let y = height - 50;
 
   page.drawText(data.name || 'Your Name', {
-    x: 50, y, size: 24, color: rgb(0, 0, 0)
+    x: 50,
+    y,
+    size: 24,
+    color: rgb(0, 0, 0),
   });
   y -= 30;
 
   page.drawText(data.email || '', {
-    x: 50, y, size: 10, color: rgb(0.3, 0.3, 0.3)
+    x: 50,
+    y,
+    size: 10,
+    color: rgb(0.3, 0.3, 0.3),
   });
   y -= 20;
 
   if (data.summary) {
     y -= 10;
     page.drawText(data.summary, {
-      x: 50, y, size: 10, color: rgb(0.2, 0.2, 0.2)
+      x: 50,
+      y,
+      size: 10,
+      color: rgb(0.2, 0.2, 0.2),
     });
   }
 

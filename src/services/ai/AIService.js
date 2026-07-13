@@ -14,7 +14,7 @@ class AIService {
       const GeminiProvider = require('./providers/gemini');
       this.primaryExtractor = new GeminiProvider({
         apiKey: process.env.GEMINI_API_KEY,
-        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
       });
       this.embeddingService = this.primaryExtractor;
     }
@@ -23,13 +23,13 @@ class AIService {
       const GroqProvider = require('./providers/groq');
       this.fallbackExtractor = new GroqProvider({
         apiKey: process.env.GROQ_API_KEY,
-        model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
+        model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
       });
       if (!this.embeddingService && process.env.GEMINI_API_KEY) {
         const GeminiProvider = require('./providers/gemini');
         this.embeddingService = new GeminiProvider({
           apiKey: process.env.GEMINI_API_KEY,
-          model: 'gemini-embedding-2'
+          model: 'gemini-embedding-2',
         });
       }
     }
@@ -38,7 +38,7 @@ class AIService {
       const XaiProvider = require('./providers/xai');
       this.fallbackExtractor = new XaiProvider({
         apiKey: process.env.XAI_API_KEY,
-        model: process.env.XAI_MODEL || 'grok-4.3'
+        model: process.env.XAI_MODEL || 'grok-4.3',
       });
     }
   }
