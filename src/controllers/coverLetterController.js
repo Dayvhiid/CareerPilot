@@ -2,8 +2,7 @@ const { logger } = require('../config/logger');
 const Resume = require('../models/Resume');
 const JobListing = require('../models/JobListing');
 const huggingFaceService = require('../services/huggingFaceService');
-const mongoose = require('mongoose');
-const { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } = require('docx');
+const { Document, Packer, Paragraph, TextRun, AlignmentType } = require('docx');
 
 
 
@@ -146,7 +145,7 @@ exports.testHuggingFace = async (req, res) => {
  */
 exports.downloadCoverLetter = async (req, res) => {
   try {
-    const { coverLetterText, jobTitle, company, applicantName } = req.body;
+    const { coverLetterText, jobTitle, company } = req.body;
     
     if (!coverLetterText) {
       return res.status(400).json({

@@ -1,9 +1,6 @@
 const { logger } = require('../config/logger');
 const UserJob = require('../models/UserJob');
-const JobListing = require('../models/JobListing');
-const resumeQueryService = require('../services/resumeQueryService');
 const jobRetrievalService = require('../services/jobRetrievalService');
-const jobRankingService = require('../services/jobRankingService');
 const jobIngestionService = require('../services/jobIngestionService');
 const cacheService = require('../services/cacheService');
 const recommendationService = require('../services/recommendationService');

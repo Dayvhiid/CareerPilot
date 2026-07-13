@@ -65,7 +65,7 @@ class HuggingFaceService {
   /**
    * Build a comprehensive prompt for cover letter generation
    */
-  buildCoverLetterPrompt(jobData, resumeData, userPreferences) {
+  buildCoverLetterPrompt(jobData, resumeData, _userPreferences) {
     const currentDate = new Date().toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'long', 
@@ -96,7 +96,6 @@ class HuggingFaceService {
     
     // Analyze job description for key requirements
     let jobRequirements = [];
-    let companyInfo = '';
     
     if (jobData.description) {
       const desc = jobData.description.toLowerCase();
@@ -223,7 +222,7 @@ Generate the final polished cover letter now.
     const formattedParagraphs = paragraphs.map(p => p.trim()).filter(p => p.length > 0);
     
     // Ensure proper closing
-    let lastParagraph = formattedParagraphs[formattedParagraphs.length - 1];
+    const lastParagraph = formattedParagraphs[formattedParagraphs.length - 1];
     if (!lastParagraph.includes('Sincerely,') && !lastParagraph.includes('Best regards,') && !lastParagraph.includes('Thank you')) {
       formattedParagraphs.push(`Thank you for considering my application. I look forward to hearing from you soon.\n\nSincerely,\n${resumeData.name || '[Your Name]'}`);
     }

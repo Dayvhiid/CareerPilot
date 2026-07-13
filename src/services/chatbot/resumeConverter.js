@@ -66,19 +66,6 @@ function convertChatDataToResume(chatData) {
       .filter(cert => cert && (cert.name || cert.issuer || cert.date));
   };
 
-  const cleanLinks = (links) => {
-    if (!Array.isArray(links)) return [];
-    return links.map(link => {
-      if (typeof link === 'string') {
-        return { type: 'other', url: link };
-      }
-      return {
-        type: link.type || 'other',
-        url: link.url || ''
-      };
-    }).filter(link => link.url.trim().length > 0);
-  };
-
   const cleanWorkExperience = (workExp) => {
     if (!Array.isArray(workExp)) return [];
     return workExp.filter(job => job.position && job.position.trim().length > 0);

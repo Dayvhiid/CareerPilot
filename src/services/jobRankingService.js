@@ -57,7 +57,7 @@ Respond with ONLY a JSON array of objects, one per job, in order:
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       logger.warn('jobRankingService: no JSON array in response — returning unscored');
-      return jobs.map((j, i) => ({ ...j, matchScore: 50, matchReasons: ['Failed to parse AI response'] }));
+      return jobs.map((j, _i) => ({ ...j, matchScore: 50, matchReasons: ['Failed to parse AI response'] }));
     }
 
     const scores = JSON.parse(jsonMatch[0]);

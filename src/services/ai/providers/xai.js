@@ -27,7 +27,7 @@ class XaiProvider {
     return response.data.choices?.[0]?.message?.content;
   }
 
-  async embed(text) {
+  async embed(_text) {
     return null;
   }
 }

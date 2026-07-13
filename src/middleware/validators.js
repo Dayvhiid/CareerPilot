@@ -3,7 +3,7 @@
  * Reusable validation middleware using express-validator
  */
 
-const { body, param, query, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 
 /**
  * Middleware to handle validation errors

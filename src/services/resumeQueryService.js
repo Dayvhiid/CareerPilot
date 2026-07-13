@@ -27,7 +27,6 @@ const DOMAIN_KEYWORDS = {
 function determineDomain(resumeData) {
   const title = (resumeData.currentJobTitle || '').toLowerCase();
   const titles = (resumeData.jobTitles || []).map(t => t.toLowerCase());
-  const skills = (resumeData.skills || []).map(s => s.toLowerCase());
 
   if (title) {
     for (const [domain, keywords] of Object.entries(DOMAIN_KEYWORDS)) {

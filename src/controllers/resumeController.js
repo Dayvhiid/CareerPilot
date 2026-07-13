@@ -3,8 +3,6 @@ const Resume = require("../models/Resume");
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
 const fs = require("fs").promises;
-const path = require("path");
-const mongoose = require("mongoose");
 const extractor = require("../services/resumeExtractor");
 const aiService = require("../services/ai/AIService");
 const { withRetry } = require("../utils/retry");
@@ -21,21 +19,6 @@ async function updateProcessingState(resumeId, { stage, progress, message }) {
 
   logger.info(`Resume ${resumeId} -> ${stage || 'status'} (${typeof progress === 'number' ? progress + '%' : 'n/a'}): ${message || ''}`);
   await Resume.findByIdAndUpdate(resumeId, update);
-}
-
-function withTimeout(promise, timeoutMs, label) {
-  let timeoutId;
-
-  const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => {
-      reject(new Error(`${label} timed out after ${timeoutMs / 1000} seconds`));
-    }, timeoutMs);
-  });
-
-  return Promise.race([
-    promise.finally(() => clearTimeout(timeoutId)),
-    timeoutPromise,
-  ]);
 }
 
 // Upload and process resume

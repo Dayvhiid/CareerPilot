@@ -231,7 +231,7 @@ function extractSkills(text) {
     'Selenium', 'Jest', 'Mocha', 'Cypress', 'Playwright', 'JUnit', 'PyTest'
   ];
   const skillsSection = text.match(/(?:skills|technical skills|core competencies|technologies|expertise)[:\s]+([\s\S]*?)(?:\n\s*\n|experience|education|$)/i);
-  let searchText = skillsSection ? skillsSection[1] : text;
+  const searchText = skillsSection ? skillsSection[1] : text;
   techSkills.forEach(skill => {
     const regex = new RegExp(`\\b${skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
     if (regex.test(searchText)) skills.add(skill);
@@ -361,7 +361,7 @@ function extractSummary(text) {
   for (const pattern of summaryPatterns) {
     const match = text.match(pattern);
     if (match && match[1]) {
-      let summary = match[1].trim();
+      const summary = match[1].trim();
       if (summary.length > 50 && summary.length < 800) return summary;
     }
   }
@@ -382,14 +382,14 @@ function extractSummaryEnhanced(text) {
   for (const pattern of summaryPatterns) {
     const match = text.match(pattern);
     if (match && match[1]) {
-      let summary = match[1].trim().replace(/\s+/g, ' ');
+      const summary = match[1].trim().replace(/\s+/g, ' ');
       if (summary.length > 50 && summary.length < 1000) return summary;
     }
   }
   return '';
 }
 
-function generateProfessionalSummary(data, originalText) {
+function generateProfessionalSummary(data, _originalText) {
   try {
     if (data.summary && data.summary.length > 50) return data.summary.length > 800 ? data.summary.substring(0, 800) + '...' : data.summary;
     const parts = [];

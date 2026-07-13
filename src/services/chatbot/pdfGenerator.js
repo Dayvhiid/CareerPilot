@@ -6,7 +6,7 @@ async function generateProfessionalPDF(data) {
   doc.registerFontkit(fontkit);
 
   const page = doc.addPage([595.28, 841.89]);
-  const { width, height } = page.getSize();
+  const { height } = page.getSize();
 
   let y = height - 50;
 
