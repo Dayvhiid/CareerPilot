@@ -14,6 +14,7 @@ const generalLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  skip: (_req) => process.env.NODE_ENV === 'test',
 });
 
 /**
@@ -24,6 +25,45 @@ const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 attempts
   message: 'Too many authentication attempts. Please try again after 15 minutes.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (_req) => process.env.NODE_ENV === 'test',
+});
+
+/**
+ * Refresh endpoint limiter
+ * 30 refreshes per 15 minutes
+ */
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: 'Too many token refresh attempts. Please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (_req) => process.env.NODE_ENV === 'test',
+});
+
+/**
+ * Password reset request limiter
+ * 5 requests per hour
+ */
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: 'Too many password reset requests. Please try again after 1 hour.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (_req) => process.env.NODE_ENV === 'test',
+});
+
+/**
+ * Password reset submission limiter
+ * 5 attempts per hour
+ */
+const resetPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: 'Too many password reset attempts. Please try again after 1 hour.',
   standardHeaders: true,
   legacyHeaders: false,
   skip: (_req) => process.env.NODE_ENV === 'test',
@@ -91,6 +131,9 @@ const cacheLimiter = rateLimit({
 module.exports = {
   generalLimiter,
   authLimiter,
+  refreshLimiter,
+  forgotPasswordLimiter,
+  resetPasswordLimiter,
   registrationLimiter,
   chatbotLimiter,
   uploadLimiter,

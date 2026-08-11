@@ -5,6 +5,7 @@ const connectDB = require('./src/config/db');
 const secrets = require('./src/config/secrets');
 const { validateEnv } = require('./src/config/validateEnv');
 const redis = require('./src/config/redis');
+const { initializeAgents } = require('./src/agents/init');
 const app = require('./src/app');
 
 const PORT = process.env.PORT || 4000;
@@ -14,7 +15,11 @@ async function startServer() {
     await secrets.initialize();
     validateEnv();
     await connectDB();
+    await initializeAgents();
     await redis.connect?.();
+
+    // Start Bull queue workers (needs DB + Redis connected)
+    require('./src/workers/resumeProcessor');
 
     const server = app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT} (${process.env.NODE_ENV || 'development'})`);

@@ -694,9 +694,9 @@
       <span class="logo-text">CareerPilot</span>
     </a>
     <nav class="nav" aria-label="Main navigation">
-      <a href="/resume">Resume</a>
-      <a href="/jobs" class="active">Find Jobs</a>
-      <a href="/chatbot">AI Coach</a>
+      <a href="/resume/resume.html">Resume</a>
+      <a href="/jobs/jobs.html" class="active">Find Jobs</a>
+      <a href="/chatbot/chatbot.html">AI Coach</a>
     </nav>
     <div class="header-actions">
       <button class="btn-icon" onclick="goBack()" aria-label="Go back" title="Back">
@@ -797,7 +797,7 @@
             <div class="empty-icon"><i class="ti ti-briefcase-off" aria-hidden="true"></i></div>
             <p class="empty-title">No matched roles yet</p>
             <p class="empty-sub">Upload your resume so our AI can match you with the most relevant opportunities in your field.</p>
-            <a href="/resume" class="btn-ghost" style="border-color:var(--bm);color:var(--gold);">
+            <a href="/resume/resume.html" class="btn-ghost" style="border-color:var(--bm);color:var(--gold);">
               <i class="ti ti-upload" aria-hidden="true"></i> Upload Resume
             </a>
           </div>
@@ -854,7 +854,7 @@
               <p style="font-family:'DM Sans',sans-serif;font-weight:300;font-size:0.83rem;color:var(--ts);line-height:1.65;">
                 A tailored cover letter increases your callback rate by up to <strong style="color:var(--tp);font-weight:500;">3×</strong>. Use the generator on each role you apply to.
               </p>
-              <a href="/chatbot" style="display:inline-flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:300;color:var(--gold);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='var(--gold-b)'" onmouseout="this.style.color='var(--gold)'">
+              <a href="/chatbot/chatbot.html" style="display:inline-flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:300;color:var(--gold);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='var(--gold-b)'" onmouseout="this.style.color='var(--gold)'">
                 <i class="ti ti-robot" aria-hidden="true"></i> Open AI Career Coach →
               </a>
             </div>
@@ -931,7 +931,6 @@
        GLOBALS
     ═════════════════════════════════════════ */
     const API_BASE   = '/api';
-    const token      = localStorage.getItem('token') || '';
     let currentJobs  = [];
     let activeFilter = 'all';
     let appliedCount = 0;
@@ -955,7 +954,7 @@
 
       try {
         const res  = await fetch(`${API_BASE}/recommendations`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 'Content-Type': 'application/json' }
         });
         const data = await res.json();
 
@@ -1098,7 +1097,7 @@
         try {
           await fetch(`${API_BASE}/recommendations/${jobId}/apply`, {
             method: 'POST',
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' }
           });
         } catch (err) { console.error('Apply track error:', err); }
       }
@@ -1176,7 +1175,7 @@
       try {
         const res  = await fetch(`${API_BASE}/coverletter/generate/${jobId}`, {
           method:  'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ jobData }),
         });
         const data = await res.json();
@@ -1207,7 +1206,7 @@
       try {
         const res  = await fetch(`${API_BASE}/coverletter/download`, {
           method:  'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({
             coverLetterText: text,
             jobTitle: job.title, company: job.company,

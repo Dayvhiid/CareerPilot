@@ -5,9 +5,9 @@
  */
 const { logger } = require('./logger');
 
-const requiredVars = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'];
+const requiredVars = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'SESSION_SECRET'];
 
-const optionalVars = ['NODE_ENV', 'SESSION_SECRET', 'HUGGINGFACE_API_KEY', 'CORS_ORIGINS', 'PORT', 'REDIS_URL'];
+const optionalVars = ['NODE_ENV', 'HUGGINGFACE_API_KEY', 'CORS_ORIGINS', 'PORT', 'REDIS_URL'];
 
 /**
  * Validate environment variables

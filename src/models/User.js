@@ -20,6 +20,26 @@ const userSchema = new mongoose.Schema(
       unique: true,
       sparse: true,
     },
+    emailVerified: {
+      type: Boolean,
+      default: true,
+    },
+    emailVerificationToken: {
+      type: String,
+      select: false,
+    },
+    emailVerificationExpires: {
+      type: Date,
+      select: false,
+    },
+    passwordResetToken: {
+      type: String,
+      select: false,
+    },
+    passwordResetExpires: {
+      type: Date,
+      select: false,
+    },
     premium: {
       active: { type: Boolean, default: false },
       billing: { type: String, enum: ['monthly', 'annual', null], default: null },

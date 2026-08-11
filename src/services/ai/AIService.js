@@ -60,6 +60,24 @@ class AIService {
     throw lastError || new Error('All AI providers failed');
   }
 
+  async generate(prompt, options = {}) {
+    const providers = [this.primaryExtractor, this.fallbackExtractor].filter(Boolean);
+    if (providers.length === 0) {
+      throw new Error('No AI providers configured');
+    }
+    let lastError;
+    for (const provider of providers) {
+      try {
+        const response = await withRetry(() => provider.generate(prompt, options));
+        return response;
+      } catch (err) {
+        lastError = err;
+        logger.warn(`[ai] Generate failed: ${err.message}`);
+      }
+    }
+    throw lastError || new Error('All AI providers failed');
+  }
+
   async computeEmbedding(text) {
     if (!this.embeddingService) {
       logger.warn('[ai] No embedding service available, returning zero vector');

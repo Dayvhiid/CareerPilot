@@ -48,6 +48,36 @@ const authValidators = {
     body('password').notEmpty().withMessage('Password is required'),
     handleValidationErrors,
   ],
+
+  forgotPassword: [
+    body('email').isEmail().withMessage('Invalid email format').normalizeEmail().toLowerCase(),
+    handleValidationErrors,
+  ],
+
+  resetPassword: [
+    body('token').isLength({ min: 32, max: 128 }).withMessage('Invalid reset token'),
+    body('newPassword')
+      .isLength({ min: 8 })
+      .withMessage('Password must be at least 8 characters')
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+      .withMessage('Password must contain uppercase, lowercase, and numbers'),
+    handleValidationErrors,
+  ],
+
+  verifyEmail: [
+    body('email').isEmail().withMessage('Invalid email format').normalizeEmail().toLowerCase(),
+    handleValidationErrors,
+  ],
+
+  changePassword: [
+    body('currentPassword').notEmpty().withMessage('Current password is required'),
+    body('newPassword')
+      .isLength({ min: 8 })
+      .withMessage('Password must be at least 8 characters')
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+      .withMessage('Password must contain uppercase, lowercase, and numbers'),
+    handleValidationErrors,
+  ],
 };
 
 /**

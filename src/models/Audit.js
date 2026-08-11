@@ -15,6 +15,8 @@ const auditSchema = new mongoose.Schema(
         'user.register',
         'user.login',
         'user.logout',
+        'user.password.change',
+        'user.email.verify',
         'user.delete',
         'user.premium.upgrade',
         'user.premium.downgrade',

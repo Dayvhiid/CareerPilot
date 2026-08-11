@@ -9,11 +9,12 @@ const { logger } = require('./config/logger');
 const requestId = require('./middleware/requestId');
 const passport = require('./config/passport');
 const session = require('express-session');
-const { RedisStore } = require('connect-redis');
+const RedisSessionStore = require('./config/sessionStore');
 const { setupSecurity } = require('./middleware/security');
 const { initializeSentry } = require('./config/sentry');
 const { metricsMiddleware, metricsRouter: addMetricsRoute } = require('./config/metrics');
 const requestLogger = require('./middleware/requestLogger');
+const { generalLimiter } = require('./middleware/rateLimiters');
 const authRoutes = require('./routes/authRoutes');
 const oauthRoutes = require('./routes/oauthRoutes');
 const resumeRoutes = require('./routes/resumeRoutes');
@@ -22,6 +23,7 @@ const coverLetterRoutes = require('./routes/coverLetterRoutes');
 const chatbotRoutes = require('./routes/chatbotRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const agentRoutes = require('./routes/agentRoutes');
 
 const app = express();
 
@@ -70,6 +72,9 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(requestId);
 
+// Global rate limit (per IP) for all API traffic
+app.use('/api', generalLimiter);
+
 // Sessions (needed for OAuth) — Redis-backed if available
 const redisClient = require('./config/redis').getClient();
 const sessionConfig = {
@@ -85,7 +90,7 @@ const sessionConfig = {
   name: 'careerpilot.sid',
 };
 if (redisClient) {
-  sessionConfig.store = new RedisStore({ client: redisClient });
+  sessionConfig.store = new RedisSessionStore({ client: redisClient });
 }
 app.use(session(sessionConfig));
 
@@ -93,33 +98,10 @@ app.use(session(sessionConfig));
 app.use(passport.initialize());
 app.use(passport.session());
 
-// CSRF protection — double-submit cookie pattern
-app.use((req, res, next) => {
-  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
-    if (!req.cookies['XSRF-TOKEN']) {
-      const crypto = require('crypto');
-      res.cookie('XSRF-TOKEN', crypto.randomBytes(32).toString('hex'), {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-      });
-    }
-    return next();
-  }
-
-  const headerToken = req.headers['x-csrf-token'];
-  const cookieToken = req.cookies['XSRF-TOKEN'];
-  if (headerToken && cookieToken && headerToken === cookieToken) {
-    return next();
-  }
-
-  // Skip CSRF for API routes that use bearer tokens (stateless)
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-    return next();
-  }
-
-  res.status(403).json({ success: false, message: 'CSRF token validation failed' });
-});
+// CSRF protection relies on SameSite=strict on all auth cookies (accessToken,
+// refreshToken, and the session cookie). Cross-site requests cannot carry
+// these cookies, so state-changing cookie-authenticated endpoints are safe
+// without a double-submit token. See docs/auth/authentication_audit.md (M1).
 
 // Routes
 const metricsRoute = require('express').Router();
@@ -133,6 +115,7 @@ app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/coverletter', coverLetterRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/health', healthRoutes);
+app.use('/api/agents', agentRoutes);
 
 // Serve landing page at root
 app.get('/', (req, res) => {
@@ -140,7 +123,17 @@ app.get('/', (req, res) => {
 });
 
 // Serve static files from root (for direct access to HTML files)
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(
+  express.static(path.join(__dirname, '../public'), {
+    setHeaders(res, filePath) {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+    },
+  })
+);
 
 // Sentry error handler (must be before the app error handler)
 const { errorHandler: sentryErrorHandler } = require('./config/sentry');

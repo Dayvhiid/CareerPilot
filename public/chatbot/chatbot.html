@@ -810,9 +810,37 @@
        GLOBALS
     ═════════════════════════════════════════ */
     const API_BASE        = '/api';
+
+    function getAuthToken() {
+      // Access token is an httpOnly cookie; nothing to read from JS.
+      return '';
+    }
+
+    function getCsrfToken() {
+      const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+      return match ? decodeURIComponent(match[1]) : '';
+    }
+
+    async function apiFetch(url, options = {}) {
+      const headers = new Headers(options.headers || {});
+
+      const authToken = getAuthToken();
+      if (authToken) headers.set('Authorization', `Bearer ${authToken}`);
+
+      const csrfToken = getCsrfToken();
+      if (csrfToken && !(options.body instanceof FormData)) headers.set('X-CSRF-Token', csrfToken);
+
+      if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json');
+      }
+
+      return fetch(url, { ...options, headers });
+    }
+
     let currentSessionId  = null;
     let currentState      = null;
     let isProcessing      = false;
+    let processingSince   = 0;
     let ttsEnabled        = false;
     let currentAudio      = null;
     let mediaRecorder     = null;
@@ -831,7 +859,21 @@
       renderProgressSteps(0);
       initVoice();
       startConversation();
+      bindChatHandlers();
     });
+
+    function bindChatHandlers() {
+      const input = document.getElementById('messageInput');
+      const btn   = document.getElementById('sendButton');
+      if (input && !input.__keyBound) {
+        input.addEventListener('keydown', (e) => handleKeyDown(e));
+        input.__keyBound = true;
+      }
+      if (btn && !btn.__clickBound) {
+        btn.addEventListener('click', () => sendMessage());
+        btn.__clickBound = true;
+      }
+    }
 
     /* ═════════════════════════════════════════
        SESSION START
@@ -839,7 +881,7 @@
     async function startConversation() {
       setStatus('Starting session…');
       try {
-        const res  = await fetch(`${API_BASE}/chatbot/start`, { method: 'POST' });
+        const res  = await apiFetch(`${API_BASE}/chatbot/start`, { method: 'POST' });
         const data = await res.json();
         currentSessionId = data.sessionId;
         hideWelcome();
@@ -861,22 +903,41 @@
     async function sendMessage(overrideText) {
       const input = document.getElementById('messageInput');
       const text  = (overrideText || input.value).trim();
-      if (!text || isProcessing) return;
 
-      isProcessing = true;
+      if (isProcessing && Date.now() - processingSince > 20000) {
+        isProcessing = false;
+      }
+
+      if (!text) {
+        input.focus();
+        return;
+      }
+      if (isProcessing) {
+        return;
+      }
+
+      isProcessing   = true;
+      processingSince = Date.now();
       hideWelcome();
       hideSuggestions();
 
-      addUserMessage(text);
-      input.value = '';
-      autoResize(input);
-      document.getElementById('sendButton').disabled = true;
+      try {
+        addUserMessage(text);
+        input.value = '';
+        autoResize(input);
+        document.getElementById('sendButton').disabled = true;
 
-      showTypingIndicator();
-      setStatus('Thinking…');
+        showTypingIndicator();
+        setStatus('Thinking…');
+      } catch (err) {
+        console.error('[chat] sendMessage setup error:', err);
+        isProcessing = false;
+        document.getElementById('sendButton').disabled = false;
+        return;
+      }
 
       try {
-        const res  = await fetch(`${API_BASE}/chatbot/message`, {
+        const res  = await apiFetch(`${API_BASE}/chatbot/message`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ message: text, sessionId: currentSessionId }),
@@ -903,6 +964,7 @@
         setStatus('Online');
       } finally {
         isProcessing = false;
+        processingSince = 0;
         document.getElementById('sendButton').disabled = false;
       }
     }
@@ -953,7 +1015,7 @@
       const form = new FormData();
       form.append('audio', blob, 'recording.webm');
       try {
-        const res  = await fetch(`${API_BASE}/chatbot/transcribe`, { method: 'POST', body: form });
+        const res  = await apiFetch(`${API_BASE}/chatbot/transcribe`, { method: 'POST', body: form });
         const data = await res.json();
         if (data.text) {
           document.getElementById('messageInput').value = data.text;
@@ -979,7 +1041,7 @@
       if (!ttsEnabled) return;
       try {
         if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-        const res  = await fetch(`${API_BASE}/chatbot/speak`, {
+        const res  = await apiFetch(`${API_BASE}/chatbot/speak`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ text }),
@@ -1008,7 +1070,7 @@
       btnText.textContent = 'Generating…';
 
       try {
-        const res  = await fetch(`${API_BASE}/chatbot/generate`, {
+        const res  = await apiFetch(`${API_BASE}/chatbot/generate`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ sessionId: currentSessionId }),
@@ -1051,7 +1113,7 @@
 
     async function downloadResume() {
       try {
-        const res  = await fetch(`${API_BASE}/chatbot/download`);
+        const res  = await apiFetch(`${API_BASE}/chatbot/download`);
         const disp = res.headers.get('Content-Disposition') || '';
         const name = (disp.match(/filename="?([^"]+)"?/) || [])[1] || 'resume.pdf';
         const blob = await res.blob();
@@ -1216,7 +1278,18 @@
     }
 
     function handleKeyDown(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
+      const isEnter     = (e.key === 'Enter') || (e.keyCode === 13);
+      const isComposing = e.isComposing || e.key === 'Process' || e.key === 'Unidentified';
+
+      // During IME/autocorrect composition, Enter confirms the composition —
+      // swallow it so it doesn't insert a newline, and the following normal
+      // Enter (after compositionend) will trigger the send.
+      if (isEnter && isComposing) {
+        e.preventDefault();
+        return;
+      }
+
+      if (isEnter && !e.shiftKey) {
         e.preventDefault();
         sendMessage();
       }
@@ -1246,7 +1319,7 @@
       const list = document.getElementById('convList');
       list.innerHTML = '<div class="conv-loading">Loading conversations...</div>';
       try {
-        const res = await fetch(`${API_BASE}/chatbot/conversations`);
+        const res = await apiFetch(`${API_BASE}/chatbot/conversations`);
         const data = await res.json();
         if (!data.success || !data.conversations.length) {
           list.innerHTML = '<div class="conv-loading">No conversations yet.</div>';
@@ -1278,7 +1351,7 @@
       toggleConversations();
       setStatus('Loading...');
       try {
-        const res = await fetch(`${API_BASE}/chatbot/conversations/${sessionId}`);
+        const res = await apiFetch(`${API_BASE}/chatbot/conversations/${sessionId}`);
         const data = await res.json();
         if (!data.success || !data.conversation) {
           setStatus('Online');

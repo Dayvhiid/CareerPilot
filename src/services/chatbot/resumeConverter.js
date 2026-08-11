@@ -74,7 +74,9 @@ function convertChatDataToResume(chatData) {
 
   const cleanWorkExperience = (workExp) => {
     if (!Array.isArray(workExp)) return [];
-    return workExp.filter((job) => job.position && job.position.trim().length > 0);
+    return workExp
+      .filter((job) => job.position && job.position.trim().length > 0)
+      .map(({ _contactAsked, ...job }) => job);
   };
 
   return {

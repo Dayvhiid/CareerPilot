@@ -971,10 +971,8 @@
   modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
   async function handleCheckout() {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
     try {
       const headers = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch('/api/payments/initialize', {
         method: 'POST',
         headers,

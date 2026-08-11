@@ -57,7 +57,7 @@ const processMessage = async (req, res) => {
 
     logger.info(`Processing message from user ${userId}: "${message}"`);
 
-    const conversation = await Conversation.findOne({ userId, sessionId }).lean();
+    const conversation = await Conversation.findOne({ userId, sessionId });
     if (!conversation) {
       return res.status(404).json({
         success: false,
@@ -131,7 +131,7 @@ const generateResume = async (req, res) => {
     const userId = req.user.id;
     const { sessionId } = req.body;
 
-    const conversation = await Conversation.findOne({ userId, sessionId }).lean();
+    const conversation = await Conversation.findOne({ userId, sessionId });
     if (!conversation || conversation.state !== CONVERSATION_STATES.COMPLETED) {
       return res.status(400).json({
         success: false,
@@ -695,13 +695,13 @@ function handleWorkExperienceState(session, message) {
     };
   }
 
-  if (!currentJob.contact) {
-    if (!lowerMessage.includes('none')) {
+  if (!currentJob.contactAsked) {
+    currentJob.contactAsked = true;
+    if (!lowerMessage.includes('none') && !lowerMessage.includes('no')) {
       currentJob.contact = message;
     }
     return {
-      message:
-        "Excellent! Do you have another job experience to add? Type 'yes' to add another job, or 'no' to continue:",
+      message: "Excellent! Do you have another job experience? Type 'yes' to add another job, or 'no' to continue:",
       progress: 68,
       options: ['yes', 'no'],
     };

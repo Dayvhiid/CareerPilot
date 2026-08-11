@@ -1,17 +1,8 @@
 const express = require('express');
 const passport = require('passport');
-const jwt = require('jsonwebtoken');
 const router = express.Router();
-
-function getOAuthAccessToken(userId) {
-  return jwt.sign({ id: userId, type: 'access' }, process.env.JWT_ACCESS_SECRET, {
-    expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m',
-  });
-}
-
-function getOAuthRefreshToken(userId) {
-  return jwt.sign({ id: userId, type: 'refresh' }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
-}
+const tokenService = require('../services/tokenService');
+const { logAudit } = require('../middleware/auditLogger');
 
 function ensureOAuthEnabled(provider) {
   return (req, res, next) => {
@@ -24,6 +15,32 @@ function ensureOAuthEnabled(provider) {
   };
 }
 
+function oauthCallback(provider) {
+  return async (req, res) => {
+    if (!req.user) {
+      return res.redirect('/public/auth/login.html?oauth=0');
+    }
+
+    const accessToken = tokenService.generateAccessToken(req.user._id);
+    const { token } = await tokenService.issueRefreshToken(req.user._id);
+
+    tokenService.setAccessTokenCookie(res, accessToken);
+    tokenService.setRefreshTokenCookie(res, token);
+
+    await logAudit({
+      userId: req.user._id,
+      action: 'oauth.link',
+      resource: 'user',
+      resourceId: req.user._id,
+      details: { provider, success: true },
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+    }).catch(() => {});
+
+    res.redirect('/public/resume/resume.html');
+  };
+}
+
 // Step 1: Kick off Google login
 router.get('/google', ensureOAuthEnabled('google'), passport.authenticate('google', { scope: ['profile', 'email'] }));
 
@@ -31,26 +48,8 @@ router.get('/google', ensureOAuthEnabled('google'), passport.authenticate('googl
 router.get(
   '/google/callback',
   ensureOAuthEnabled('google'),
-  passport.authenticate('google', { failureRedirect: '/public/auth/login.html', session: false }),
-  (req, res) => {
-    const token = getOAuthAccessToken(req.user._id);
-    const refreshToken = getOAuthRefreshToken(req.user._id);
-
-    res.cookie('accessToken', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 15 * 60 * 1000,
-    });
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.redirect('/public/resume/resume.html');
-  }
+  passport.authenticate('google', { failureRedirect: '/public/auth/login.html?oauth=0', session: false }),
+  oauthCallback('google')
 );
 
 // Step 1: Kick off GitHub login
@@ -60,34 +59,35 @@ router.get('/github', ensureOAuthEnabled('github'), passport.authenticate('githu
 router.get(
   '/github/callback',
   ensureOAuthEnabled('github'),
-  passport.authenticate('github', { failureRedirect: '/public/auth/login.html', session: false }),
-  (req, res) => {
-    const token = getOAuthAccessToken(req.user._id);
-    const refreshToken = getOAuthRefreshToken(req.user._id);
-
-    res.cookie('accessToken', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 15 * 60 * 1000,
-    });
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.redirect('/public/resume/resume.html');
-  }
+  passport.authenticate('github', { failureRedirect: '/public/auth/login.html?oauth=0', session: false }),
+  oauthCallback('github')
 );
 
 // Step 3: Logout
-router.get('/logout', (req, res) => {
+router.get('/logout', async (req, res) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+    if (refreshToken) {
+      await tokenService.revokeRefreshToken(refreshToken);
+    }
+    if (req.user?._id) {
+      await logAudit({
+        userId: req.user._id,
+        action: 'user.logout',
+        resource: 'user',
+        resourceId: req.user._id,
+        details: { success: true },
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+    }
+  } catch (err) {
+    // Best-effort revocation; still clear cookies.
+  }
+
   req.logout((err) => {
-    if (err) return res.status(500).json({ success: false, message: 'Logout error' });
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
+    tokenService.clearAuthCookies(res);
+    if (err) return res.redirect('/');
     res.redirect('/');
   });
 });

@@ -12,7 +12,7 @@ async function ensureIndexes() {
   await Resume.collection.createIndex({ userId: 1 });
   await Resume.collection.createIndex({ createdAt: -1 });
 
-  // JobListing additional indexes
+  // JobListing  indexes
   await JobListing.collection.createIndex({ isActive: 1, postedDate: -1 });
   await JobListing.collection.createIndex({ domain: 1, isActive: 1, postedDate: -1 });
   await JobListing.collection.createIndex({ 'salary.min': 1, 'salary.max': 1 });
