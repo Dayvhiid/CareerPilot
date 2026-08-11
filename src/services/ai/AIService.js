@@ -14,7 +14,7 @@ class AIService {
       const GeminiProvider = require('./providers/gemini');
       this.primaryExtractor = new GeminiProvider({
         apiKey: process.env.GEMINI_API_KEY,
-        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
       });
       this.embeddingService = this.primaryExtractor;
     }
@@ -23,13 +23,13 @@ class AIService {
       const GroqProvider = require('./providers/groq');
       this.fallbackExtractor = new GroqProvider({
         apiKey: process.env.GROQ_API_KEY,
-        model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
+        model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
       });
       if (!this.embeddingService && process.env.GEMINI_API_KEY) {
         const GeminiProvider = require('./providers/gemini');
         this.embeddingService = new GeminiProvider({
           apiKey: process.env.GEMINI_API_KEY,
-          model: 'gemini-embedding-2'
+          model: 'gemini-embedding-2',
         });
       }
     }
@@ -38,7 +38,7 @@ class AIService {
       const XaiProvider = require('./providers/xai');
       this.fallbackExtractor = new XaiProvider({
         apiKey: process.env.XAI_API_KEY,
-        model: process.env.XAI_MODEL || 'grok-4.3'
+        model: process.env.XAI_MODEL || 'grok-4.3',
       });
     }
   }
@@ -57,6 +57,24 @@ class AIService {
       }
     }
 
+    throw lastError || new Error('All AI providers failed');
+  }
+
+  async generate(prompt, options = {}) {
+    const providers = [this.primaryExtractor, this.fallbackExtractor].filter(Boolean);
+    if (providers.length === 0) {
+      throw new Error('No AI providers configured');
+    }
+    let lastError;
+    for (const provider of providers) {
+      try {
+        const response = await withRetry(() => provider.generate(prompt, options));
+        return response;
+      } catch (err) {
+        lastError = err;
+        logger.warn(`[ai] Generate failed: ${err.message}`);
+      }
+    }
     throw lastError || new Error('All AI providers failed');
   }
 

@@ -26,14 +26,14 @@ function calculateScore(extractedData) {
   const expCount = d.workExperience?.length || 0;
   if (expCount > 0) score += 0.5;
   if (expCount >= 2) score += 0.5;
-  const hasDetails = d.workExperience?.some(e => e.responsibilities?.length > 50);
+  const hasDetails = d.workExperience?.some((e) => e.responsibilities?.length > 50);
   if (hasDetails) score += 1.0;
 
   // Education (max +1.5)
   const eduCount = d.education?.length || 0;
   if (eduCount > 0) score += 0.5;
   if (eduCount >= 2) score += 0.5;
-  const hasDetailedEdu = d.education?.some(e => e.degree && e.institution);
+  const hasDetailedEdu = d.education?.some((e) => e.degree && e.institution);
   if (hasDetailedEdu) score += 0.5;
 
   // Career progression (max +1.0)

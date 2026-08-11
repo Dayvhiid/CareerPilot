@@ -1,9 +1,28 @@
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 
 jest.mock('../../../src/models/User');
+jest.mock('../../../src/services/tokenService', () => ({
+  generateAccessToken: jest.fn(() => 'access-token'),
+  issueRefreshToken: jest.fn(async () => ({ token: 'refresh-token', tokenId: 'tokenId-123' })),
+  verifyRefreshToken: jest.fn(),
+  revokeRefreshToken: jest.fn(async () => null),
+  revokeAllUserTokens: jest.fn(async () => {}),
+  deleteRefreshToken: jest.fn(async () => {}),
+  setAccessTokenCookie: jest.fn(),
+  setRefreshTokenCookie: jest.fn(),
+  clearAuthCookies: jest.fn(),
+}));
+jest.mock('../../../src/services/emailService', () => ({
+  sendEmail: jest.fn(async () => ({})),
+  APP_BASE_URL: 'http://localhost:4000',
+}));
+jest.mock('../../../src/middleware/auditLogger', () => ({
+  logAudit: jest.fn(async () => {}),
+}));
 
 const User = require('../../../src/models/User');
+const tokenService = require('../../../src/services/tokenService');
+const emailService = require('../../../src/services/emailService');
 const authController = require('../../../src/controllers/authController');
 
 describe('Auth Controller', () => {
@@ -15,6 +34,10 @@ describe('Auth Controller', () => {
     req = {
       body: {},
       cookies: {},
+      query: {},
+      get: jest.fn(() => 'test-agent'),
+      ip: '127.0.0.1',
+      user: undefined,
     };
 
     res = {
@@ -22,44 +45,51 @@ describe('Auth Controller', () => {
       json: jest.fn(),
       cookie: jest.fn(),
       clearCookie: jest.fn(),
+      redirect: jest.fn(),
     };
   });
 
   describe('register', () => {
-    it('should register a new user', async () => {
+    it('should register a new user and send a verification email', async () => {
       req.body = { name: 'Test User', email: 'test@test.com', password: 'password123' };
 
-      User.findOne.mockResolvedValue(null);
-      User.prototype.save = jest.fn().mockResolvedValue();
+      const mockUser = {
+        _id: 'user123',
+        name: 'Test User',
+        email: 'test@test.com',
+        emailVerified: false,
+      };
+      User.create.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashedPassword');
 
       await authController.register(req, res);
 
-      expect(bcrypt.hash).toHaveBeenCalledWith('password123', 10);
+      expect(bcrypt.hash).toHaveBeenCalledWith('password123', 12);
+      expect(emailService.sendEmail).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({
         success: true,
-        message: 'User registered successfully',
+        message: 'User registered successfully. Please verify your email address.',
       });
     });
 
-    it('should return 400 if user already exists', async () => {
-      req.body = { name: 'Test User', email: 'existing@test.com', password: 'password123' };
+    it('should return 400 on duplicate email', async () => {
+      req.body = { name: 'Test', email: 'existing@test.com', password: 'password123' };
 
-      User.findOne.mockResolvedValue({ email: 'existing@test.com' });
+      User.create.mockRejectedValue({ code: 11000 });
 
       await authController.register(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        message: 'User already exists',
+        message: 'Registration failed. Please try again.',
       });
     });
   });
 
   describe('login', () => {
-    it('should login with valid credentials', async () => {
+    it('should login with valid credentials and set cookies', async () => {
       req.body = { email: 'test@test.com', password: 'password123' };
 
       const mockUser = {
@@ -67,20 +97,21 @@ describe('Auth Controller', () => {
         name: 'Test User',
         email: 'test@test.com',
         password: 'hashedPassword',
+        emailVerified: true,
       };
 
       User.findOne.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true);
-      jest.spyOn(jwt, 'sign').mockReturnValue('token123');
 
       await authController.login(req, res);
 
       expect(bcrypt.compare).toHaveBeenCalledWith('password123', 'hashedPassword');
-      expect(res.cookie).toHaveBeenCalled();
+      expect(tokenService.setAccessTokenCookie).toHaveBeenCalled();
+      expect(tokenService.setRefreshTokenCookie).toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         success: true,
-        accessToken: 'token123',
-        user: { id: 'user123', name: 'Test User', email: 'test@test.com' },
+        accessToken: 'access-token',
+        user: { id: 'user123', name: 'Test User', email: 'test@test.com', emailVerified: true },
       });
     });
 
@@ -115,10 +146,14 @@ describe('Auth Controller', () => {
   });
 
   describe('logout', () => {
-    it('should clear refresh token cookie', async () => {
+    it('should revoke the refresh token and clear cookies', async () => {
+      req.cookies.refreshToken = 'refresh-token';
+      req.user = { _id: 'user123' };
+
       await authController.logout(req, res);
 
-      expect(res.clearCookie).toHaveBeenCalledWith('refreshToken');
+      expect(tokenService.revokeRefreshToken).toHaveBeenCalledWith('refresh-token');
+      expect(tokenService.clearAuthCookies).toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         success: true,
         message: 'Logged out successfully',
@@ -137,20 +172,139 @@ describe('Auth Controller', () => {
       });
     });
 
-    it('should issue new access token with valid refresh token', async () => {
+    it('should issue new tokens with a valid refresh token', async () => {
       req.cookies.refreshToken = 'validRefreshToken';
 
-      jest.spyOn(jwt, 'verify').mockReturnValue({ id: 'user123' });
+      tokenService.verifyRefreshToken.mockResolvedValue({ id: 'user123', tokenId: 'tokenId-123' });
       User.findById.mockResolvedValue({ _id: 'user123' });
-      jest.spyOn(jwt, 'sign').mockReturnValue('newAccessToken');
 
       await authController.refreshToken(req, res);
 
-      expect(jwt.verify).toHaveBeenCalledWith('validRefreshToken', process.env.JWT_REFRESH_SECRET);
+      expect(tokenService.deleteRefreshToken).toHaveBeenCalledWith('tokenId-123');
+      expect(tokenService.setAccessTokenCookie).toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         success: true,
-        accessToken: 'newAccessToken',
-        tokenId: expect.any(String),
+        accessToken: 'access-token',
+      });
+    });
+
+    it('should return 401 with an invalid refresh token', async () => {
+      req.cookies.refreshToken = 'invalid';
+
+      tokenService.verifyRefreshToken.mockResolvedValue(null);
+
+      await authController.refreshToken(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
+  });
+
+  describe('forgotPassword', () => {
+    it('should send a reset link when the account exists', async () => {
+      req.body = { email: 'test@test.com' };
+
+      User.findOne.mockResolvedValue({
+        _id: 'user123',
+        name: 'Test User',
+        email: 'test@test.com',
+        save: jest.fn().mockResolvedValue(),
+      });
+
+      await authController.forgotPassword(req, res);
+
+      expect(emailService.sendEmail).toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'If an account exists for that email, a password reset link has been sent.',
+      });
+    });
+
+    it('should respond generically when the account does not exist', async () => {
+      req.body = { email: 'missing@test.com' };
+
+      User.findOne.mockResolvedValue(null);
+
+      await authController.forgotPassword(req, res);
+
+      expect(emailService.sendEmail).not.toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'If an account exists for that email, a password reset link has been sent.',
+      });
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('should reset the password and revoke tokens', async () => {
+      req.body = { token: 'valid-token-32-chars-minimum', newPassword: 'NewPassword123' };
+
+      User.findOne.mockResolvedValue({
+        _id: 'user123',
+        save: jest.fn().mockResolvedValue(),
+        set: jest.fn(),
+      });
+      jest.spyOn(bcrypt, 'hash').mockResolvedValue('newHashed');
+
+      await authController.resetPassword(req, res);
+
+      expect(User.findOne).toHaveBeenCalled();
+      expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith('user123');
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Password reset successfully. Please log in.',
+      });
+    });
+
+    it('should return 400 for an invalid token', async () => {
+      req.body = { token: 'invalid', newPassword: 'NewPassword123' };
+
+      User.findOne.mockResolvedValue(null);
+
+      await authController.resetPassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+  });
+
+  describe('changePassword', () => {
+    it('should change the password and revoke tokens', async () => {
+      req.user = { _id: 'user123' };
+      req.body = { currentPassword: 'OldPassword123', newPassword: 'NewPassword123' };
+
+      User.findById.mockResolvedValue({
+        _id: 'user123',
+        password: 'oldHashed',
+        save: jest.fn().mockResolvedValue(),
+      });
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true);
+      jest.spyOn(bcrypt, 'hash').mockResolvedValue('newHashed');
+
+      await authController.changePassword(req, res);
+
+      expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith('user123');
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Password changed successfully. Please log in again.',
+      });
+    });
+
+    it('should return 400 when the current password is wrong', async () => {
+      req.user = { _id: 'user123' };
+      req.body = { currentPassword: 'WrongPassword123', newPassword: 'NewPassword123' };
+
+      User.findById.mockResolvedValue({
+        _id: 'user123',
+        password: 'oldHashed',
+        save: jest.fn(),
+      });
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false);
+
+      await authController.changePassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Current password is incorrect',
       });
     });
   });

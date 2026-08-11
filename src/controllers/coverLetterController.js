@@ -2,10 +2,7 @@ const { logger } = require('../config/logger');
 const Resume = require('../models/Resume');
 const JobListing = require('../models/JobListing');
 const huggingFaceService = require('../services/huggingFaceService');
-const mongoose = require('mongoose');
-const { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } = require('docx');
-
-
+const { Document, Packer, Paragraph, TextRun, AlignmentType } = require('docx');
 
 /**
  * Generate cover letter for a specific job
@@ -23,7 +20,7 @@ exports.generateCoverLetter = async (req, res) => {
     if (!job) {
       return res.status(404).json({
         success: false,
-        message: 'Job not found'
+        message: 'Job not found',
       });
     }
 
@@ -32,7 +29,7 @@ exports.generateCoverLetter = async (req, res) => {
     if (!resume || !resume.extractedData) {
       return res.status(404).json({
         success: false,
-        message: 'No resume found. Please upload a resume first.'
+        message: 'No resume found. Please upload a resume first.',
       });
     }
 
@@ -48,7 +45,7 @@ exports.generateCoverLetter = async (req, res) => {
       requirements: job.requirements || [],
       location: job.location,
       jobType: job.jobType,
-      experienceLevel: job.experienceLevel
+      experienceLevel: job.experienceLevel,
     };
 
     // Prepare resume data
@@ -61,28 +58,24 @@ exports.generateCoverLetter = async (req, res) => {
       currentJobTitle: resume.extractedData.currentJobTitle,
       yearsOfExperience: resume.extractedData.yearsOfExperience,
       education: resume.extractedData.education || [],
-      experience: resume.extractedData.experience || []
+      experience: resume.extractedData.experience || [],
     };
 
     // User preferences
     const userPreferences = {
       customInstructions,
       tone,
-      length
+      length,
     };
 
     // Generate cover letter using Hugging Face
-    const coverLetterResult = await huggingFaceService.generateCoverLetter(
-      jobData, 
-      resumeData, 
-      userPreferences
-    );
+    const coverLetterResult = await huggingFaceService.generateCoverLetter(jobData, resumeData, userPreferences);
 
     if (!coverLetterResult.success) {
       return res.status(500).json({
         success: false,
         message: 'Failed to generate cover letter',
-        error: coverLetterResult.error
+        error: coverLetterResult.error,
       });
     }
 
@@ -94,23 +87,22 @@ exports.generateCoverLetter = async (req, res) => {
       jobData: {
         title: job.title,
         company: job.company,
-        id: job._id
+        id: job._id,
       },
       resumeData: {
         name: resumeData.name,
-        email: resumeData.email
+        email: resumeData.email,
       },
       generatedAt: coverLetterResult.generatedAt,
       model: coverLetterResult.model,
-      isTemplate: coverLetterResult.isTemplate || false
+      isTemplate: coverLetterResult.isTemplate || false,
     });
-
   } catch (error) {
     logger.error('Error generating cover letter:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -121,22 +113,21 @@ exports.generateCoverLetter = async (req, res) => {
 exports.testHuggingFace = async (req, res) => {
   try {
     logger.info('Testing Hugging Face service...');
-    
+
     const testResult = await huggingFaceService.testConnection();
-    
+
     res.json({
       success: testResult.success,
       message: testResult.success ? 'Hugging Face connection successful' : 'Hugging Face connection failed',
       error: testResult.error || undefined,
-      response: testResult.response || undefined
+      response: testResult.response || undefined,
     });
-
   } catch (error) {
     logger.error('Error testing Hugging Face:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to test Hugging Face connection',
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -146,104 +137,103 @@ exports.testHuggingFace = async (req, res) => {
  */
 exports.downloadCoverLetter = async (req, res) => {
   try {
-    const { coverLetterText, jobTitle, company, applicantName } = req.body;
-    
+    const { coverLetterText, jobTitle, company } = req.body;
+
     if (!coverLetterText) {
       return res.status(400).json({
         success: false,
-        message: 'Cover letter text is required'
+        message: 'Cover letter text is required',
       });
     }
 
     logger.info(`Generating Word document for ${jobTitle} at ${company}`);
 
     // Split cover letter into paragraphs
-    const paragraphs = coverLetterText.split('\n\n').filter(p => p.trim().length > 0);
-    
+    const paragraphs = coverLetterText.split('\n\n').filter((p) => p.trim().length > 0);
+
     // Create Word document
     const doc = new Document({
       sections: [
         {
           properties: {},
-          children: paragraphs.map(paragraphText => {
+          children: paragraphs.map((paragraphText) => {
             const trimmedText = paragraphText.trim();
-            
+
             // Check if this is the date
             if (trimmedText.match(/\w+\s+\d{1,2},\s+\d{4}/)) {
               return new Paragraph({
                 children: [
                   new TextRun({
                     text: trimmedText,
-                    size: 22
-                  })
+                    size: 22,
+                  }),
                 ],
                 alignment: AlignmentType.RIGHT,
-                spacing: { after: 200 }
+                spacing: { after: 200 },
               });
             }
-            
+
             // Check if this is a greeting
             if (trimmedText.startsWith('Dear ')) {
               return new Paragraph({
                 children: [
                   new TextRun({
                     text: trimmedText,
-                    size: 22
-                  })
+                    size: 22,
+                  }),
                 ],
-                spacing: { after: 200 }
+                spacing: { after: 200 },
               });
             }
-            
+
             // Check if this is the signature
             if (trimmedText.startsWith('Sincerely,') || trimmedText.startsWith('Best regards,')) {
               return new Paragraph({
                 children: [
                   new TextRun({
                     text: trimmedText,
-                    size: 22
-                  })
+                    size: 22,
+                  }),
                 ],
-                spacing: { before: 200 }
+                spacing: { before: 200 },
               });
             }
-            
+
             // Regular paragraph
             return new Paragraph({
               children: [
                 new TextRun({
                   text: trimmedText,
-                  size: 22
-                })
+                  size: 22,
+                }),
               ],
               spacing: { after: 200 },
-              alignment: AlignmentType.JUSTIFIED
+              alignment: AlignmentType.JUSTIFIED,
             });
-          })
-        }
-      ]
+          }),
+        },
+      ],
     });
 
     // Generate the document buffer
     const buffer = await Packer.toBuffer(doc);
-    
+
     // Set response headers for file download
     const fileName = `Cover_Letter_${(jobTitle || 'Job').replace(/[^a-zA-Z0-9]/g, '_')}_${(company || 'Company').replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
-    
+
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Length', buffer.length);
-    
-    res.send(buffer);
-    
-    logger.info(`Word document generated successfully: ${fileName}`);
 
+    res.send(buffer);
+
+    logger.info(`Word document generated successfully: ${fileName}`);
   } catch (error) {
     logger.error('Error generating Word document:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to generate Word document',
-      error: error.message
+      error: error.message,
     });
   }
 };

@@ -5,16 +5,9 @@
  */
 const { logger } = require('./logger');
 
-const requiredVars = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'];
+const requiredVars = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'SESSION_SECRET'];
 
-const optionalVars = [
-  'NODE_ENV',
-  'SESSION_SECRET',
-  'HUGGINGFACE_API_KEY',
-  'CORS_ORIGINS',
-  'PORT',
-  'REDIS_URL'
-];
+const optionalVars = ['NODE_ENV', 'HUGGINGFACE_API_KEY', 'CORS_ORIGINS', 'PORT', 'REDIS_URL'];
 
 /**
  * Validate environment variables
@@ -34,13 +27,15 @@ function validateEnv() {
   // In production, fail if any required vars are missing
   if (nodeEnv === 'production' && missing.length > 0) {
     throw new Error(
-      `❌ CRITICAL: Missing required environment variables in production:\n${missing.map(v => `  - ${v}`).join('\n')}\n\nPlease set these variables before starting the server.`
+      `❌ CRITICAL: Missing required environment variables in production:\n${missing.map((v) => `  - ${v}`).join('\n')}\n\nPlease set these variables before starting the server.`
     );
   }
 
   // In development, warn about missing required vars
   if (nodeEnv !== 'production' && missing.length > 0) {
-    logger.warn(`Development: Missing recommended environment variables:\n${missing.map(v => `  - ${v}`).join('\n')}`);
+    logger.warn(
+      `Development: Missing recommended environment variables:\n${missing.map((v) => `  - ${v}`).join('\n')}`
+    );
   }
 
   const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
@@ -89,5 +84,5 @@ function isValidExpiration(expiration) {
 module.exports = {
   validateEnv,
   requiredVars,
-  optionalVars
+  optionalVars,
 };

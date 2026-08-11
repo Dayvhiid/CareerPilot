@@ -12,13 +12,16 @@ async function rerank(resumeData, jobs, domain) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     logger.warn('jobRankingService: GEMINI_API_KEY not set — returning unscored');
-    return jobs.map(j => ({ ...j, matchScore: 50, matchReasons: ['AI scoring unavailable'] }));
+    return jobs.map((j) => ({ ...j, matchScore: 50, matchReasons: ['AI scoring unavailable'] }));
   }
 
   const candidateProfile = buildProfile(resumeData);
-  const jobList = jobs.map((j, i) =>
-    `${i + 1}. [${j.title}] at ${j.company} — ${j.location || 'No location'} — Skills: ${(j.skills || []).join(', ')}`
-  ).join('\n');
+  const jobList = jobs
+    .map(
+      (j, i) =>
+        `${i + 1}. [${j.title}] at ${j.company} — ${j.location || 'No location'} — Skills: ${(j.skills || []).join(', ')}`
+    )
+    .join('\n');
 
   const prompt = `You are a job matching AI. Given a candidate's resume and a list of jobs (all in the domain "${domain}"), score each job's relevance to the candidate on a scale of 0-100.
 
@@ -47,7 +50,7 @@ Respond with ONLY a JSON array of objects, one per job, in order:
   try {
     const response = await axios.post(url, {
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 4096 }
+      generationConfig: { temperature: 0.2, maxOutputTokens: 4096 },
     });
 
     const duration = Date.now() - start;
@@ -57,27 +60,27 @@ Respond with ONLY a JSON array of objects, one per job, in order:
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       logger.warn('jobRankingService: no JSON array in response — returning unscored');
-      return jobs.map((j, i) => ({ ...j, matchScore: 50, matchReasons: ['Failed to parse AI response'] }));
+      return jobs.map((j, _i) => ({ ...j, matchScore: 50, matchReasons: ['Failed to parse AI response'] }));
     }
 
     const scores = JSON.parse(jsonMatch[0]);
     logger.info(`jobRankingService: parsed ${scores.length} score entries`);
 
     return jobs.map((job, i) => {
-      const s = scores.find(sc => sc.index === i + 1) || {};
+      const s = scores.find((sc) => sc.index === i + 1) || {};
       return {
         ...job,
         matchScore: s.score || 50,
         matchReasons: s.reasons || [],
         matchedSkills: s.matchedSkills || [],
         missingSkills: s.missingSkills || [],
-        careerFit: s.score >= 70 ? 'good' : s.score >= 40 ? 'moderate' : 'stretch'
+        careerFit: s.score >= 70 ? 'good' : s.score >= 40 ? 'moderate' : 'stretch',
       };
     });
   } catch (err) {
     const duration = Date.now() - start;
     logger.error(`jobRankingService: FAILED after ${duration}ms: ${err.message}`);
-    return jobs.map(j => ({ ...j, matchScore: 50, matchReasons: ['AI scoring unavailable'] }));
+    return jobs.map((j) => ({ ...j, matchScore: 50, matchReasons: ['AI scoring unavailable'] }));
   }
 }
 
@@ -87,10 +90,12 @@ function buildProfile(resumeData) {
     `Years of Experience: ${resumeData.yearsOfExperience || 'N/A'}`,
     `Skills: ${(resumeData.skills || []).join(', ')}`,
     `Past Titles: ${(resumeData.jobTitles || []).join(', ')}`,
-    `Education: ${(resumeData.education || []).map(e => `${e.degree} in ${e.field}`).join(', ')}`,
+    `Education: ${(resumeData.education || []).map((e) => `${e.degree} in ${e.field}`).join(', ')}`,
     `Location: ${resumeData.location || 'N/A'}`,
-    `Summary: ${(resumeData.summary || '').substring(0, 500)}`
-  ].filter(Boolean).join('\n');
+    `Summary: ${(resumeData.summary || '').substring(0, 500)}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 module.exports = { rerank };

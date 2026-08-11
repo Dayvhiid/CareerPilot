@@ -7,7 +7,7 @@ class HuggingFaceService {
     this.model = 'microsoft/DialoGPT-large'; // We'll use a good text generation model
     // Alternative models to consider:
     // 'gpt2-large'
-    // 'microsoft/DialoGPT-large' 
+    // 'microsoft/DialoGPT-large'
     // 'facebook/blenderbot-400M-distill'
   }
 
@@ -19,11 +19,11 @@ class HuggingFaceService {
       logger.info('Generating cover letter with Hugging Face...');
       logger.info('Job title:', jobData.title);
       logger.info('Company:', jobData.company);
-      
+
       // Build a comprehensive prompt for cover letter generation
       const prompt = this.buildCoverLetterPrompt(jobData, resumeData, userPreferences);
       logger.info('Generated prompt length:', prompt.length);
-      
+
       // Use text generation model
       const response = await this.hf.textGeneration({
         model: 'gpt2-large', // Using GPT-2 Large for better text generation
@@ -34,29 +34,28 @@ class HuggingFaceService {
           do_sample: true,
           top_p: 0.9,
           repetition_penalty: 1.1,
-          return_full_text: false
-        }
+          return_full_text: false,
+        },
       });
 
       logger.info('Cover letter generated successfully');
-      
+
       // Extract and clean the generated text
       let generatedText = response.generated_text || response[0]?.generated_text || '';
       generatedText = this.cleanAndFormatCoverLetter(generatedText, jobData, resumeData);
-      
+
       return {
         success: true,
         coverLetter: generatedText,
         jobTitle: jobData.title,
         company: jobData.company,
         generatedAt: new Date().toISOString(),
-        model: 'gpt2-large'
+        model: 'gpt2-large',
       };
-
     } catch (error) {
       logger.error('Error generating cover letter:', error.message);
       logger.error('Error details:', error);
-      
+
       // Fallback to template-based cover letter
       return this.generateTemplateCoverLetter(jobData, resumeData);
     }
@@ -65,59 +64,81 @@ class HuggingFaceService {
   /**
    * Build a comprehensive prompt for cover letter generation
    */
-  buildCoverLetterPrompt(jobData, resumeData, userPreferences) {
-    const currentDate = new Date().toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+  buildCoverLetterPrompt(jobData, resumeData, _userPreferences) {
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
 
     // Extract key information with better defaults
     const applicantName = resumeData.name || '[Your Name]';
     const jobTitle = jobData.title || 'the position';
     const company = jobData.company || '[Company Name]';
-    
+
     // Extract skills more intelligently
     const topSkills = resumeData.skills?.slice(0, 4) || [];
     const skillsText = topSkills.length > 0 ? topSkills.join(', ') : 'relevant technical skills';
-    
+
     // Extract work experience details
     const workExperience = resumeData.workExperience || [];
     const recentPosition = workExperience[0];
-    const experienceText = recentPosition ? 
-      `${recentPosition.position} at ${recentPosition.company}` : 
-      'professional experience in the field';
-    
+    const experienceText = recentPosition
+      ? `${recentPosition.position} at ${recentPosition.company}`
+      : 'professional experience in the field';
+
     // Extract education if available
     const education = resumeData.education || [];
-    const degree = education[0] ? 
-      `${education[0].degree} in ${education[0].field}` : 
-      'relevant educational background';
-    
+    const degree = education[0] ? `${education[0].degree} in ${education[0].field}` : 'relevant educational background';
+
     // Analyze job description for key requirements
     let jobRequirements = [];
-    let companyInfo = '';
-    
+
     if (jobData.description) {
       const desc = jobData.description.toLowerCase();
-      
+
       // Extract technical skills mentioned
-      const techSkills = ['javascript', 'python', 'react', 'node.js', 'aws', 'sql', 'mongodb', 'express', 'html', 'css', 'git', 'docker', 'kubernetes', 'java', 'c++', 'angular', 'vue'];
-      const mentionedTech = techSkills.filter(skill => desc.includes(skill));
-      
+      const techSkills = [
+        'javascript',
+        'python',
+        'react',
+        'node.js',
+        'aws',
+        'sql',
+        'mongodb',
+        'express',
+        'html',
+        'css',
+        'git',
+        'docker',
+        'kubernetes',
+        'java',
+        'c++',
+        'angular',
+        'vue',
+      ];
+      const mentionedTech = techSkills.filter((skill) => desc.includes(skill));
+
       // Extract soft skills and requirements
-      const softSkills = ['leadership', 'teamwork', 'communication', 'problem-solving', 'analytical', 'creative', 'detail-oriented'];
-      const mentionedSoft = softSkills.filter(skill => desc.includes(skill));
-      
+      const softSkills = [
+        'leadership',
+        'teamwork',
+        'communication',
+        'problem-solving',
+        'analytical',
+        'creative',
+        'detail-oriented',
+      ];
+      const mentionedSoft = softSkills.filter((skill) => desc.includes(skill));
+
       jobRequirements = [...mentionedTech.slice(0, 3), ...mentionedSoft.slice(0, 2)];
     }
-    
-    const requirementsText = jobRequirements.length > 0 ? 
-      jobRequirements.join(', ') : 
-      'the technical and soft skills required for this role';
+
+    const requirementsText =
+      jobRequirements.length > 0 ? jobRequirements.join(', ') : 'the technical and soft skills required for this role';
 
     // Build a more sophisticated prompt
-   const prompt = `
+    const prompt = `
 You are an elite executive recruiter, hiring manager, and professional career coach with years of experience writing high-converting, industry-standard cover letters.
 
 Your task is to generate a highly personalized, ATS-optimized, professional cover letter tailored specifically to the applicant and the target role.
@@ -198,15 +219,15 @@ Generate the final polished cover letter now.
     // Find the actual cover letter content (after the date)
     const dateRegex = /\w+\s+\d{1,2},\s+\d{4}/;
     const dateMatch = generatedText.match(dateRegex);
-    
+
     let cleaned = generatedText;
-    
+
     // If we find a date, start from there
     if (dateMatch) {
       const dateIndex = generatedText.indexOf(dateMatch[0]);
       cleaned = generatedText.substring(dateIndex);
     }
-    
+
     // Clean up the text
     cleaned = cleaned
       .replace(/\n\n\n+/g, '\n\n') // Remove excessive line breaks
@@ -220,17 +241,23 @@ Generate the final polished cover letter now.
 
     // Ensure proper paragraph structure
     const paragraphs = cleaned.split('\n\n');
-    const formattedParagraphs = paragraphs.map(p => p.trim()).filter(p => p.length > 0);
-    
+    const formattedParagraphs = paragraphs.map((p) => p.trim()).filter((p) => p.length > 0);
+
     // Ensure proper closing
-    let lastParagraph = formattedParagraphs[formattedParagraphs.length - 1];
-    if (!lastParagraph.includes('Sincerely,') && !lastParagraph.includes('Best regards,') && !lastParagraph.includes('Thank you')) {
-      formattedParagraphs.push(`Thank you for considering my application. I look forward to hearing from you soon.\n\nSincerely,\n${resumeData.name || '[Your Name]'}`);
+    const lastParagraph = formattedParagraphs[formattedParagraphs.length - 1];
+    if (
+      !lastParagraph.includes('Sincerely,') &&
+      !lastParagraph.includes('Best regards,') &&
+      !lastParagraph.includes('Thank you')
+    ) {
+      formattedParagraphs.push(
+        `Thank you for considering my application. I look forward to hearing from you soon.\n\nSincerely,\n${resumeData.name || '[Your Name]'}`
+      );
     }
-    
+
     // Join paragraphs with proper spacing
     cleaned = formattedParagraphs.join('\n\n');
-    
+
     // Final cleanup - ensure no incomplete sentences or odd formatting
     cleaned = cleaned
       .replace(/\s+/g, ' ') // Remove extra spaces
@@ -245,10 +272,10 @@ Generate the final polished cover letter now.
    * Fallback template-based cover letter generation
    */
   generateTemplateCoverLetter(jobData, resumeData) {
-    const currentDate = new Date().toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
 
     const applicantName = resumeData.name || 'Your Name';
@@ -285,7 +312,7 @@ ${applicantName}`;
       company: jobData.company,
       generatedAt: new Date().toISOString(),
       model: 'template-fallback',
-      isTemplate: true
+      isTemplate: true,
     };
   }
 
@@ -295,16 +322,16 @@ ${applicantName}`;
   async testConnection() {
     try {
       logger.info('Testing Hugging Face connection...');
-      
+
       const response = await this.hf.textGeneration({
         model: 'gpt2',
         inputs: 'Hello world',
         parameters: {
           max_new_tokens: 10,
-          temperature: 0.5
-        }
+          temperature: 0.5,
+        },
       });
-      
+
       logger.info('Hugging Face connection successful');
       return { success: true, response };
     } catch (error) {
@@ -320,33 +347,33 @@ ${applicantName}`;
   async transcribeAudio(audioBuffer) {
     try {
       logger.info('Transcribing audio with Whisper...');
-      
+
       // Use Whisper model for speech-to-text
       // Note: Model may require authorization, fallback to a simpler approach if needed
       try {
         const response = await this.hf.automaticSpeechRecognition({
           model: 'openai/whisper-small',
-          data: audioBuffer
+          data: audioBuffer,
         });
 
         logger.info('Transcription successful:', response.text);
         return {
           success: true,
           text: response.text,
-          model: 'openai/whisper-small'
+          model: 'openai/whisper-small',
         };
       } catch (whisperError) {
         logger.warn('Whisper model failed, trying alternative model...');
         // Fallback to a more accessible model
         const altResponse = await this.hf.automaticSpeechRecognition({
           model: 'facebook/wav2vec2-base-960h',
-          data: audioBuffer
+          data: audioBuffer,
         });
         logger.info('Transcription successful (fallback):', altResponse.text);
         return {
           success: true,
           text: altResponse.text,
-          model: 'facebook/wav2vec2-base-960h'
+          model: 'facebook/wav2vec2-base-960h',
         };
       }
     } catch (error) {
@@ -354,7 +381,7 @@ ${applicantName}`;
       return {
         success: false,
         error: error.message,
-        text: ''
+        text: '',
       };
     }
   }
@@ -366,42 +393,42 @@ ${applicantName}`;
   async synthesizeSpeech(text) {
     try {
       logger.info('Synthesizing speech:', text.substring(0, 50) + '...');
-      
+
       // Try multiple TTS models, fallback to free options if needed
       try {
         // Try the high-quality VITS model first
         const response = await this.hf.textToSpeech({
           model: 'espnet/kan-bayashi_ljspeech_vits',
-          inputs: text
+          inputs: text,
         });
 
         logger.info('TTS synthesis successful');
         const buffer = await response.arrayBuffer();
         const base64 = Buffer.from(buffer).toString('base64');
-        
+
         return {
           success: true,
           audio: base64,
           model: 'espnet/kan-bayashi_ljspeech_vits',
-          mimeType: 'audio/wav'
+          mimeType: 'audio/wav',
         };
       } catch (vitsError) {
         logger.warn('VITS model failed, trying alternative TTS...');
         // Fallback to a more accessible TTS model
         const response = await this.hf.textToSpeech({
           model: 'Facebook/MMS-TTS-ENG',
-          inputs: text
+          inputs: text,
         });
 
         logger.info('TTS synthesis successful (fallback)');
         const buffer = await response.arrayBuffer();
         const base64 = Buffer.from(buffer).toString('base64');
-        
+
         return {
           success: true,
           audio: base64,
           model: 'Facebook/MMS-TTS-ENG',
-          mimeType: 'audio/wav'
+          mimeType: 'audio/wav',
         };
       }
     } catch (error) {
@@ -409,7 +436,7 @@ ${applicantName}`;
       return {
         success: false,
         error: error.message,
-        audio: null
+        audio: null,
       };
     }
   }

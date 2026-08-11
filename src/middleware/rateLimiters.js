@@ -14,6 +14,7 @@ const generalLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  skip: (_req) => process.env.NODE_ENV === 'test',
 });
 
 /**
@@ -26,34 +27,65 @@ const authLimiter = rateLimit({
   message: 'Too many authentication attempts. Please try again after 15 minutes.',
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => process.env.NODE_ENV === 'test', // Skip in test environment
+  skip: (_req) => process.env.NODE_ENV === 'test',
 });
 
 /**
- * Registration limiter
- * 3 registrations per hour per IP
+ * Refresh endpoint limiter
+ * 30 refreshes per 15 minutes
  */
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: 'Too many token refresh attempts. Please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (_req) => process.env.NODE_ENV === 'test',
+});
+
+/**
+ * Password reset request limiter
+ * 5 requests per hour
+ */
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: 'Too many password reset requests. Please try again after 1 hour.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (_req) => process.env.NODE_ENV === 'test',
+});
+
+/**
+ * Password reset submission limiter
+ * 5 attempts per hour
+ */
+const resetPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: 'Too many password reset attempts. Please try again after 1 hour.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (_req) => process.env.NODE_ENV === 'test',
+});
+
 const registrationLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 60 * 60 * 1000,
   max: 3,
   message: 'Too many registration attempts. Please try again after 1 hour.',
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => process.env.NODE_ENV === 'test',
+  skip: (_req) => process.env.NODE_ENV === 'test',
 });
 
-/**
- * Chatbot/Message rate limiter
- * 50 messages per hour per user
- */
 const chatbotLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 60 * 60 * 1000,
   max: 50,
   message: 'Too many messages. Please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id || req.ip, // Per user if authenticated, else per IP
-  skip: (req) => process.env.NODE_ENV === 'test',
+  keyGenerator: (req) => req.user?.id || req.ip,
+  skip: (_req) => process.env.NODE_ENV === 'test',
 });
 
 /**
@@ -61,13 +93,13 @@ const chatbotLimiter = rateLimit({
  * 10 uploads per day per user
  */
 const uploadLimiter = rateLimit({
-  windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  windowMs: 24 * 60 * 60 * 1000,
   max: 10,
   message: 'Upload limit exceeded. Max 10 uploads per day.',
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => req.user?.id || req.ip,
-  skip: (req) => process.env.NODE_ENV === 'test',
+  skip: (_req) => process.env.NODE_ENV === 'test',
 });
 
 /**
@@ -75,7 +107,7 @@ const uploadLimiter = rateLimit({
  * 200 requests per hour per user
  */
 const apiLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 60 * 60 * 1000,
   max: 200,
   message: 'Too many requests. Please try again later.',
   standardHeaders: true,
@@ -88,20 +120,23 @@ const apiLimiter = rateLimit({
  * 1 request per hour
  */
 const cacheLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 60 * 60 * 1000,
   max: 1,
   message: 'Cache operations are rate limited. Please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => process.env.NODE_ENV === 'test',
+  skip: (_req) => process.env.NODE_ENV === 'test',
 });
 
 module.exports = {
   generalLimiter,
   authLimiter,
+  refreshLimiter,
+  forgotPasswordLimiter,
+  resetPasswordLimiter,
   registrationLimiter,
   chatbotLimiter,
   uploadLimiter,
   apiLimiter,
-  cacheLimiter
+  cacheLimiter,
 };

@@ -13,13 +13,13 @@ const {
   getConversation,
   downloadResume,
   transcribeAudio,
-  synthesizeSpeech
+  synthesizeSpeech,
 } = require('../controllers/chatbotController');
 
 // Configure multer for audio file uploads
-const upload = multer({ 
+const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
 });
 
 // Chatbot routes with authentication and rate limiting

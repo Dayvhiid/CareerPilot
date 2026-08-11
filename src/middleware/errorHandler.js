@@ -3,9 +3,9 @@ const ApiResponse = require('../utils/apiResponse');
 
 const handleMongooseError = (err) => {
   if (err.name === 'ValidationError') {
-    const errors = Object.values(err.errors).map(e => ({
+    const errors = Object.values(err.errors).map((e) => ({
       field: e.path,
-      message: e.message
+      message: e.message,
     }));
     return { status: 400, message: 'Validation failed', errors };
   }

@@ -10,14 +10,14 @@ router.get('/', async (req, res) => {
     cpu: process.cpuUsage(),
     mongodb: { status: 'unknown' },
     redis: { status: 'unknown' },
-    disk: { status: 'unknown' }
+    disk: { status: 'unknown' },
   };
 
   try {
     const dbState = mongoose.connection.readyState;
     checks.mongodb = {
       status: dbState === 1 ? 'healthy' : 'degraded',
-      state: ['disconnected', 'connected', 'connecting', 'disconnecting'][dbState]
+      state: ['disconnected', 'connected', 'connecting', 'disconnecting'][dbState],
     };
   } catch (err) {
     checks.mongodb = { status: 'unhealthy', error: err.message };
@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
     success: true,
     status: isHealthy ? 'healthy' : 'degraded',
     version: process.env.npm_package_version || '1.0.0',
-    checks
+    checks,
   });
 });
 
@@ -57,7 +57,7 @@ router.get('/detailed', async (req, res) => {
     const dbState = mongoose.connection.readyState;
     return {
       status: dbState === 1 ? 'healthy' : 'degraded',
-      state: ['disconnected', 'connected', 'connecting', 'disconnecting'][dbState]
+      state: ['disconnected', 'connected', 'connecting', 'disconnecting'][dbState],
     };
   };
 
@@ -75,11 +75,7 @@ router.get('/detailed', async (req, res) => {
     return { status: 'healthy' };
   };
 
-  const [mongoHealth, redisHealth, diskHealth] = await Promise.allSettled([
-    checkMongoDB(),
-    checkRedis(),
-    checkDisk(),
-  ]);
+  const [mongoHealth, redisHealth, diskHealth] = await Promise.allSettled([checkMongoDB(), checkRedis(), checkDisk()]);
 
   const extractResult = (result) =>
     result.status === 'fulfilled' ? result.value : { status: 'unhealthy', error: result.reason?.message };

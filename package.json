@@ -30,7 +30,6 @@
     "bull": "^4.16.5",
     "compression": "^1.8.1",
     "compromise": "^14.14.4",
-    "connect-redis": "^9.0.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "docx": "^9.5.1",

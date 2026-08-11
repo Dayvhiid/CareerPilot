@@ -1,9 +1,6 @@
 const { logger } = require('../config/logger');
 const UserJob = require('../models/UserJob');
-const JobListing = require('../models/JobListing');
-const resumeQueryService = require('../services/resumeQueryService');
 const jobRetrievalService = require('../services/jobRetrievalService');
-const jobRankingService = require('../services/jobRankingService');
 const jobIngestionService = require('../services/jobIngestionService');
 const cacheService = require('../services/cacheService');
 const recommendationService = require('../services/recommendationService');
@@ -32,7 +29,7 @@ exports.getRecommendations = async (req, res) => {
 
     return res.json({
       success: true,
-      ...result
+      ...result,
     });
   } catch (error) {
     logger.error(`recommendationController.getRecommendations: ${error.message}`);
@@ -47,11 +44,7 @@ exports.getJobDetails = async (req, res) => {
 
     const [job] = await Promise.all([
       jobRetrievalService.retrieveById(jobId),
-      UserJob.findOneAndUpdate(
-        { userId, jobId },
-        { userId, jobId, status: 'viewed' },
-        { upsert: true }
-      )
+      UserJob.findOneAndUpdate({ userId, jobId }, { userId, jobId, status: 'viewed' }, { upsert: true }),
     ]);
 
     if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
@@ -98,13 +91,16 @@ exports.markApplied = async (req, res) => {
 };
 
 exports.triggerIngestion = async (req, res) => {
-  jobIngestionService.runIngestionCycle().then(count => {
-    logger.info(`recommendationController: manual ingestion complete — ${count} jobs`);
-    cacheService.invalidate('recommendations:*').then(() => {
-      logger.info('recommendationController: flushed all recommendation caches after ingestion');
+  jobIngestionService
+    .runIngestionCycle()
+    .then((count) => {
+      logger.info(`recommendationController: manual ingestion complete — ${count} jobs`);
+      cacheService.invalidate('recommendations:*').then(() => {
+        logger.info('recommendationController: flushed all recommendation caches after ingestion');
+      });
+    })
+    .catch((err) => {
+      logger.error(`recommendationController: manual ingestion failed — ${err.message}`);
     });
-  }).catch(err => {
-    logger.error(`recommendationController: manual ingestion failed — ${err.message}`);
-  });
   return res.json({ success: true, message: 'Ingestion started in background' });
 };
