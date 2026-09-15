@@ -19,7 +19,7 @@ async function computeEmbedding(text) {
   try {
     const response = await axios.post(url, {
       model: `models/${GEMINI_EMBEDDING_MODEL}`,
-      content: { parts: [{ text: text.substring(0, 8000) }] }
+      content: { parts: [{ text: text.substring(0, 8000) }] },
     });
 
     const duration = Date.now() - start;
@@ -37,7 +37,9 @@ async function computeEmbedding(text) {
     const duration = Date.now() - start;
     const status = err.response?.status || 'network';
     const detail = err.response?.data?.error?.message || err.message;
-    logger.error(`EmbeddingService: FAILED after ${duration}ms | status=${status} | model=${GEMINI_EMBEDDING_MODEL} | error=${detail}`);
+    logger.error(
+      `EmbeddingService: FAILED after ${duration}ms | status=${status} | model=${GEMINI_EMBEDDING_MODEL} | error=${detail}`
+    );
     return new Array(EMBEDDING_DIMENSION).fill(0);
   }
 }

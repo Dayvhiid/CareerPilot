@@ -15,13 +15,13 @@ class SecretsManager {
 
     logger.info('[secrets] Loading from AWS Parameter Store');
     this.ssm = new AWS.SSM({
-      region: process.env.AWS_REGION || 'us-east-1'
+      region: process.env.AWS_REGION || 'us-east-1',
     });
 
     const params = {
       Path: '/careerpilot/production/',
       WithDecryption: true,
-      Recursive: true
+      Recursive: true,
     };
 
     try {

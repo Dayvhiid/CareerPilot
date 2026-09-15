@@ -6,7 +6,7 @@ module.exports = (ttlSeconds = 86400) => {
     if (!key) {
       return res.status(400).json({
         success: false,
-        message: 'Idempotency-Key header required for this endpoint'
+        message: 'Idempotency-Key header required for this endpoint',
       });
     }
 
@@ -17,7 +17,7 @@ module.exports = (ttlSeconds = 86400) => {
     }
 
     const originalJson = res.json.bind(res);
-    res.json = function(body) {
+    res.json = function (body) {
       cache.set(cacheKey, body, ttlSeconds);
       originalJson(body);
     };

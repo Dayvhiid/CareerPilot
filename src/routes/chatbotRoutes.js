@@ -11,15 +11,16 @@ const {
   getProgress,
   listConversations,
   getConversation,
+  deleteConversation,
   downloadResume,
   transcribeAudio,
-  synthesizeSpeech
+  synthesizeSpeech,
 } = require('../controllers/chatbotController');
 
 // Configure multer for audio file uploads
-const upload = multer({ 
+const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
 });
 
 // Chatbot routes with authentication and rate limiting
@@ -28,6 +29,9 @@ router.post('/message', auth, chatbotLimiter, chatbotValidators.message, process
 router.post('/generate', auth, uploadLimiter, generateResume);
 // List all conversations for the user
 router.get('/conversations', auth, listConversations);
+
+// Delete a specific conversation
+router.delete('/conversations/:sessionId', auth, deleteConversation);
 
 // Get a specific conversation with full message history
 router.get('/conversations/:sessionId', auth, getConversation);

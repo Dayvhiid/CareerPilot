@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const { logger } = require('./logger');
 
 function formatConnectionError(error) {
@@ -46,7 +46,7 @@ function logPoolStats() {
       total: pool.totalConnectionCount,
       active: pool.activeConnectionCount,
       available: pool.availableConnectionCount,
-      pending: pool.pendingConnectionCount
+      pending: pool.pendingConnectionCount,
     });
   }
 }
@@ -56,8 +56,10 @@ const connectDB = async () => {
     const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
 
     if (!mongoUri) {
-      logger.warn("MongoDB connection skipped because MONGO_URI/MONGODB_URI is missing.");
-      logger.warn("The server will start, but database-backed features will be unavailable until MongoDB is configured.");
+      logger.warn('MongoDB connection skipped because MONGO_URI/MONGODB_URI is missing.');
+      logger.warn(
+        'The server will start, but database-backed features will be unavailable until MongoDB is configured.'
+      );
       return false;
     }
 
@@ -77,7 +79,7 @@ const connectDB = async () => {
     };
 
     await mongoose.connect(mongoUri, options);
-    logger.info("MongoDB connected");
+    logger.info('MongoDB connected');
 
     mongoose.connection.on('error', (err) => {
       logger.error('MongoDB runtime error:', err);
@@ -95,7 +97,7 @@ const connectDB = async () => {
 
     return true;
   } catch (error) {
-    logger.error("MongoDB connection error details:");
+    logger.error('MongoDB connection error details:');
     logger.error(`   - ${formatConnectionError(error)}`);
     throw error;
   }

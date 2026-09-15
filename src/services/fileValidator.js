@@ -13,12 +13,12 @@ const path = require('path');
  */
 const MAGIC_BYTES = {
   pdf: Buffer.from([0x25, 0x50, 0x44, 0x46]), // %PDF
-  docx: Buffer.from([0x50, 0x4B, 0x03, 0x04]), // ZIP signature (DOCX is ZIP)
+  docx: Buffer.from([0x50, 0x4b, 0x03, 0x04]), // ZIP signature (DOCX is ZIP)
   doc: [
-    Buffer.from([0xD0, 0xCF, 0x11, 0xE0]), // MS Office OLE2
-    Buffer.from([0xDB, 0xA5, 0x2D, 0x00]) // Alternative DOC header
+    Buffer.from([0xd0, 0xcf, 0x11, 0xe0]), // MS Office OLE2
+    Buffer.from([0xdb, 0xa5, 0x2d, 0x00]), // Alternative DOC header
   ],
-  txt: Buffer.from([]) // Plain text - no specific signature
+  txt: Buffer.from([]), // Plain text - no specific signature
 };
 
 /**
@@ -28,10 +28,10 @@ const ALLOWED_FILES = {
   'application/pdf': { ext: '.pdf', magicBytes: MAGIC_BYTES.pdf },
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
     ext: '.docx',
-    magicBytes: MAGIC_BYTES.docx
+    magicBytes: MAGIC_BYTES.docx,
   },
   'application/msword': { ext: '.doc', magicBytes: MAGIC_BYTES.doc },
-  'text/plain': { ext: '.txt', magicBytes: MAGIC_BYTES.txt }
+  'text/plain': { ext: '.txt', magicBytes: MAGIC_BYTES.txt },
 };
 
 /**
@@ -50,10 +50,7 @@ function sanitizeFilename(filename) {
   }
 
   // Remove path separators and null bytes
-  let clean = filename
-    .replace(/[/\\]/g, '_')
-    .replace(/\0/g, '')
-    .replace(/^\.+/, ''); // Remove leading dots
+  let clean = filename.replace(/[/\\]/g, '_').replace(/\0/g, '').replace(/^\.+/, ''); // Remove leading dots
 
   // Keep only alphanumeric, dash, underscore, and extension
   clean = clean.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -86,9 +83,7 @@ async function verifyFileMagic(filePath, mimeType) {
       return false;
     }
 
-    const magicBytes = Array.isArray(fileConfig.magicBytes)
-      ? fileConfig.magicBytes
-      : [fileConfig.magicBytes];
+    const magicBytes = Array.isArray(fileConfig.magicBytes) ? fileConfig.magicBytes : [fileConfig.magicBytes];
 
     const file = await fs.promises.open(filePath, 'r');
     const buffer = Buffer.alloc(4);
@@ -101,7 +96,7 @@ async function verifyFileMagic(filePath, mimeType) {
     }
 
     // Check if file starts with any of the magic byte signatures
-    return magicBytes.some(magic => {
+    return magicBytes.some((magic) => {
       return buffer.slice(0, magic.length).equals(magic);
     });
   } catch (error) {
@@ -139,7 +134,7 @@ async function validateFile(file, filePath) {
     if (!ALLOWED_FILES[file.mimetype]) {
       return {
         valid: false,
-        error: `File type not allowed. Allowed types: ${Object.keys(ALLOWED_FILES).join(', ')}`
+        error: `File type not allowed. Allowed types: ${Object.keys(ALLOWED_FILES).join(', ')}`,
       };
     }
 
@@ -177,5 +172,5 @@ module.exports = {
   verifyFileMagic,
   validateFile,
   ALLOWED_FILES,
-  MAX_FILE_SIZE
+  MAX_FILE_SIZE,
 };

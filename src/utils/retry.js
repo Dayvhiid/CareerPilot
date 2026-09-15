@@ -9,7 +9,7 @@ async function withRetry(fn, options = {}) {
       const retryCodes = [429, 500, 502, 503, 504];
       const code = err.response?.status || err.statusCode || 0;
       return retryCodes.includes(code) || err.code === 'ECONNRESET';
-    }
+    },
   } = options;
 
   let lastError;
@@ -24,7 +24,7 @@ async function withRetry(fn, options = {}) {
       const delay = Math.min(baseDelay * Math.pow(2, attempt - 1), maxDelay);
       const jitter = Math.random() * 1000;
       logger.warn(`[retry] Attempt ${attempt}/${maxRetries} failed. Retrying in ${delay + jitter}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delay + jitter));
+      await new Promise((resolve) => setTimeout(resolve, delay + jitter));
     }
   }
   throw lastError;

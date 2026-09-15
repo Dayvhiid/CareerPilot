@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareerPilot — Verify Email</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #08080E;
+      --surf:   #0F0F1A;
+      --surf2:  #161628;
+      --glass:  rgba(255,255,255,0.04);
+      --gold:   #C9973A;
+      --gold-b: #E8B45A;
+      --gold-d: rgba(201,151,58,0.35);
+      --tp:     #F0EDE6;
+      --ts:     #8A8580;
+      --tt:     #484644;
+      --bs:     rgba(201,151,58,0.12);
+      --bm:     rgba(201,151,58,0.28);
+      --r-sm:   6px;
+      --r-md:   10px;
+      --r-lg:   18px;
+      --r-xl:   26px;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(var(--bs) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bs) 1px, transparent 1px);
+      background-size: 60px 60px;
+      color: var(--tp);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -20%; left: 50%;
+      transform: translateX(-50%);
+      width: 1000px; height: 1000px;
+      background: radial-gradient(ellipse, rgba(201,151,58,0.08) 0%, transparent 65%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .header {
+      position: relative; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 clamp(1.5rem, 5vw, 3rem);
+      height: 72px; border-bottom: 1px solid var(--bs);
+    }
+
+    .logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600; font-size: 1.4rem; color: var(--tp);
+      text-decoration: none; display: flex; align-items: center;
+    }
+    .logo span { color: var(--gold); margin-right: 6px; }
+
+    .main {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 2rem 1.5rem; position: relative; z-index: 1;
+    }
+
+    .card {
+      width: 100%; max-width: 420px;
+      background: var(--surf);
+      border: 1px solid var(--bs);
+      border-radius: var(--r-xl);
+      padding: 2.5rem 2.25rem;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-icon {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: rgba(201,151,58,0.1);
+      border: 1px solid var(--bm);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.5rem;
+    }
+    .card-icon i { font-size: 24px; color: var(--gold); }
+
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem; font-weight: 400; color: var(--tp);
+      text-align: center; margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      text-align: center; font-size: 0.85rem; color: var(--ts);
+      font-weight: 300; margin-bottom: 2rem; line-height: 1.5;
+    }
+    .subtitle .email { color: var(--gold); font-weight: 400; }
+
+    .code-inputs {
+      display: flex; gap: 0.6rem; justify-content: center; margin-bottom: 1.5rem;
+    }
+    .code-inputs input {
+      width: 48px; height: 56px;
+      background: var(--surf2);
+      border: 1px solid var(--bs);
+      border-radius: var(--r-md);
+      color: var(--tp);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.4rem; font-weight: 500;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    .code-inputs input:focus { border-color: var(--gold); }
+    .code-inputs input.filled { border-color: var(--gold-b); background: rgba(201,151,58,0.05); }
+
+    #message {
+      font-size: 0.82rem; text-align: center;
+      margin-bottom: 1rem; min-height: 1.2rem;
+      transition: opacity 0.3s ease;
+    }
+    #message.error   { color: #e74c3c; }
+    #message.success { color: #5DCAA5; }
+
+    .btn-verify {
+      width: 100%; padding: 0.85rem;
+      background: var(--gold); color: var(--bg);
+      border: none; border-radius: var(--r-md);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem; font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn-verify:hover { background: var(--gold-b); box-shadow: var(--glow-h); }
+    .btn-verify:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .resend {
+      text-align: center; margin-top: 1.5rem;
+      font-size: 0.82rem; color: var(--ts);
+    }
+    .resend button {
+      background: none; border: none; color: var(--gold);
+      font-family: 'DM Sans', sans-serif; font-size: 0.82rem;
+      font-weight: 500; cursor: pointer; text-decoration: underline;
+    }
+    .resend button:disabled { opacity: 0.5; cursor: not-allowed; color: var(--ts); }
+
+    .back {
+      text-align: center; margin-top: 1rem;
+      font-size: 0.82rem;
+    }
+    .back a { color: var(--ts); text-decoration: none; transition: color 0.2s; }
+    .back a:hover { color: var(--tp); }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <a href="/" class="logo"><span>·</span>CareerPilot</a>
+    <a href="/login" class="btn btn-ghost" style="font-size:0.85rem;color:var(--ts);text-decoration:none;">Sign in</a>
+  </header>
+
+  <main class="main">
+    <div class="card">
+      <div class="card-icon"><i class="ti ti-mail-check"></i></div>
+      <h1>Check your email</h1>
+      <p class="subtitle">
+        We sent a 6-digit code to<br>
+        <span class="email" id="userEmail">your email</span>
+      </p>
+
+      <form id="verifyForm" autocomplete="off">
+        <div class="code-inputs" id="codeInputs">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" autofocus />
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+        </div>
+
+        <div id="message"></div>
+
+        <button type="submit" class="btn-verify" id="verifyBtn" disabled>Verify Email</button>
+      </form>
+
+      <div class="resend">
+        <span id="resendTimer">Resend code in 30s</span>
+        <button id="resendBtn" disabled>Resend Code</button>
+      </div>
+
+      <div class="back">
+        <a href="/login">← Back to sign in</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = '/api';
+    const params = new URLSearchParams(window.location.search);
+    const email = params.get('email') || '';
+    const maskedEmail = email ? email.replace(/(.{2})(.*)(@.*)/, '$1***$3') : 'your email';
+
+    document.getElementById('userEmail').textContent = maskedEmail;
+
+    if (!email) {
+      document.getElementById('message').textContent = 'No email provided. Please sign up first.';
+      document.getElementById('message').className = 'error';
+      document.getElementById('verifyBtn').disabled = true;
+    }
+
+    /* ── Code input handling ── */
+    const inputs = document.querySelectorAll('#codeInputs input');
+    const verifyBtn = document.getElementById('verifyBtn');
+
+    inputs.forEach((input, i) => {
+      input.addEventListener('input', (e) => {
+        const val = e.target.value.replace(/[^0-9]/g, '');
+        e.target.value = val;
+        if (val && i < inputs.length - 1) inputs[i + 1].focus();
+        updateVerifyBtn();
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !e.target.value && i > 0) {
+          inputs[i - 1].focus();
+          inputs[i - 1].value = '';
+        }
+      });
+
+      input.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+        pasted.split('').forEach((char, j) => {
+          if (inputs[j]) inputs[j].value = char;
+        });
+        if (pasted.length > 0) inputs[Math.min(pasted.length, inputs.length - 1)].focus();
+        updateVerifyBtn();
+      });
+    });
+
+    function getCode() {
+      return Array.from(inputs).map(i => i.value).join('');
+    }
+
+    function updateVerifyBtn() {
+      const code = getCode();
+      verifyBtn.disabled = code.length !== 6 || !email;
+      inputs.forEach(i => { i.classList.toggle('filled', i.value.length === 1); });
+    }
+
+    /* ── Verify form ── */
+    document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const code = getCode();
+      if (code.length !== 6 || !email) return;
+
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = 'Verifying…';
+      showMessage('', '');
+
+      try {
+        const res = await fetch(`${API_BASE}/auth/verify-code`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, code }),
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          localStorage.setItem('user', JSON.stringify(data.user));
+          showMessage('Email verified! Redirecting…', 'success');
+          setTimeout(() => { window.location.href = '/resume'; }, 1000);
+        } else {
+          showMessage(data.message || 'Invalid code. Please try again.', 'error');
+          verifyBtn.disabled = false;
+          verifyBtn.textContent = 'Verify Email';
+          inputs.forEach(i => { i.value = ''; i.classList.remove('filled'); });
+          inputs[0].focus();
+        }
+      } catch {
+        showMessage('Network error. Please try again.', 'error');
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = 'Verify Email';
+      }
+    });
+
+    function showMessage(text, type) {
+      const el = document.getElementById('message');
+      el.textContent = text;
+      el.className = type;
+    }
+
+    /* ── Resend code ── */
+    let cooldown = 30;
+    const timerEl = document.getElementById('resendTimer');
+    const resendBtn = document.getElementById('resendBtn');
+
+    function startCooldown() {
+      cooldown = 30;
+      resendBtn.disabled = true;
+      timerEl.style.display = '';
+      const interval = setInterval(() => {
+        cooldown--;
+        if (cooldown <= 0) {
+          clearInterval(interval);
+          resendBtn.disabled = false;
+          timerEl.style.display = 'none';
+        } else {
+          timerEl.textContent = `Resend code in ${cooldown}s`;
+        }
+      }, 1000);
+    }
+
+    resendBtn.addEventListener('click', async () => {
+      if (!email) return;
+      resendBtn.disabled = true;
+      try {
+        const res = await fetch(`${API_BASE}/auth/resend-verification`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showMessage('New code sent! Check your inbox.', 'success');
+        } else {
+          showMessage(data.message || 'Failed to resend code.', 'error');
+        }
+      } catch {
+        showMessage('Network error. Please try again.', 'error');
+      }
+      startCooldown();
+    });
+
+    startCooldown();
+  </script>
+</body>
+</html>

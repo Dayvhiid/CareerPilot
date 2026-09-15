@@ -42,18 +42,24 @@ function normalizeJob(raw) {
     salary: {
       min: raw.job_min_salary || null,
       max: raw.job_max_salary || null,
-      currency: raw.job_salary_currency || 'USD'
+      currency: raw.job_salary_currency || 'USD',
     },
     jobType: normalizeJobType(raw.job_employment_type || raw.jobType),
     experienceLevel: normalizeExpLevel(raw),
     workType: raw.job_is_remote ? 'remote' : 'onsite',
     postedDate: raw.job_posted_at_datetime_utc || raw.postedDate || new Date(),
-    isActive: true
+    isActive: true,
   };
 }
 
 function normalizeJobType(type) {
-  const map = { 'fulltime': 'full-time', 'parttime': 'part-time', 'contractor': 'contract', 'temporary': 'temporary', 'internship': 'internship' };
+  const map = {
+    fulltime: 'full-time',
+    parttime: 'part-time',
+    contractor: 'contract',
+    temporary: 'temporary',
+    internship: 'internship',
+  };
   return map[(type || '').toLowerCase().replace(/[^a-z]/g, '')] || 'full-time';
 }
 
@@ -104,8 +110,8 @@ async function searchAndIngest(query, location = 'Nigeria', numPages = 1) {
         params: { query, location, page, num_pages: 1 },
         headers: {
           'X-RapidAPI-Key': JSEARCH_API_KEY,
-          'X-RapidAPI-Host': 'jsearch.p.rapidapi.com'
-        }
+          'X-RapidAPI-Host': 'jsearch.p.rapidapi.com',
+        },
       });
 
       const jobs = response.data?.data || [];
@@ -126,18 +132,25 @@ async function runIngestionCycle() {
   logger.info('jobIngestionService: === STARTING INGESTION CYCLE ===');
 
   const QUERIES_BY_DOMAIN = {
-    'Software Engineering': ['software engineer', 'developer', 'backend developer', 'frontend developer', 'full stack developer', 'devops engineer'],
+    'Software Engineering': [
+      'software engineer',
+      'developer',
+      'backend developer',
+      'frontend developer',
+      'full stack developer',
+      'devops engineer',
+    ],
     'Data / Analytics': ['data scientist', 'data engineer', 'data analyst'],
     'Design / UX': ['ui designer', 'ux designer', 'product designer'],
     'Product Management': ['product manager'],
-    'Marketing': ['marketing manager', 'digital marketing manager'],
-    'Sales': ['sales representative', 'account executive', 'business development'],
+    Marketing: ['marketing manager', 'digital marketing manager'],
+    Sales: ['sales representative', 'account executive', 'business development'],
     'Finance / Accounting': ['accountant', 'financial analyst', 'finance manager'],
     'Human Resources': ['hr manager', 'recruiter', 'human resources'],
     'Operations / Admin': ['operations manager', 'office manager', 'administrative assistant'],
-    'Healthcare': ['registered nurse', 'nurse', 'healthcare', 'medical assistant', 'pharmacist'],
-    'Education': ['teacher', 'instructor', 'professor', 'education coordinator'],
-    'Legal': ['lawyer', 'paralegal', 'legal assistant', 'attorney'],
+    Healthcare: ['registered nurse', 'nurse', 'healthcare', 'medical assistant', 'pharmacist'],
+    Education: ['teacher', 'instructor', 'professor', 'education coordinator'],
+    Legal: ['lawyer', 'paralegal', 'legal assistant', 'attorney'],
     'Construction / Engineering': ['civil engineer', 'mechanical engineer', 'construction manager'],
     'Customer Support': ['customer support', 'customer service representative', 'support specialist'],
     'Content / Writing': ['content writer', 'copywriter', 'editor', 'journalist'],

@@ -3,7 +3,7 @@
  * Reusable validation middleware using express-validator
  */
 
-const { body, param, query, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 
 /**
  * Middleware to handle validation errors
@@ -14,10 +14,10 @@ const handleValidationErrors = (req, res, next) => {
     return res.status(400).json({
       success: false,
       message: 'Validation failed',
-      errors: errors.array().map(err => ({
+      errors: errors.array().map((err) => ({
         field: err.param,
-        message: err.msg
-      }))
+        message: err.msg,
+      })),
     });
   }
   next();
@@ -34,29 +34,50 @@ const authValidators = {
       .withMessage('Name must be between 2 and 100 characters')
       .matches(/^[a-zA-Z\s'-]+$/)
       .withMessage('Name contains invalid characters'),
-    body('email')
-      .isEmail()
-      .withMessage('Invalid email format')
-      .normalizeEmail()
-      .toLowerCase(),
+    body('email').isEmail().withMessage('Invalid email format').normalizeEmail().toLowerCase(),
     body('password')
       .isLength({ min: 8 })
       .withMessage('Password must be at least 8 characters')
       .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
       .withMessage('Password must contain uppercase, lowercase, and numbers'),
-    handleValidationErrors
+    handleValidationErrors,
   ],
 
   login: [
-    body('email')
-      .isEmail()
-      .withMessage('Invalid email format')
-      .normalizeEmail(),
-    body('password')
-      .notEmpty()
-      .withMessage('Password is required'),
-    handleValidationErrors
-  ]
+    body('email').isEmail().withMessage('Invalid email format').normalizeEmail(),
+    body('password').notEmpty().withMessage('Password is required'),
+    handleValidationErrors,
+  ],
+
+  forgotPassword: [
+    body('email').isEmail().withMessage('Invalid email format').normalizeEmail().toLowerCase(),
+    handleValidationErrors,
+  ],
+
+  resetPassword: [
+    body('token').isLength({ min: 32, max: 128 }).withMessage('Invalid reset token'),
+    body('newPassword')
+      .isLength({ min: 8 })
+      .withMessage('Password must be at least 8 characters')
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+      .withMessage('Password must contain uppercase, lowercase, and numbers'),
+    handleValidationErrors,
+  ],
+
+  verifyEmail: [
+    body('email').isEmail().withMessage('Invalid email format').normalizeEmail().toLowerCase(),
+    handleValidationErrors,
+  ],
+
+  changePassword: [
+    body('currentPassword').notEmpty().withMessage('Current password is required'),
+    body('newPassword')
+      .isLength({ min: 8 })
+      .withMessage('Password must be at least 8 characters')
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+      .withMessage('Password must contain uppercase, lowercase, and numbers'),
+    handleValidationErrors,
+  ],
 };
 
 /**
@@ -64,13 +85,9 @@ const authValidators = {
  */
 const fileValidators = {
   uploadResume: [
-    body('filename')
-      .if(body('filename').exists())
-      .trim()
-      .isLength({ max: 255 })
-      .withMessage('Filename too long'),
+    body('filename').if(body('filename').exists()).trim().isLength({ max: 255 }).withMessage('Filename too long'),
   ],
-  handleValidationErrors
+  handleValidationErrors,
 };
 
 /**
@@ -83,12 +100,9 @@ const chatbotValidators = {
       .isLength({ min: 1, max: 5000 })
       .withMessage('Message must be between 1 and 5000 characters')
       .escape(),
-    body('sessionId')
-      .if(body('sessionId').exists())
-      .isLength({ max: 100 })
-      .withMessage('Invalid session ID'),
-    handleValidationErrors
-  ]
+    body('sessionId').if(body('sessionId').exists()).isLength({ max: 100 }).withMessage('Invalid session ID'),
+    handleValidationErrors,
+  ],
 };
 
 /**
@@ -96,51 +110,24 @@ const chatbotValidators = {
  */
 const coverLetterValidators = {
   generate: [
-    body('customInstructions')
-      .optional()
-      .trim()
-      .isLength({ max: 5000 })
-      .withMessage('Custom instructions too long'),
-    body('tone')
-      .optional()
-      .isIn(['professional', 'casual', 'formal'])
-      .withMessage('Invalid tone'),
-    body('length')
-      .optional()
-      .isIn(['short', 'medium', 'long'])
-      .withMessage('Invalid length'),
-    handleValidationErrors
-  ]
+    body('customInstructions').optional().trim().isLength({ max: 5000 }).withMessage('Custom instructions too long'),
+    body('tone').optional().isIn(['professional', 'casual', 'formal']).withMessage('Invalid tone'),
+    body('length').optional().isIn(['short', 'medium', 'long']).withMessage('Invalid length'),
+    handleValidationErrors,
+  ],
 };
 
 const paymentValidators = {
   initialize: [
-    body('billing')
-      .isIn(['monthly', 'annual'])
-      .withMessage('Billing must be monthly or annual'),
-    handleValidationErrors
-  ]
+    body('billing').isIn(['monthly', 'annual']).withMessage('Billing must be monthly or annual'),
+    handleValidationErrors,
+  ],
 };
 
 const jobValidators = {
-  bookmark: [
-    param('jobId')
-      .isMongoId()
-      .withMessage('Invalid job ID'),
-    handleValidationErrors
-  ],
-  getJobDetails: [
-    param('jobId')
-      .isMongoId()
-      .withMessage('Invalid job ID'),
-    handleValidationErrors
-  ],
-  markApplied: [
-    param('jobId')
-      .isMongoId()
-      .withMessage('Invalid job ID'),
-    handleValidationErrors
-  ]
+  bookmark: [param('jobId').isMongoId().withMessage('Invalid job ID'), handleValidationErrors],
+  getJobDetails: [param('jobId').isMongoId().withMessage('Invalid job ID'), handleValidationErrors],
+  markApplied: [param('jobId').isMongoId().withMessage('Invalid job ID'), handleValidationErrors],
 };
 
 module.exports = {
@@ -150,5 +137,5 @@ module.exports = {
   chatbotValidators,
   coverLetterValidators,
   paymentValidators,
-  jobValidators
+  jobValidators,
 };

@@ -7,12 +7,14 @@ const BUCKET = process.env.S3_BUCKET || 'careerpilot-uploads';
 
 async function uploadFile(file, userId) {
   const key = `uploads/${userId}/${uuidv4()}-${Date.now()}`;
-  await s3.send(new PutObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-    Body: file.buffer,
-    ContentType: file.mimetype
-  }));
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    })
+  );
   return key;
 }
 

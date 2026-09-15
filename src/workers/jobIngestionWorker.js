@@ -24,7 +24,7 @@ async function main() {
   process.exit(0);
 }
 
-main().catch(err => {
+main().catch((err) => {
   logger.error(`jobIngestionWorker: fatal — ${err.message}`);
   process.exit(1);
 });

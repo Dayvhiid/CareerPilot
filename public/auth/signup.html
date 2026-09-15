@@ -904,10 +904,14 @@
         const data = await res.json();
 
         if (res.ok) {
-          showMessage('Account created! Redirecting to sign in…', 'success', 'ti-circle-check');
-          setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+          showMessage('Account created! Redirecting to verification…', 'success', 'ti-circle-check');
+          setTimeout(() => { window.location.href = `/verify?email=${encodeURIComponent(email)}`; }, 1500);
         } else {
-          showMessage(data.msg || 'Registration failed. Please try again.', 'error', 'ti-alert-circle');
+          if (data.errors && data.errors.length > 0) {
+            showMessage(data.errors[0].message, 'error', 'ti-alert-circle');
+          } else {
+            showMessage(data.message || 'Registration failed. Please try again.', 'error', 'ti-alert-circle');
+          }
         }
       } catch (err) {
         console.error(err);

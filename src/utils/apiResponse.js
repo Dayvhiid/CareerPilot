@@ -2,7 +2,7 @@ class ApiResponse {
   static success(res, data, statusCode = 200) {
     return res.status(statusCode).json({
       success: true,
-      ...data
+      ...data,
     });
   }
 
@@ -10,7 +10,7 @@ class ApiResponse {
     const response = {
       success: false,
       message,
-      code: `ERR_${statusCode}`
+      code: `ERR_${statusCode}`,
     };
     if (errors) response.errors = errors;
     return res.status(statusCode).json(response);
@@ -25,8 +25,8 @@ class ApiResponse {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-        hasMore: page * limit < total
-      }
+        hasMore: page * limit < total,
+      },
     });
   }
 }

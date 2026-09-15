@@ -12,10 +12,7 @@ function initializeSentry(app) {
     environment: process.env.NODE_ENV || 'development',
     release: process.env.npm_package_version || '1.0.0',
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 1.0 : 0.1,
-    integrations: [
-      new Sentry.Integrations.Http({ tracing: true }),
-      new Sentry.Integrations.Express({ app }),
-    ],
+    integrations: [new Sentry.Integrations.Http({ tracing: true }), new Sentry.Integrations.Express({ app })],
   });
 
   app.use(Sentry.Handlers.requestHandler());

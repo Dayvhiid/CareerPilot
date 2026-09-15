@@ -8,7 +8,7 @@ const {
   getJobDetails,
   bookmarkJob,
   markApplied,
-  triggerIngestion
+  triggerIngestion,
 } = require('../controllers/recommendationController');
 
 router.get(['/', ''], auth, apiLimiter, getRecommendations);

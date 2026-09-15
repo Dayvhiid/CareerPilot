@@ -83,17 +83,19 @@ ${text}`;
     response = await axios.post(
       url,
       {
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
+        contents: [
+          {
+            parts: [{ text: prompt }],
+          },
+        ],
         generationConfig: {
           temperature: 0.1,
-          maxOutputTokens: 4000
-        }
+          maxOutputTokens: 4000,
+        },
       },
       {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 30000
+        timeout: 30000,
       }
     );
     logger.info(`Gemini API responded with status ${response.status}`);

@@ -57,11 +57,10 @@ Rate limited: 5 attempts per 15 minutes.
 {
   "success": true,
   "accessToken": "<jwt>",
-  "token": "<jwt>",
   "user": { "id": "...", "name": "John Doe", "email": "john@example.com" }
 }
 ```
-Sets `refreshToken` as httpOnly cookie (7-day expiry).
+Sets `accessToken` (15m) and `refreshToken` (7d) as httpOnly cookies. `accessToken` in the response body is retained for clients that cannot use cookies.
 
 **Response 401:**
 ```json
@@ -75,7 +74,7 @@ Reads `refreshToken` from cookie.
 
 **Response 200:**
 ```json
-{ "success": true, "accessToken": "<new-jwt>", "token": "<new-jwt>" }
+{ "success": true, "accessToken": "<new-jwt>" }
 ```
 
 **Response 401:**
@@ -83,13 +82,13 @@ Reads `refreshToken` from cookie.
 { "success": false, "message": "Refresh token missing" }
 ```
 ```json
-{ "success": false, "message": "Refresh token expired. Please login again." }
+{ "success": false, "message": "Invalid or expired refresh token" }
 ```
 
 ---
 
 ### POST /api/auth/logout
-Clears `refreshToken` cookie.
+Revokes the refresh token server-side and clears the auth cookies.
 
 **Response 200:**
 ```json
@@ -98,22 +97,39 @@ Clears `refreshToken` cookie.
 
 ---
 
+### POST /api/auth/change-password
+*Authenticated.* Requires `currentPassword` and `newPassword`. On success all refresh tokens are revoked and auth cookies are cleared.
+
+### POST /api/auth/forgot-password
+Accepts `{ "email": "..." }`. If the account exists, emails a password-reset link (expires in 30 minutes). Always returns a generic success response to avoid email enumeration.
+
+### POST /api/auth/reset-password
+Accepts `{ "token": "...", "newPassword": "..." }`. Resets the password, marks the email verified, and revokes all refresh tokens.
+
+### GET /api/auth/verify-email?token=...
+Verifies the user's email and redirects to `/public/auth/login.html?verified=1` (or `?verified=0` on failure).
+
+### POST /api/auth/resend-verification
+Accepts `{ "email": "..." }`. Re-sends the verification email if the account exists and is unverified.
+
+---
+
 ## OAuth
 
 ### GET /api/oauth/google
-Redirects to Google consent screen. Requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to be configured.
+Redirects to Google consent screen (with CSRF `state`). Requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to be configured.
 
 ### GET /api/oauth/google/callback
-Handles Google OAuth callback. On success, sets `accessToken` cookie and redirects to `/public/resume/resume.html`.
+Handles Google OAuth callback. On success, sets `accessToken` + `refreshToken` httpOnly cookies and redirects to `/public/resume/resume.html`.
 
 ### GET /api/oauth/github
-Redirects to GitHub consent screen. Requires `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` to be configured.
+Redirects to GitHub consent screen (with CSRF `state`). Requires `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` to be configured.
 
 ### GET /api/oauth/github/callback
-Handles GitHub OAuth callback. On success, sets `accessToken` cookie and redirects to `/public/resume/resume.html`.
+Handles GitHub OAuth callback. On success, sets `accessToken` + `refreshToken` httpOnly cookies and redirects to `/public/resume/resume.html`.
 
 ### GET /api/oauth/logout
-Calls `req.logout()` and redirects to `/`.
+Revokes the refresh token and calls `req.logout()`, then redirects to `/`.
 
 ---
 

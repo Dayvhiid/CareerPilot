@@ -10,7 +10,7 @@ const router = express.Router();
 // Amounts in kobo (PayStack's smallest currency unit)
 const PREMIUM_AMOUNTS = {
   monthly: parseInt(process.env.PREMIUM_MONTHLY_KOBO || '500000', 10),
-  annual:  parseInt(process.env.PREMIUM_ANNUAL_KOBO  || '5000000', 10)
+  annual: parseInt(process.env.PREMIUM_ANNUAL_KOBO || '5000000', 10),
 };
 
 const CALLBACK_URL = process.env.PAYSTACK_CALLBACK_URL || 'http://localhost:4000/api/payments/verify';
@@ -26,12 +26,10 @@ router.post('/initialize', auth, paymentValidators.initialize, async (req, res) 
       return res.status(400).json({ success: false, message: 'Invalid billing plan' });
     }
 
-    const result = await initializeTransaction(
-      req.user.email,
-      amount,
-      CALLBACK_URL,
-      { userId: req.user._id.toString(), billing: plan }
-    );
+    const result = await initializeTransaction(req.user.email, amount, CALLBACK_URL, {
+      userId: req.user._id.toString(),
+      billing: plan,
+    });
 
     if (!result.status) {
       return res.status(502).json({ success: false, message: 'Failed to initialize payment' });
@@ -92,9 +90,9 @@ async function webhookHandler(req, res) {
             billing,
             paystackReference: reference,
             activatedAt: new Date(),
-            expiresAt
-          }
-        }
+            expiresAt,
+          },
+        },
       },
       { new: true }
     );
@@ -120,36 +118,47 @@ router.get('/verify', async (req, res) => {
   const ref = reference || trxref;
 
   if (!ref) {
-    return res.status(400).send(renderPage(
-      'Missing Parameters',
-      'No transaction reference was provided. Please contact support.'
-    ));
+    return res
+      .status(400)
+      .send(renderPage('Missing Parameters', 'No transaction reference was provided. Please contact support.'));
   }
 
   try {
     const result = await verifyTransaction(ref);
 
     if (!result.status || result.data.status !== 'success') {
-      return res.status(200).send(renderPage(
-        'Payment Failed',
-        `Your payment could not be verified (${result.data.status || 'unknown'}). If your card was charged, please contact support.`
-      ));
+      return res
+        .status(200)
+        .send(
+          renderPage(
+            'Payment Failed',
+            `Your payment could not be verified (${result.data.status || 'unknown'}). If your card was charged, please contact support.`
+          )
+        );
     }
 
     const customerEmail = result.data.customer?.email;
     if (!customerEmail) {
-      return res.status(200).send(renderPage(
-        'Verification Error',
-        'Could not identify the customer from this transaction. Please contact support.'
-      ));
+      return res
+        .status(200)
+        .send(
+          renderPage(
+            'Verification Error',
+            'Could not identify the customer from this transaction. Please contact support.'
+          )
+        );
     }
 
     const user = await User.findOne({ email: customerEmail });
     if (!user) {
-      return res.status(200).send(renderPage(
-        'Account Not Found',
-        `No CareerPilot account was found for ${customerEmail}. Your payment was received but could not be linked. Please contact support.`
-      ));
+      return res
+        .status(200)
+        .send(
+          renderPage(
+            'Account Not Found',
+            `No CareerPilot account was found for ${customerEmail}. Your payment was received but could not be linked. Please contact support.`
+          )
+        );
     }
 
     // Atomic update to prevent race condition between webhook and verify callback
@@ -171,23 +180,25 @@ router.get('/verify', async (req, res) => {
             billing,
             paystackReference: ref,
             activatedAt: new Date(),
-            expiresAt
-          }
-        }
+            expiresAt,
+          },
+        },
       }
     );
 
-    return res.status(200).send(renderPage(
-      'Payment Successful!',
-      `Your CareerPilot Premium plan is now active. Welcome aboard!`,
-      true
-    ));
+    return res
+      .status(200)
+      .send(renderPage('Payment Successful!', `Your CareerPilot Premium plan is now active. Welcome aboard!`, true));
   } catch (err) {
     logger.error('paystack verify error:', err);
-    return res.status(200).send(renderPage(
-      'Verification Error',
-      'We could not verify your payment right now. If your card was charged, please contact support.'
-    ));
+    return res
+      .status(200)
+      .send(
+        renderPage(
+          'Verification Error',
+          'We could not verify your payment right now. If your card was charged, please contact support.'
+        )
+      );
   }
 });
 

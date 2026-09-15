@@ -745,11 +745,11 @@
     </a>
     <nav class="nav" aria-label="Main navigation">
       <a href="/resume" class="active">Resume</a>
-      <a href="/jobs/jobs.html">Find Jobs</a>
-      <a href="/chatbot/chatbot.html">AI Coach</a>
+      <a href="/jobs">Find Jobs</a>
+      <a href="/chat">AI Coach</a>
     </nav>
     <div class="header-actions">
-      <a href="/upgrade/upgrade.html" class="btn-upgrade">
+      <a href="/upgrade" class="btn-upgrade">
         <i class="ti ti-bolt" aria-hidden="true"></i>
         <span>Upgrade</span>
       </a>
@@ -874,7 +874,7 @@
               <div class="empty-icon"><i class="ti ti-file-off" aria-hidden="true"></i></div>
               <p class="empty-title">Nothing here yet</p>
               <p class="empty-sub">Upload your resume below and our AI will extract your skills, experience, and education — ready to match you with roles instantly.</p>
-              <a href="/chatbot/chatbot.html" class="btn-ghost-gold">
+              <a href="/chat" class="btn-ghost-gold">
                 <i class="ti ti-robot" aria-hidden="true"></i>
                 Try the AI career coach instead
               </a>
@@ -882,7 +882,7 @@
           </div>
 
           <!-- UPLOAD panel -->
-          <div class="panel">
+          <div class="panel" id="uploadPanel">
             <div class="panel-head">
               <span class="panel-title"><i class="ti ti-upload"></i>Upload Resume</span>
               <span class="badge badge-outline">Max 10 MB</span>
@@ -976,7 +976,7 @@
           <div class="cta-card">
             <p class="cta-card-title">Get <em>interview-ready</em></p>
             <p class="cta-card-sub">Our AI coach will run mock interviews tailored to your resume and target role.</p>
-            <a href="/chatbot/chatbot.html" class="btn-primary">
+            <a href="/chat" class="btn-primary">
               <i class="ti ti-robot" aria-hidden="true"></i>
               Open AI Career Coach →
             </a>
@@ -1000,12 +1000,6 @@
   <!-- ─── SCRIPTS ───────────────────────────── -->
   <script>
     const API_BASE = '/api';
-    const urlToken = new URLSearchParams(window.location.search).get('token');
-    if (urlToken) {
-      localStorage.setItem('token', urlToken);
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-    const token    = localStorage.getItem('token') || '';
 
     /* ─────────────────────────────────────────
        INIT
@@ -1018,10 +1012,14 @@
     /* ─────────────────────────────────────────
        LOGOUT
     ───────────────────────────────────────── */
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-      localStorage.removeItem('token');
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      try {
+        await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
+      } catch (err) {
+        console.error('Logout error:', err);
+      }
       localStorage.removeItem('user');
-      window.location.href = '/public/auth/login.html';
+      window.location.href = '/login';
     });
 
     /* ─────────────────────────────────────────
@@ -1030,7 +1028,7 @@
     async function loadExistingResume() {
       try {
         const res  = await fetch(`${API_BASE}/resume`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 'Content-Type': 'application/json' }
         });
         const data = await res.json();
 
@@ -1059,6 +1057,8 @@
         const el = document.getElementById(s);
         if (el) el.style.display = s === id ? '' : 'none';
       });
+      const upload = document.getElementById('uploadPanel');
+      if (upload) upload.style.display = id === 'existingResume' ? 'none' : '';
     }
 
     /* ─────────────────────────────────────────
@@ -1067,6 +1067,7 @@
     function showExistingResume(resume) {
       showSection('existingResume');
       hide('noResumeSection');
+      hide('uploadPanel');
 
       document.getElementById('resumeFilename').textContent = resume.filename || 'resume.pdf';
       document.getElementById('resumeDate').textContent =
@@ -1273,7 +1274,6 @@
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', `${API_BASE}/resume/upload`);
-      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
 
       xhr.upload.addEventListener('progress', e => {
         if (e.lengthComputable) {
@@ -1391,7 +1391,7 @@
       _pollInterval = setInterval(async () => {
         try {
           const res  = await fetch(`${API_BASE}/resume`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { 'Content-Type': 'application/json' }
           });
           const data = await res.json();
           if (!data.resume) return;
@@ -1428,13 +1428,14 @@
       try {
         const res = await fetch(`${API_BASE}/resume`, {
           method:  'DELETE',
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 'Content-Type': 'application/json' }
         });
         if (res.ok) {
           hide('existingResume');
           hide('scorePanel');
           hide('successSection');
           show('noResumeSection');
+          show('uploadPanel');
           resetUploadState();
         } else {
           alert('Failed to delete resume. Please try again.');
