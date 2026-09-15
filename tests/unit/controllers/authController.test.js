@@ -69,7 +69,8 @@ describe('Auth Controller', () => {
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({
         success: true,
-        message: 'User registered successfully. Please verify your email address.',
+        message: 'Account created. Please verify your email.',
+        email: 'test@test.com',
       });
     });
 
@@ -83,7 +84,7 @@ describe('Auth Controller', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Registration failed. Please try again.',
+        message: 'An account with this email already exists. Please log in or use a different email.',
       });
     });
   });

@@ -74,7 +74,7 @@ class RedisSessionStore extends Store {
   _getTTL(sess) {
     if (sess?.cookie?.expires) {
       const ms = Number(new Date(sess.cookie.expires)) - Date.now();
-      if (ms > 0) return Math.ceil(ms / 1000);
+      return ms > 0 ? Math.ceil(ms / 1000) : 0;
     }
     return this.ttl;
   }

@@ -1,4 +1,29 @@
 const request = require('supertest');
+const bcrypt = require('bcryptjs');
+jest.mock('../../src/models/User', () => {
+  const usersByEmail = new Map();
+
+  return {
+    create: jest.fn(async (data) => {
+      if (usersByEmail.has(data.email)) {
+        const err = new Error('Duplicate key');
+        err.code = 11000;
+        throw err;
+      }
+
+      const created = {
+        _id: `user-${usersByEmail.size + 1}`,
+        ...data,
+      };
+      usersByEmail.set(created.email, created);
+      return created;
+    }),
+    findOne: jest.fn(async (query) => usersByEmail.get(query.email) || null),
+    deleteMany: jest.fn(async () => {
+      usersByEmail.clear();
+    }),
+  };
+});
 const User = require('../../src/models/User');
 
 describe('Auth API', () => {
@@ -24,7 +49,11 @@ describe('Auth API', () => {
           password: 'Password123'
         });
       expect(res.status).toBe(201);
-      expect(res.body.success).toBe(true);
+      expect(res.body).toMatchObject({
+        success: true,
+        message: 'Account created. Please verify your email.',
+        email: 'test@test.com',
+      });
     });
 
     it('should reject duplicate email', async () => {
@@ -57,9 +86,12 @@ describe('Auth API', () => {
 
   describe('POST /api/auth/login', () => {
     beforeEach(async () => {
-      await request(app)
-        .post('/api/auth/register')
-        .send({ name: 'Test', email: 'test@test.com', password: 'Password123' });
+      await User.create({
+        name: 'Test',
+        email: 'test@test.com',
+        password: await bcrypt.hash('Password123', 12),
+        emailVerified: true,
+      });
     });
 
     it('should login and return tokens', async () => {
