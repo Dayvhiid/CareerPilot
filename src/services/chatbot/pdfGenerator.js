@@ -1,7 +1,16 @@
 const path = require('path');
 const fs = require('fs');
 const ejs = require('ejs');
-const puppeteer = require('puppeteer');
+
+let puppeteerModulePromise;
+
+async function loadPuppeteer() {
+  if (!puppeteerModulePromise) {
+    puppeteerModulePromise = import('puppeteer').then((module) => module.default || module);
+  }
+
+  return puppeteerModulePromise;
+}
 
 const TEMPLATE_PATH = path.join(__dirname, '..', '..', 'templates', 'resume-template.ejs');
 
@@ -9,6 +18,7 @@ async function generateProfessionalPDF(data) {
   const templateSource = fs.readFileSync(TEMPLATE_PATH, 'utf-8');
 
   const html = ejs.render(templateSource, { data });
+  const puppeteer = await loadPuppeteer();
 
   const browser = await puppeteer.launch({
     headless: true,
