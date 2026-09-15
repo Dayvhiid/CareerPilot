@@ -11,6 +11,7 @@ const {
   getProgress,
   listConversations,
   getConversation,
+  deleteConversation,
   downloadResume,
   transcribeAudio,
   synthesizeSpeech,
@@ -28,6 +29,9 @@ router.post('/message', auth, chatbotLimiter, chatbotValidators.message, process
 router.post('/generate', auth, uploadLimiter, generateResume);
 // List all conversations for the user
 router.get('/conversations', auth, listConversations);
+
+// Delete a specific conversation
+router.delete('/conversations/:sessionId', auth, deleteConversation);
 
 // Get a specific conversation with full message history
 router.get('/conversations/:sessionId', auth, getConversation);

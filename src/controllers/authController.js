@@ -2,12 +2,22 @@ const { logger } = require('../config/logger');
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const tokenService = require('../services/tokenService');
 const emailService = require('../services/emailService');
 const { logAudit } = require('../middleware/auditLogger');
 
 const BCRYPT_ROUNDS = 12;
 const RESET_TOKEN_TTL_MINUTES = 30;
+const VERIFICATION_CODE_TEMPLATE = fs.readFileSync(
+  path.join(__dirname, '../templates/emails/verification-code.html'),
+  'utf-8'
+);
+
+function generateVerificationCode() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 function sendError(res, status, message) {
   res.status(status).json({
@@ -42,7 +52,7 @@ exports.register = async (req, res) => {
     const { name, email, password } = req.body;
 
     const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    const emailVerificationToken = createOpaqueToken();
+    const verificationCode = generateVerificationCode();
 
     let user;
     try {
@@ -51,20 +61,24 @@ exports.register = async (req, res) => {
         email,
         password: hashedPassword,
         emailVerified: false,
-        emailVerificationToken: hashOpaqueToken(emailVerificationToken),
+        emailVerificationToken: verificationCode,
         emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
       });
     } catch (err) {
       if (err.code === 11000) {
-        return sendError(res, 400, 'Registration failed. Please try again.');
+        return sendError(res, 400, 'An account with this email already exists. Please log in or use a different email.');
       }
       throw err;
     }
 
+    const html = VERIFICATION_CODE_TEMPLATE
+      .replace(/\{\{name\}\}/g, name)
+      .replace(/\{\{code\}\}/g, verificationCode);
+
     await emailService.sendEmail({
       to: email,
-      subject: 'Verify your CareerPilot email',
-      text: `Hi ${name},\n\nPlease verify your email address by clicking the link below:\n\n${emailService.APP_BASE_URL}/api/auth/verify-email?token=${emailVerificationToken}\n\nThis link expires in 24 hours.\n\nIf you did not create a CareerPilot account, you can ignore this email.`,
+      subject: 'Your CareerPilot verification code',
+      html,
     });
 
     await logAudit({
@@ -79,7 +93,8 @@ exports.register = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully. Please verify your email address.',
+      message: 'Account created. Please verify your email.',
+      email,
     });
   } catch (error) {
     logger.error('Registration error:', error.message);
@@ -117,6 +132,10 @@ exports.login = async (req, res) => {
         userAgent: req.get('User-Agent'),
       }).catch(() => {});
       return sendError(res, 401, 'Invalid credentials');
+    }
+
+    if (!user.emailVerified) {
+      return sendError(res, 403, 'Please verify your email before logging in.');
     }
 
     const accessToken = tokenService.generateAccessToken(user._id);
@@ -262,21 +281,21 @@ exports.changePassword = async (req, res) => {
   }
 };
 
-exports.verifyEmail = async (req, res) => {
+exports.verifyCode = async (req, res) => {
   try {
-    const { token } = req.query;
-    if (!token) {
-      return res.redirect('/public/auth/login.html?verified=0');
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return sendError(res, 400, 'Email and code are required.');
     }
 
-    const hashed = hashOpaqueToken(token);
     const user = await User.findOne({
-      emailVerificationToken: hashed,
+      email,
+      emailVerificationToken: code,
       emailVerificationExpires: { $gt: new Date() },
     });
 
     if (!user) {
-      return res.redirect('/public/auth/login.html?verified=0');
+      return sendError(res, 400, 'Invalid or expired code. Please request a new one.');
     }
 
     user.emailVerified = true;
@@ -284,10 +303,31 @@ exports.verifyEmail = async (req, res) => {
     user.emailVerificationExpires = undefined;
     await user.save();
 
-    res.redirect('/public/auth/login.html?verified=1');
+    const accessToken = tokenService.generateAccessToken(user._id);
+    const { token: refreshToken } = await tokenService.issueRefreshToken(user._id);
+
+    tokenService.setAccessTokenCookie(res, accessToken);
+    tokenService.setRefreshTokenCookie(res, refreshToken);
+
+    await logAudit({
+      userId: user._id,
+      action: 'user.email verified',
+      resource: 'user',
+      resourceId: user._id,
+      details: { method: 'code' },
+      ip: safeIp(req),
+      userAgent: req.get('User-Agent'),
+    }).catch(() => {});
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully.',
+      accessToken,
+      user: buildUserPayload(user),
+    });
   } catch (error) {
-    logger.error('Email verification error:', error.message);
-    res.redirect('/public/auth/login.html?verified=0');
+    logger.error('Verify code error:', error.message);
+    sendError(res, 500, 'Server error during verification');
   }
 };
 
@@ -299,18 +339,22 @@ exports.resendVerification = async (req, res) => {
       return sendError(res, 200, 'If the account exists and is unverified, a verification email has been sent.');
     }
 
-    const token = createOpaqueToken();
-    user.emailVerificationToken = hashOpaqueToken(token);
+    const verificationCode = generateVerificationCode();
+    user.emailVerificationToken = verificationCode;
     user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await user.save();
 
+    const html = VERIFICATION_CODE_TEMPLATE
+      .replace(/\{\{name\}\}/g, user.name)
+      .replace(/\{\{code\}\}/g, verificationCode);
+
     await emailService.sendEmail({
       to: email,
-      subject: 'Verify your CareerPilot email',
-      text: `Please verify your email address by clicking the link below:\n\n${emailService.APP_BASE_URL}/api/auth/verify-email?token=${token}\n\nThis link expires in 24 hours.`,
+      subject: 'Your CareerPilot verification code',
+      html,
     });
 
-    res.json({ success: true, message: 'Verification email sent.' });
+    res.json({ success: true, message: 'Verification code sent.' });
   } catch (error) {
     logger.error('Resend verification error:', error.message);
     sendError(res, 500, 'Server error');
@@ -331,7 +375,7 @@ exports.forgotPassword = async (req, res) => {
       await emailService.sendEmail({
         to: email,
         subject: 'Reset your CareerPilot password',
-        text: `Hi ${user.name},\n\nWe received a request to reset your password. Click the link below to choose a new password:\n\n${emailService.APP_BASE_URL}/public/auth/reset-password.html?token=${token}\n\nThis link expires in ${RESET_TOKEN_TTL_MINUTES} minutes.\n\nIf you did not request this, you can safely ignore this email.`,
+        text: `Hi ${user.name},\n\nWe received a request to reset your password. Click the link below to choose a new password:\n\n${emailService.APP_BASE_URL}/reset-password?token=${token}\n\nThis link expires in ${RESET_TOKEN_TTL_MINUTES} minutes.\n\nIf you did not request this, you can safely ignore this email.`,
       });
     }
 

@@ -10,6 +10,7 @@ const {
 } = require('../services/chatbot/stateMachine');
 const { generateProfessionalPDF } = require('../services/chatbot/pdfGenerator');
 const { convertChatDataToResume } = require('../services/chatbot/resumeConverter');
+const { calculateScore } = require('../services/resumeScoringService');
 const { transcribeAudio, synthesizeSpeech } = require('../services/chatbot/audioService');
 
 const startConversation = async (req, res) => {
@@ -57,12 +58,19 @@ const processMessage = async (req, res) => {
 
     logger.info(`Processing message from user ${userId}: "${message}"`);
 
-    const conversation = await Conversation.findOne({ userId, sessionId });
+    let conversation = await Conversation.findOne({ userId, sessionId });
     if (!conversation) {
-      return res.status(404).json({
-        success: false,
-        message: 'Session not found. Please start a new conversation.',
+      conversation = new Conversation({
+        userId,
+        sessionId,
+        state: CONVERSATION_STATES.WELCOME,
+        status: 'active',
+        data: {},
+        messages: [],
+        startedAt: new Date(),
+        lastActivity: new Date(),
       });
+      await conversation.save();
     }
 
     if (conversation.status !== 'active') {
@@ -142,10 +150,13 @@ const generateResume = async (req, res) => {
     logger.debug('Raw session data:', JSON.stringify(conversation.data, null, 2));
 
     const resumeData = convertChatDataToResume(conversation.data);
+    resumeData.score = calculateScore(resumeData);
 
     logger.debug('Converted resume data:', JSON.stringify(resumeData, null, 2));
 
     const existingResume = await Resume.findOne({ userId }).lean();
+
+    const resumeScore = resumeData.score;
 
     let resume;
     if (existingResume) {
@@ -153,6 +164,7 @@ const generateResume = async (req, res) => {
         { userId },
         {
           extractedData: resumeData,
+          resumeScore,
           isProcessed: true,
           updatedAt: new Date(),
         },
@@ -167,6 +179,7 @@ const generateResume = async (req, res) => {
         fileType: 'application/json',
         filePath: `/generated/chat_resume_${Date.now()}.json`,
         extractedData: resumeData,
+        resumeScore,
         isProcessed: true,
       });
       await resume.save();
@@ -1114,6 +1127,33 @@ function generateReviewMessage(data) {
   return review;
 }
 
+const deleteConversation = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { sessionId } = req.params;
+
+    const result = await Conversation.findOneAndDelete({ userId, sessionId });
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: 'Conversation not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Conversation deleted',
+    });
+  } catch (error) {
+    logger.error('Error deleting conversation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete conversation',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   processMessage,
   startConversation,
@@ -1121,6 +1161,7 @@ module.exports = {
   getProgress,
   listConversations,
   getConversation,
+  deleteConversation,
   downloadResume,
   transcribeAudio: handleTranscribeAudio,
   synthesizeSpeech: handleSynthesizeSpeech,

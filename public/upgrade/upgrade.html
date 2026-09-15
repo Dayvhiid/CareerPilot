@@ -329,20 +329,19 @@
   .price-card .amount { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-size: 3.2rem; line-height: 1; color: var(--text-primary); }
   .price-card.premium .amount { color: var(--accent-gold-bright); }
   .price-card .period { font-size: 0.85rem; color: var(--text-tertiary); font-weight: 300; }
-  .price-card .ngn-line {
+  .price-card .usd-line {
     margin-top: 0.5rem;
     display: flex;
     align-items: baseline;
     gap: 0.4rem;
   }
-  .price-card .ngn-amount {
+  .price-card .usd-amount {
     font-family: 'DM Sans', sans-serif;
-    font-weight: 500;
-    font-size: 1.15rem;
+    font-weight: 400;
+    font-size: 1rem;
     color: var(--text-secondary);
   }
-  .price-card.premium .ngn-amount { color: var(--text-primary); }
-  .price-card .ngn-period { font-size: 0.78rem; color: var(--text-tertiary); font-weight: 300; }
+  .price-card .usd-period { font-size: 0.78rem; color: var(--text-tertiary); font-weight: 300; }
   .price-card .billed-as { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--text-tertiary); margin-top: 0.6rem; letter-spacing: 0.04em; min-height: 14px; }
   .price-card .fx-note { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--text-tertiary); margin-top: 0.3rem; letter-spacing: 0.03em; }
 
@@ -552,15 +551,21 @@
 
 <header class="header" id="header">
   <div class="wrap">
-    <a href="#" class="logo"><span>·</span>CareerPilot</a>
+    <a href="/" class="logo"><span>·</span>CareerPilot</a>
     <ul class="nav-links">
       <li><a href="#compare">Compare plans</a></li>
       <li><a href="#pricing">Pricing</a></li>
       <li><a href="#faq">FAQ</a></li>
     </ul>
-    <div class="nav-cta">
-      <a href="#" class="btn btn-ghost">Log in</a>
-      <a href="#pricing" class="btn btn-gold">Upgrade →</a>
+    <div class="nav-cta" id="navLoggedOut">
+      <a href="/login" class="btn btn-ghost">Log in</a>
+      <a href="/signup" class="btn btn-gold">Sign up →</a>
+    </div>
+    <div class="nav-cta" id="navLoggedIn" style="display:none">
+      <a href="/resume" class="btn btn-ghost">Resume</a>
+      <a href="/jobs" class="btn btn-ghost">Find Jobs</a>
+      <a href="/chat" class="btn btn-ghost">AI Coach</a>
+      <button class="btn btn-ghost" id="logoutBtn">Log out</button>
     </div>
     <button class="menu-btn" id="menuBtn">☰</button>
   </div>
@@ -571,7 +576,16 @@
   <a href="#compare">Compare plans</a>
   <a href="#pricing">Pricing</a>
   <a href="#faq">FAQ</a>
-  <a href="#pricing" class="btn btn-gold" style="font-family:'DM Sans',sans-serif; font-size:1rem;">Upgrade</a>
+  <div id="mobileLoggedOut">
+    <a href="/login" class="btn btn-ghost" style="font-family:'DM Sans',sans-serif; font-size:1rem;">Log in</a>
+    <a href="/signup" class="btn btn-gold" style="font-family:'DM Sans',sans-serif; font-size:1rem;">Sign up →</a>
+  </div>
+  <div id="mobileLoggedIn" style="display:none">
+    <a href="/resume" class="btn btn-ghost" style="font-family:'DM Sans',sans-serif; font-size:1rem;">Resume</a>
+    <a href="/jobs" class="btn btn-ghost" style="font-family:'DM Sans',sans-serif; font-size:1rem;">Find Jobs</a>
+    <a href="/chat" class="btn btn-ghost" style="font-family:'DM Sans',sans-serif; font-size:1rem;">AI Coach</a>
+    <button class="btn btn-ghost" id="mobileLogoutBtn" style="font-family:'DM Sans',sans-serif; font-size:1rem;">Log out</button>
+  </div>
 </div>
 
 <!-- HERO -->
@@ -699,7 +713,7 @@
     <div class="section-title">
       <p class="eyebrow" style="justify-content:center;">Pricing</p>
       <h2>Simple, <em>honest</em> pricing.</h2>
-      <p>Start free. Upgrade the moment the caps start slowing you down.<br>Priced in USD, shown in naira — you're charged in ₦ at checkout.</p>
+      <p>Start free. Upgrade the moment the caps start slowing you down.<br>Priced in naira — you're charged in ₦ at checkout.</p>
     </div>
 
     <div class="toggle-row">
@@ -715,12 +729,11 @@
         <h3>Free</h3>
         <p class="plan-desc">Everything you need to start applying.</p>
         <div class="price-line">
-          <span class="amount">$0</span>
+          <span class="amount">₦0</span>
           <span class="period">/ forever</span>
         </div>
-        <div class="ngn-line">
-          <span class="ngn-amount">₦0</span>
-          <span class="ngn-period">/ forever</span>
+        <div class="usd-line">
+          <span class="usd-amount">$0</span>
         </div>
         <div class="billed-as">&nbsp;</div>
         <ul>
@@ -740,15 +753,15 @@
         <h3>Premium</h3>
         <p class="plan-desc">Every limit removed. Built for an active search.</p>
         <div class="price-line">
-          <span class="amount" id="priceAmount">$14</span>
-          <span class="period" id="pricePeriod">/ month</span>
+          <span class="amount" id="priceAmountNGN">₦18,500</span>
+          <span class="period" id="pricePeriodNGN">/ month</span>
         </div>
-        <div class="ngn-line">
-          <span class="ngn-amount" id="priceAmountNGN">≈ ₦5,000</span>
-          <span class="ngn-period" id="pricePeriodNGN">/ month</span>
+        <div class="usd-line">
+          <span class="usd-amount" id="priceAmountUSD">≈ $14</span>
+          <span class="usd-period" id="pricePeriodUSD">/ month</span>
         </div>
         <div class="billed-as" id="billedAs">Billed monthly</div>
-        <div class="fx-note">Charged in naira at checkout · rate updates daily</div>
+        <div class="fx-note">Live rate · charged in naira at checkout</div>
         <ul>
           <li><span class="tick">✓</span> Unlimited resumes &amp; templates</li>
           <li><span class="tick">✓</span> Unlimited chatbot messages</li>
@@ -844,7 +857,7 @@
         <div class="plan-label">Plan</div>
         <div class="plan-name" id="modalPlanName">Premium · Monthly</div>
       </div>
-      <div class="plan-price" id="modalPlanPrice">$14</div>
+      <div class="plan-price" id="modalPlanPrice">₦18,500</div>
     </div>
 
     <div class="card-preview">
@@ -888,6 +901,33 @@
 </div>
 
 <script>
+  // Auth-aware nav
+  (function() {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    const loggedOut = document.getElementById('navLoggedOut');
+    const loggedIn = document.getElementById('navLoggedIn');
+    const mobileLoggedOut = document.getElementById('mobileLoggedOut');
+    const mobileLoggedIn = document.getElementById('mobileLoggedIn');
+    if (user) {
+      if (loggedOut) loggedOut.style.display = 'none';
+      if (loggedIn) loggedIn.style.display = '';
+      if (mobileLoggedOut) mobileLoggedOut.style.display = 'none';
+      if (mobileLoggedIn) mobileLoggedIn.style.display = '';
+    }
+
+    function bindLogout(btnId) {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      });
+    }
+    bindLogout('logoutBtn');
+    bindLogout('mobileLogoutBtn');
+  })();
+
   // Header scroll state
   window.addEventListener('scroll', () => {
     document.getElementById('header').classList.toggle('scrolled', window.scrollY > 40);
@@ -905,32 +945,57 @@
   const toggle = document.getElementById('billingToggle');
   const monthlyLabel = document.getElementById('monthlyLabel');
   const annualLabel = document.getElementById('annualLabel');
-  const priceAmount = document.getElementById('priceAmount');
-  const pricePeriod = document.getElementById('pricePeriod');
   const billedAs = document.getElementById('billedAs');
   const checkoutBtn = document.getElementById('checkoutBtn');
   const checkoutBtnBottom = document.getElementById('checkoutBtnBottom');
 
   const priceAmountNGN = document.getElementById('priceAmountNGN');
   const pricePeriodNGN = document.getElementById('pricePeriodNGN');
+  const priceAmountUSD = document.getElementById('priceAmountUSD');
+  const pricePeriodUSD = document.getElementById('pricePeriodUSD');
 
-  // USD is the reference price; NGN shown alongside is an approximate
-  // conversion (~₦1,370/$ as of Jul 2026) rounded to a clean local price.
-  // Actual charge happens in NGN at checkout via your local payment provider.
+  // NGN is the reference price; USD shown alongside is an approximate
+  // conversion fetched live from Frankfurter API (ECB data).
   const PRICING = {
-    monthly: { amount: '$14',  period: '/ month', ngnAmount: '≈ ₦5,000', ngnPeriod: '/ month', billedAs: 'Billed monthly' },
-    annual:  { amount: '$11',  period: '/ month', ngnAmount: '≈ ₦4,200', ngnPeriod: '/ month', billedAs: 'Billed annually — $134 / ≈ ₦50,000 per year' }
+    monthly: { ngnAmount: '₦18,500', ngnPeriod: '/ month', ngnRaw: 18500, billedAs: 'Billed monthly' },
+    annual:  { ngnAmount: '₦14,500', ngnPeriod: '/ month', ngnRaw: 14500, billedAs: 'Billed annually — ₦177,000 per year', annualTotalNGN: 177000 }
   };
 
   let billing = 'monthly';
+  let exchangeRate = 1325;
 
-  function renderBilling() {
+  async function fetchRate() {
+    try {
+      const res = await fetch('https://api.frankfurter.dev/v2/rate/USD/NGN');
+      if (!res.ok) throw new Error('Rate fetch failed');
+      const data = await res.json();
+      exchangeRate = data.rate;
+    } catch {
+      exchangeRate = 1325;
+    }
+  }
+
+  function formatUSD(amount) {
+    return '$' + Math.round(amount).toLocaleString('en-US');
+  }
+
+  async function renderBilling() {
     const p = PRICING[billing];
-    priceAmount.textContent = p.amount;
-    pricePeriod.textContent = p.period;
     priceAmountNGN.textContent = p.ngnAmount;
     pricePeriodNGN.textContent = p.ngnPeriod;
-    billedAs.textContent = p.billedAs;
+
+    const usdMonthly = Math.round(p.ngnRaw / exchangeRate);
+    priceAmountUSD.textContent = '≈ ' + formatUSD(usdMonthly);
+
+    if (billing === 'annual') {
+      const usdTotal = Math.round(p.annualTotalNGN / exchangeRate);
+      pricePeriodUSD.textContent = '/ month';
+      billedAs.textContent = 'Billed annually — ' + formatUSD(usdTotal) + ' per year';
+    } else {
+      pricePeriodUSD.textContent = '/ month';
+      billedAs.textContent = p.billedAs;
+    }
+
     toggle.classList.toggle('on', billing === 'annual');
     monthlyLabel.classList.toggle('active', billing === 'monthly');
     annualLabel.classList.toggle('active', billing === 'annual');
@@ -943,7 +1008,7 @@
     renderBilling();
   });
 
-  renderBilling();
+  fetchRate().then(() => renderBilling());
 
   // ── Payment modal ──
   const modal      = document.getElementById('paymentModal');
@@ -954,7 +1019,7 @@
   function openModal() {
     const p = PRICING[billing];
     document.getElementById('modalPlanName').textContent = 'Premium \u00B7 ' + (billing === 'annual' ? 'Annual' : 'Monthly');
-    document.getElementById('modalPlanPrice').textContent = p.amount;
+    document.getElementById('modalPlanPrice').textContent = p.ngnAmount;
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
     modalError.classList.remove('show');
@@ -981,7 +1046,7 @@
       });
       if (res.status === 401) {
         alert('Please log in first to upgrade.');
-        window.location.href = '/auth/login.html';
+        window.location.href = '/login';
         return;
       }
       const data = await res.json();

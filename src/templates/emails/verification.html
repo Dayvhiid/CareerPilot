@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify your email</title>
+</head>
+<body style="margin:0;padding:0;background:#08080E;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#08080E;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="480" cellpadding="0" cellspacing="0" style="background:#0F0F18;border:1px solid rgba(201,151,58,0.12);border-radius:16px;overflow:hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="padding:32px 40px 24px;border-bottom:1px solid rgba(201,151,58,0.12);">
+              <h1 style="margin:0;font-size:22px;font-weight:600;color:#F0EDE6;font-family:'Cormorant Garamond',Georgia,serif;">
+                <span style="color:#C9973A;">·</span> CareerPilot
+              </h1>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px 40px 32px;">
+              <h2 style="margin:0 0 16px;font-size:20px;font-weight:500;color:#F0EDE6;">
+                Verify your email address
+              </h2>
+              <p style="margin:0 0 8px;font-size:14px;color:#8A8580;line-height:1.6;">
+                Hi {{name}},
+              </p>
+              <p style="margin:0 0 24px;font-size:14px;color:#8A8580;line-height:1.6;">
+                Thanks for signing up for CareerPilot. Click the button below to verify your email address and get started.
+              </p>
+              <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                <tr>
+                  <td style="background:#C9973A;border-radius:8px;">
+                    <a href="{{verificationUrl}}" style="display:inline-block;padding:14px 32px;font-size:14px;font-weight:500;color:#08080E;text-decoration:none;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+                      Verify Email Address
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 8px;font-size:13px;color:#504E4A;line-height:1.6;">
+                If the button doesn't work, copy and paste this link into your browser:
+              </p>
+              <p style="margin:0;font-size:12px;color:#C9973A;word-break:break-all;">
+                <a href="{{verificationUrl}}" style="color:#C9973A;text-decoration:underline;">{{verificationUrl}}</a>
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 40px;border-top:1px solid rgba(201,151,58,0.12);">
+              <p style="margin:0;font-size:11px;color:#504E4A;line-height:1.5;text-align:center;">
+                This link expires in 24 hours. If you didn't create an account, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

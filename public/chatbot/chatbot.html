@@ -645,6 +645,67 @@
     }
     .conv-item-badge.completed { background: rgba(15,110,86,0.2); color: #5DCAA5; }
 
+    .conv-item { position: relative; }
+    .conv-delete-btn {
+      position: absolute; top: 0.5rem; right: 0.5rem;
+      background: none; border: none; cursor: pointer;
+      color: var(--tt); opacity: 0; transition: opacity 0.15s, color 0.15s;
+      padding: 0.3rem; line-height: 1; display: flex; align-items: center; justify-content: center;
+      border-radius: 4px;
+    }
+    .conv-delete-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .conv-item:hover .conv-delete-btn { opacity: 1; }
+    .conv-delete-btn:hover { color: #e74c3c; background: rgba(231,76,60,0.1); }
+
+    /* ─── TOAST CONFIRM ────────────────────────── */
+    .toast-overlay {
+      position: fixed; inset: 0; z-index: 999;
+      background: rgba(8,8,14,0.7); backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+    }
+    .toast-overlay.visible { opacity: 1; pointer-events: auto; }
+    .toast-box {
+      background: var(--surf); border: 1px solid var(--bs);
+      border-radius: var(--r-lg); padding: 1.5rem 1.75rem;
+      max-width: 340px; width: 90%; text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5), var(--glow);
+      transform: translateY(12px) scale(0.96);
+      transition: transform 0.25s ease;
+    }
+    .toast-overlay.visible .toast-box { transform: translateY(0) scale(1); }
+    .toast-icon {
+      width: 40px; height: 40px; margin: 0 auto 0.75rem;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .toast-icon.warn { background: rgba(231,76,60,0.12); color: #e74c3c; }
+    .toast-icon.info { background: rgba(201,151,58,0.12); color: var(--gold); }
+    .toast-icon.success { background: rgba(93,202,165,0.12); color: #5DCAA5; }
+    .toast-msg {
+      font-family: 'DM Sans', sans-serif; font-weight: 400;
+      font-size: 0.88rem; color: var(--tp); line-height: 1.5;
+      margin-bottom: 1.25rem;
+    }
+    .toast-actions { display: flex; gap: 0.6rem; justify-content: center; }
+    .toast-btn {
+      flex: 1; padding: 0.55rem 1rem; border-radius: var(--r-sm);
+      font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 0.82rem;
+      cursor: pointer; border: none; transition: all 0.2s ease;
+    }
+    .toast-btn.cancel {
+      background: var(--surf2); color: var(--ts); border: 1px solid var(--bs);
+    }
+    .toast-btn.cancel:hover { background: var(--glass); color: var(--tp); }
+    .toast-btn.confirm {
+      background: #e74c3c; color: #fff;
+    }
+    .toast-btn.confirm:hover { background: #c0392b; }
+    .toast-btn.confirm.safe {
+      background: var(--gold); color: var(--bg);
+    }
+    .toast-btn.confirm.safe:hover { background: var(--gold-b); }
+
     /* ─── RESPONSIVE ─────────────────────────── */
     @media (max-width: 640px) {
       .hdr-btn span { display: none; }
@@ -715,6 +776,18 @@
     </div>
     <div class="progress-steps" id="progressSteps" aria-hidden="true">
       <!-- Steps injected by JS -->
+    </div>
+  </div>
+
+  <!-- ─── TOAST NOTIFICATION ─────────────────── -->
+  <div class="toast-overlay" id="toastOverlay">
+    <div class="toast-box">
+      <div class="toast-icon warn" id="toastIcon"><i class="ti ti-alert-triangle"></i></div>
+      <p class="toast-msg" id="toastMsg">Are you sure?</p>
+      <div class="toast-actions">
+        <button class="toast-btn cancel" id="toastCancel" onclick="toastResolve(false)">Cancel</button>
+        <button class="toast-btn confirm" id="toastConfirm" onclick="toastResolve(true)">Delete</button>
+      </div>
     </div>
   </div>
 
@@ -811,6 +884,37 @@
     ═════════════════════════════════════════ */
     const API_BASE        = '/api';
 
+    /* ─── TOAST SYSTEM ─────────────────────── */
+
+    function showToast({ message, confirmText = 'Delete', cancelText = 'Cancel', type = 'warn' }) {
+      return new Promise(resolve => {
+        window._toastResolver = resolve;
+        const overlay = document.getElementById('toastOverlay');
+        const icon = document.getElementById('toastIcon');
+        const msg = document.getElementById('toastMsg');
+        const btnConfirm = document.getElementById('toastConfirm');
+        const btnCancel = document.getElementById('toastCancel');
+
+        msg.textContent = message;
+        btnConfirm.textContent = confirmText;
+        btnCancel.textContent = cancelText;
+
+        icon.className = 'toast-icon ' + type;
+        if (type === 'warn') icon.innerHTML = '<i class="ti ti-alert-triangle"></i>';
+        else if (type === 'info') icon.innerHTML = '<i class="ti ti-info-circle"></i>';
+        else if (type === 'success') icon.innerHTML = '<i class="ti ti-circle-check"></i>';
+
+        btnConfirm.className = type === 'warn' ? 'toast-btn confirm' : 'toast-btn confirm safe';
+
+        overlay.classList.add('visible');
+      });
+    }
+
+    window.toastResolve = function(val) {
+      document.getElementById('toastOverlay').classList.remove('visible');
+      if (window._toastResolver) { window._toastResolver(val); window._toastResolver = null; }
+    };
+
     function getAuthToken() {
       // Access token is an httpOnly cookie; nothing to read from JS.
       return '';
@@ -858,7 +962,9 @@
     document.addEventListener('DOMContentLoaded', () => {
       renderProgressSteps(0);
       initVoice();
-      startConversation();
+      currentSessionId = 'local_' + Date.now();
+      addBotMessage("You dey find job you no get resume/cv, no lele nothing spoil. Career Pilot is here to help you! 🚀\n\nI go ask you some questions to build your professional resume. Ready to start?");
+      setStatus('Online');
       bindChatHandlers();
     });
 
@@ -937,6 +1043,12 @@
       }
 
       try {
+        if (currentSessionId && currentSessionId.startsWith('local_')) {
+          const startRes = await apiFetch(`${API_BASE}/chatbot/start`, { method: 'POST' });
+          const startData = await startRes.json();
+          currentSessionId = startData.sessionId;
+        }
+
         const res  = await apiFetch(`${API_BASE}/chatbot/message`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -947,7 +1059,7 @@
         hideTypingIndicator();
         addBotMessage(data.message || data.response);
 
-        if (data.state) updateStateProgress(data.state);
+        if (data.state) updateStateProgress(data.state, data.progress);
 
         if (data.suggestions && data.suggestions.length)
           showSuggestions(data.suggestions);
@@ -1230,29 +1342,37 @@
       document.getElementById('progressPct').textContent  = Math.round(pct) + '%';
     }
 
-    function updateStateProgress(state) {
+    function updateStateProgress(state, progress) {
       currentState = state;
       const stateMap = {
-        greeting:    0,  personal:  15, experience: 35,
-        education:  55,  skills:    70, summary:    85,
-        completed:  100,
+        welcome:              0,  personal_info:       15, professional_summary: 25,
+        professional_links:  35,  education:           50, work_experience:      65,
+        skills:              75,  projects:            80, certificates:         85,
+        achievements:        90,  review:              95, completed:           100,
       };
       const stepMap = {
-        personal: 0, experience: 1, education: 2,
-        skills:   3, summary:    4, completed: 5,
+        personal_info: 0, professional_summary: 0, professional_links: 0,
+        education: 1, work_experience: 2,
+        skills: 3, projects: 3, certificates: 4,
+        achievements: 4, review: 5, completed: 5,
       };
-      const pct  = stateMap[state] ?? 0;
+      const pct  = progress ?? stateMap[state] ?? 0;
       const step = stepMap[state]  ?? -1;
       updateProgress(pct);
       renderProgressSteps(step);
 
       const labels = {
-        greeting: 'Starting conversation',
-        personal: 'Collecting personal info',
-        experience: 'Exploring work history',
+        welcome: 'Starting conversation',
+        personal_info: 'Collecting personal info',
+        professional_summary: 'Building your summary',
+        professional_links: 'Adding professional links',
         education: 'Education & training',
+        work_experience: 'Exploring work history',
         skills: 'Identifying your skills',
-        summary: 'Crafting your summary',
+        projects: 'Showcasing projects',
+        certificates: 'Adding certificates',
+        achievements: 'Recording achievements',
+        review: 'Reviewing your profile',
         completed: 'Profile complete!',
       };
       if (labels[state])
@@ -1338,6 +1458,7 @@
             <div class="conv-item-title">${badge} Resume Chat</div>
             <div class="conv-item-preview">${preview}</div>
             <div class="conv-item-meta">${date}</div>
+            <span class="conv-delete-btn" onclick="deleteConversation('${c.sessionId}', event)" title="Delete conversation"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></span>
           </button>`;
         }).join('');
       } catch (err) {
@@ -1388,7 +1509,35 @@
       document.getElementById('chatMessages').innerHTML = '';
       hideGenerateBtn();
       hideWelcome();
-      startConversation();
+      currentSessionId = 'local_' + Date.now();
+      addBotMessage("You dey find job you no get resume/cv, no lele nothing spoil. Career Pilot is here to help you! 🚀\n\nI go ask you some questions to build your professional resume. Ready to start?");
+      setStatus('Online');
+    }
+
+    async function deleteConversation(sessionId, event) {
+      event.stopPropagation();
+      const ok = await showToast({ message: 'Delete this conversation? This cannot be undone.', confirmText: 'Delete', type: 'warn' });
+      if (!ok) return;
+      try {
+        const res = await apiFetch(`${API_BASE}/chatbot/conversations/${sessionId}`, {
+          method: 'DELETE',
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (sessionId === currentSessionId) {
+            document.getElementById('chatMessages').innerHTML = '';
+            hideGenerateBtn();
+            hideWelcome();
+            startConversation();
+          }
+          loadConversations();
+        } else {
+          await showToast({ message: data.message || 'Failed to delete conversation.', confirmText: 'OK', type: 'warn' });
+        }
+      } catch (err) {
+        console.error('Delete conversation error:', err);
+        await showToast({ message: 'Network error. Please try again.', confirmText: 'OK', type: 'warn' });
+      }
     }
 
     function hideGenerateBtn() {

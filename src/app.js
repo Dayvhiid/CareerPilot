@@ -122,6 +122,30 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
+// Clean URL routes — obfuscated paths hiding actual file names
+const publicDir = path.join(__dirname, '../public');
+
+app.get('/chat', (req, res) => res.sendFile(path.join(publicDir, 'chatbot/chatbot.html')));
+app.get('/chat/mobile', (req, res) => res.sendFile(path.join(publicDir, 'chatbot/chatbotmobile_new.html')));
+
+app.get('/resume', (req, res) => res.sendFile(path.join(publicDir, 'resume/resume.html')));
+app.get('/resume/mobile', (req, res) => res.sendFile(path.join(publicDir, 'resume/resumemobile.html')));
+
+app.get('/jobs', (req, res) => res.sendFile(path.join(publicDir, 'jobs/jobs.html')));
+app.get('/jobs/mobile', (req, res) => res.sendFile(path.join(publicDir, 'jobs/jobsmobile.html')));
+
+app.get('/login', (req, res) => res.sendFile(path.join(publicDir, 'auth/login.html')));
+app.get('/login/mobile', (req, res) => res.sendFile(path.join(publicDir, 'auth/loginmobile.html')));
+
+app.get('/signup', (req, res) => res.sendFile(path.join(publicDir, 'auth/signup.html')));
+app.get('/signup/mobile', (req, res) => res.sendFile(path.join(publicDir, 'auth/signupmobile.html')));
+
+app.get('/reset-password', (req, res) => res.sendFile(path.join(publicDir, 'auth/reset-password.html')));
+
+app.get('/verify', (req, res) => res.sendFile(path.join(publicDir, 'auth/verify.html')));
+
+app.get('/upgrade', (req, res) => res.sendFile(path.join(publicDir, 'upgrade/upgrade.html')));
+
 // Serve static files from root (for direct access to HTML files)
 app.use(
   express.static(path.join(__dirname, '../public'), {
@@ -134,6 +158,20 @@ app.use(
     },
   })
 );
+
+// API 404 catch-all — return consistent JSON for unmatched /api/* routes
+app.use('/api', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+    code: 'ERR_404',
+  });
+});
+
+// Frontend 404 catch-all — serve styled error page for unmatched browser requests
+app.use((req, res) => {
+  res.status(404).sendFile(path.join(__dirname, '../public/404.html'));
+});
 
 // Sentry error handler (must be before the app error handler)
 const { errorHandler: sentryErrorHandler } = require('./config/sentry');

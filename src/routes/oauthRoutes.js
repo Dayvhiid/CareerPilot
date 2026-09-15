@@ -18,7 +18,7 @@ function ensureOAuthEnabled(provider) {
 function oauthCallback(provider) {
   return async (req, res) => {
     if (!req.user) {
-      return res.redirect('/public/auth/login.html?oauth=0');
+      return res.redirect('/login?oauth=0');
     }
 
     const accessToken = tokenService.generateAccessToken(req.user._id);
@@ -37,7 +37,7 @@ function oauthCallback(provider) {
       userAgent: req.get('User-Agent'),
     }).catch(() => {});
 
-    res.redirect('/public/resume/resume.html');
+    res.redirect('/resume');
   };
 }
 
@@ -48,7 +48,7 @@ router.get('/google', ensureOAuthEnabled('google'), passport.authenticate('googl
 router.get(
   '/google/callback',
   ensureOAuthEnabled('google'),
-  passport.authenticate('google', { failureRedirect: '/public/auth/login.html?oauth=0', session: false }),
+  passport.authenticate('google', { failureRedirect: '/login?oauth=0', session: false }),
   oauthCallback('google')
 );
 
@@ -59,7 +59,7 @@ router.get('/github', ensureOAuthEnabled('github'), passport.authenticate('githu
 router.get(
   '/github/callback',
   ensureOAuthEnabled('github'),
-  passport.authenticate('github', { failureRedirect: '/public/auth/login.html?oauth=0', session: false }),
+  passport.authenticate('github', { failureRedirect: '/login?oauth=0', session: false }),
   oauthCallback('github')
 );
 

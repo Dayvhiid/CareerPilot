@@ -16,6 +16,7 @@ async function ensureIndexes() {
   await JobListing.collection.createIndex({ isActive: 1, postedDate: -1 });
   await JobListing.collection.createIndex({ domain: 1, isActive: 1, postedDate: -1 });
   await JobListing.collection.createIndex({ 'salary.min': 1, 'salary.max': 1 });
+  await JobListing.collection.createIndex({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 
   // UserJob additional indexes
   await UserJob.collection.createIndex({ jobId: 1 });

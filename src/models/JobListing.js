@@ -31,5 +31,6 @@ jobListingSchema.index({ domain: 1, isActive: 1 });
 jobListingSchema.index({ skills: 1 });
 jobListingSchema.index({ location: 1 });
 jobListingSchema.index({ title: 'text', description: 'text', company: 'text' });
+jobListingSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 
 module.exports = mongoose.model('JobListing', jobListingSchema);

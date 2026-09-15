@@ -7,7 +7,7 @@ const {
   refreshToken,
   logout,
   changePassword,
-  verifyEmail,
+  verifyCode,
   resendVerification,
   forgotPassword,
   resetPassword,
@@ -33,7 +33,7 @@ router.post('/logout', authLimiter, logout);
 router.post('/change-password', auth, authLimiter, authValidators.changePassword, changePassword);
 
 // Email verification
-router.get('/verify-email', verifyEmail);
+router.post('/verify-code', authLimiter, verifyCode);
 router.post('/resend-verification', forgotPasswordLimiter, authValidators.verifyEmail, resendVerification);
 
 // Password reset

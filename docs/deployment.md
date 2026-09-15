@@ -97,6 +97,33 @@ The `.github/workflows/ci.yml` workflow:
 
 > **IAM permissions needed:** `AWSElasticBeanstalkFullAccess` (or a custom policy with EB deploy actions).
 
+### Launch Template 403 (deploy fails)
+
+The EB environment's Auto Scaling group references an EC2 launch template. The deploy IAM user must be
+authorized to use it, otherwise the CloudFormation stack update aborts with:
+
+```
+You are not authorized to use launch template: lt-<id> (Service: AutoScaling, Status Code: 403)
+```
+
+**Fix (as infrastructure-as-code):** the policy lives in `infrastructure/iam.yaml`. Apply once with the
+deploy IAM user's name:
+
+```bash
+aws cloudformation deploy \
+  --stack-name careerpilot-eb-deploy-policy \
+  --template-file infrastructure/iam.yaml \
+  --parameter-overrides DeployUserName=<your-deploy-user> \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --region us-east-1
+```
+
+This attaches the `CareerPilot-BeanstalkLaunchTemplateAccess` managed policy, granting
+`ec2:RunInstances` and launch-template actions on `*`. Re-run the workflow after applying.
+
+**Alternative (no IAM change):** in EB Console → `Careerpilot-env` → **Configuration → Instances →
+EC2 Instance settings**, set the launch template back to the default/managed one, then Apply.
+
 ---
 
 ## Manual Deployment
