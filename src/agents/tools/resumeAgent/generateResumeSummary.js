@@ -4,11 +4,12 @@ const { withRetry } = require('../../../utils/retry');
 async function generateResumeSummary({ extractedData, style, maxLength }) {
   if (!extractedData) throw new Error('extractedData is required');
 
-  const styleGuide = style === 'brief'
-    ? 'Write a very concise 1-2 sentence summary.'
-    : style === 'detailed'
-      ? 'Write a comprehensive 4-5 sentence summary with specific achievements.'
-      : 'Write a professional 2-3 sentence summary.';
+  const styleGuide =
+    style === 'brief'
+      ? 'Write a very concise 1-2 sentence summary.'
+      : style === 'detailed'
+        ? 'Write a comprehensive 4-5 sentence summary with specific achievements.'
+        : 'Write a professional 2-3 sentence summary.';
 
   const prompt = `${styleGuide}
 

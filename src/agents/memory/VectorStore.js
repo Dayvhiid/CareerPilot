@@ -39,7 +39,9 @@ class VectorStore {
 
   _cosineSimilarity(a, b) {
     if (!a || !b || a.length !== b.length) return 0;
-    let dotProduct = 0, normA = 0, normB = 0;
+    let dotProduct = 0,
+      normA = 0,
+      normB = 0;
     for (let i = 0; i < a.length; i++) {
       dotProduct += a[i] * b[i];
       normA += a[i] * a[i];

@@ -121,7 +121,8 @@ class ResumeAgent extends Agent {
 
     super({
       name: 'ResumeAgent',
-      description: 'Analyzes, scores, tailors, and optimizes resumes. Provides skill gap analysis and job match comparison.',
+      description:
+        'Analyzes, scores, tailors, and optimizes resumes. Provides skill gap analysis and job match comparison.',
       tools,
       memory,
     });

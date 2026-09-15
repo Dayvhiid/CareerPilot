@@ -55,14 +55,20 @@ class RedisSessionStore extends Store {
     const client = this.client;
     if (!client) return cb(null);
 
-    client.expire(this.prefix + sid, this._getTTL(sess)).then(() => cb(null), (err) => cb(err));
+    client.expire(this.prefix + sid, this._getTTL(sess)).then(
+      () => cb(null),
+      (err) => cb(err)
+    );
   }
 
   destroy(sid, cb) {
     const client = this.client;
     if (!client) return cb(null);
 
-    client.del(this.prefix + sid).then(() => cb(null), (err) => cb(err));
+    client.del(this.prefix + sid).then(
+      () => cb(null),
+      (err) => cb(err)
+    );
   }
 
   _getTTL(sess) {

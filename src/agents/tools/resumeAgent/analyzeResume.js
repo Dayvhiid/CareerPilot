@@ -6,7 +6,7 @@ async function analyzeResume({ extractedText, extractedData }) {
     throw new Error('Either extractedText or extractedData is required');
   }
 
-  const input = extractedData || await aiService.extractResumeData(extractedText);
+  const input = extractedData || (await aiService.extractResumeData(extractedText));
 
   const prompt = `You are a resume analyst. Review the following resume data and provide detailed analysis.
 

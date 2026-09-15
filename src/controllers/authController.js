@@ -66,14 +66,16 @@ exports.register = async (req, res) => {
       });
     } catch (err) {
       if (err.code === 11000) {
-        return sendError(res, 400, 'An account with this email already exists. Please log in or use a different email.');
+        return sendError(
+          res,
+          400,
+          'An account with this email already exists. Please log in or use a different email.'
+        );
       }
       throw err;
     }
 
-    const html = VERIFICATION_CODE_TEMPLATE
-      .replace(/\{\{name\}\}/g, name)
-      .replace(/\{\{code\}\}/g, verificationCode);
+    const html = VERIFICATION_CODE_TEMPLATE.replace(/\{\{name\}\}/g, name).replace(/\{\{code\}\}/g, verificationCode);
 
     await emailService.sendEmail({
       to: email,
@@ -344,9 +346,10 @@ exports.resendVerification = async (req, res) => {
     user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await user.save();
 
-    const html = VERIFICATION_CODE_TEMPLATE
-      .replace(/\{\{name\}\}/g, user.name)
-      .replace(/\{\{code\}\}/g, verificationCode);
+    const html = VERIFICATION_CODE_TEMPLATE.replace(/\{\{name\}\}/g, user.name).replace(
+      /\{\{code\}\}/g,
+      verificationCode
+    );
 
     await emailService.sendEmail({
       to: email,
